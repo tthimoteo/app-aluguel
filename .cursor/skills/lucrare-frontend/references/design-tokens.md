@@ -11,14 +11,14 @@ Tokens extraídos diretamente do CSS de produção do app (`lucraregestao.netlif
 | `--lucrare-accent` | `#DB6838` | CTA primário, links, foco de input, estado ativo, badge de destaque/admin |
 | `--lucrare-accent-hover` | `#C55A32` | Hover de botão/link primário |
 | `--lucrare-accent-soft` | `#DB683833` (20% alpha) | Anel de foco (`box-shadow`) em inputs |
-| `--lucrare-accent-site` | `#DD6112` | Variante usada no site institucional (mesma família tonal) |
+| `--lucrare-accent-site` | `#E85D15` (faixa `#E85D15`–`#F16622`) | Laranja vibrante do site institucional — CTAs, links de menu, faixa de estatísticas, placeholder de formulário |
 
 ### Neutros / autoridade
 
 | Token | Hex | Uso |
 |---|---|---|
 | `--lucrare-navy` | `#2C3E50` | Header do app, títulos de página, texto de destaque escuro |
-| `--lucrare-navy-deep` | `#02356E` | Azul profundo usado no site institucional |
+| `--lucrare-navy-deep` | `#003366` (faixa `#003366`–`#00427A`) | Azul-marinho do painel do hero, círculos de serviço e formulário de contato do site institucional |
 | `--lucrare-slate` | `#34495E` | Cabeçalho de tabelas |
 | `--lucrare-gray-700` | `#495057` | Texto secundário forte (labels, autor de comentário) |
 | `--lucrare-gray-600` | `#6C757D` | Texto muted, placeholders, botão cancelar |
@@ -52,8 +52,8 @@ Tokens extraídos diretamente do CSS de produção do app (`lucraregestao.netlif
 ## Tipografia
 
 - **App (dashboard)**: `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif` — stack nativa do sistema, peso normal no corpo, `600–700` em títulos e labels de destaque.
-- **Site institucional**: títulos em `helvetica-w01-bold, sans-serif` (ou `Montserrat`/`Montserrat Black` em variações), corpo em `Helvetica, Arial, sans-serif`.
-- Escala de heading observada no site: `Heading L = 34px/1.4`, `Heading M = 25px/1.4`, `Heading S = 22px/1.4`.
+- **Site institucional**: fonte confirmada via DevTools é **`Montserrat, sans-serif`** para títulos e corpo. Hero title (~48–60px, bold, branco), subtítulo (~24–30px, bold, branco), títulos de seção em navy com caixa alta + letter-spacing, corpo de texto em `18px` peso regular (400), line-height relaxado (~1.4–1.6). Fallback histórico observado em headings: `helvetica-w01-bold, sans-serif`.
+- Escala de heading (fallback Wix observado): `Heading L = 34px/1.4`, `Heading M = 25px/1.4`, `Heading S = 22px/1.4`.
 - Tamanho de corpo padrão do app: `1rem` (inputs, botões); textos secundários em `0.75rem–0.9rem`.
 
 ## Espaçamento, raio e sombra

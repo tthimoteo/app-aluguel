@@ -312,6 +312,140 @@ Padrão de destaque numérico grande usado na home institucional para reforçar 
 
 Use números grandes e em negrito (ex.: `+300`, `+30 Anos`) combinados com um rótulo curto abaixo — reforça a mensagem de tradição e confiança da marca.
 
+## 9. Hero split-screen (site institucional)
+
+Confirmado por inspeção visual: metade com foto real, metade com painel navy sólido.
+
+```css
+.hero {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 600px;
+}
+.hero-image {
+  background-size: cover;
+  background-position: center;
+}
+.hero-panel {
+  background-color: #00427a; /* navy sólido */
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 3rem;
+}
+.hero-panel h1 {
+  font-family: Montserrat, sans-serif;
+  font-weight: 700;
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+.hero-panel .cta-btn {
+  background-color: #e85d15;
+  color: #fff;
+  padding: 0.875rem 2rem;
+  border-radius: 6px;
+  font-weight: 600;
+  border: none;
+}
+@media (max-width: 768px) {
+  .hero { grid-template-columns: 1fr; }
+}
+```
+
+## 10. Badges circulares de serviço (concêntricos)
+
+```css
+.service-circle {
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-weight: 700;
+  font-family: Montserrat, sans-serif;
+}
+/* variante navy preenchido + anel laranja */
+.service-circle--filled {
+  background-color: #00427a;
+  border: 6px solid #e85d15;
+  color: #fff;
+}
+/* variante contornada */
+.service-circle--outline {
+  background-color: #fff;
+  border: 4px solid #00427a;
+  color: #00427a;
+}
+.services-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3rem;
+  justify-content: center;
+  padding: 4rem 2rem;
+}
+@media (max-width: 768px) {
+  .services-grid { grid-template-columns: 1fr; }
+}
+```
+
+## 11. Faixa de estatísticas (banda laranja full-width)
+
+```css
+.stats-band {
+  background-color: #e85d15;
+  padding: 3rem 2rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+.stats-band .stat-number {
+  font-size: 3rem;
+  font-weight: 700;
+  color: #fff;
+}
+@media (max-width: 768px) {
+  .stats-band { grid-template-columns: 1fr; text-align: center; }
+}
+```
+
+## 12. Painel de contato (formulário sobre navy)
+
+```css
+.contact-panel {
+  background-color: #00366;
+  color: #fff;
+  padding: 3rem;
+}
+.contact-panel h2 {
+  color: #e85d15;
+  font-family: Montserrat, sans-serif;
+  font-weight: 700;
+}
+.contact-panel input,
+.contact-panel textarea {
+  background-color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 0.75rem;
+  width: 100%;
+}
+.contact-panel input::placeholder {
+  color: #e85d15;
+}
+.contact-panel .submit-btn {
+  background-color: #003366;
+  color: #fff;
+  border: 2px solid #fff;
+}
+```
+
 ## Vocabulário de UI em PT-BR (usar consistentemente)
 
 `Entrar`, `Usuário`, `Senha`, `Clientes`, `Usuários`, `Honorário`, `Status`, `Ativo`, `Inativo`, `Editar`, `Excluir`, `Cancelar`, `Salvar`, `Adicionar`, `Comentários`, `Buscar`, `Limpar busca`, `Nenhum resultado encontrado`, `Carregando...`.
