@@ -1,0 +1,52 @@
+:root {
+  --lucrare-accent: #db6838;
+  --lucrare-accent-hover: #c55a32;
+  --lucrare-accent-soft: rgba(219, 104, 56, 0.2);
+  --lucrare-navy: #2c3e50;
+  --lucrare-slate: #34495e;
+  --lucrare-success: #27ae60;
+  --lucrare-success-bg: #d4edda;
+  --lucrare-success-text: #155724;
+  --lucrare-danger: #e74c3c;
+  --lucrare-danger-bg: #f8d7da;
+  --lucrare-danger-text: #721c24;
+  --lucrare-warning: #ffc107;
+  --lucrare-info: #007bff;
+  --lucrare-bg-app: #f8f9fa;
+  --lucrare-bg-auth: #f5f5f5;
+  --lucrare-surface: #ffffff;
+  --lucrare-border: #dddddd;
+  --lucrare-border-soft: #e9ecef;
+  --lucrare-text: #2c3e50;
+  --lucrare-text-muted: #6c757d;
+  --lucrare-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+    Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100vh;
+}
+
+body {
+  font-family: var(--lucrare-font);
+  background-color: var(--lucrare-bg-app);
+  color: var(--lucrare-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--lucrare-accent);
+}
+
+h1,
+h2,
+h3 {
+  color: var(--lucrare-navy);
+}
