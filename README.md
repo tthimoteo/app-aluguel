@@ -1,27 +1,9 @@
-# Lucrare — APP Aluguel + Skill de Frontend
+# Lucrare — Skill de Frontend
 
-Este repositório contém:
-
-1. **APP Aluguel** — aplicação web (React + TypeScript + Vite) para gestão de locações e recebimentos, estilizada com a identidade visual da Lucrare. É o ponto de partida para a plataforma descrita em `Docs/APP-Aluguel-Especificacao.md`.
-2. Uma **Cursor Agent Skill** de frontend baseada na identidade visual e nos padrões de UI reais da marca **Lucrare**, uma contabilidade estratégica de São Paulo:
+Este repositório contém uma **Cursor Agent Skill** de frontend baseada na identidade visual e nos padrões de UI reais da marca **Lucrare**, uma contabilidade estratégica de São Paulo:
 
 - **Site institucional**: [lucrarecontabilidade.com.br](https://www.lucrarecontabilidade.com.br/)
 - **Lucrare Gestão** (app de gestão de clientes/usuários): [lucraregestao.netlify.app](https://lucraregestao.netlify.app/login)
-
-## Desenvolvimento (APP Aluguel)
-
-Pré-requisitos: Node.js 22+.
-
-```bash
-npm ci        # instala as dependências
-npm run dev   # sobe o servidor de desenvolvimento em http://localhost:5173
-npm run build # build de produção (typecheck + Vite)
-npm run lint  # oxlint
-```
-
-O app usa dados em memória (seed) para demonstração — faça login com qualquer usuário/senha (sugestão: `admin` / `lucrare`). Módulos: Dashboard, Imóveis, Inquilinos e Recebimentos.
-
-O ambiente de Cloud Agent é configurado em `.cursor/environment.json` (`install: npm ci`, terminal `dev` rodando `npm run dev`, porta `5173`).
 
 ## O que tem aqui
 
