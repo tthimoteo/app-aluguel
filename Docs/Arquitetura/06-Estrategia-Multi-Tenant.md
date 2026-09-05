@@ -103,14 +103,26 @@ if (plano.MaxImoveis is int max && qtd >= max)
     throw new PlanoLimiteExcedidoException("imóveis", max);
 ```
 
-- **Downgrade** valida limites antes de trocar o plano (bloqueia se exceder — regra da especificação).
-- **Suspensa**: `PlanoGuardMiddleware` bloqueia todas as rotas exceto Login, Minha Conta e Pagamentos.
+- **Downgrade** valida limites antes de trocar o plano; se exceder, é bloqueado com alerta para inativar imóveis/usuários (**CASO 2**).
+- **Plano sem NFS-e** (Básico/Trial): emissão bloqueada por policy `PlanoComNfse` (**CASO 4**).
+- **Suspensa**: `AssinaturaSuspensaGuard` bloqueia todas as rotas exceto Login, Minha Conta e Pagamentos, redirecionando para pagamento (**CASO 5**).
 
 ```csharp
-// PlanoGuardMiddleware (resumo)
+// AssinaturaSuspensaGuard (resumo)
 if (assinatura.Status == StatusAssinatura.Suspensa && !RotaLiberadaNaSuspensao(path))
-    return Results.Problem(statusCode: 402, title: "Assinatura suspensa");
+    return Results.Problem(statusCode: 402, title: "Assinatura suspensa — regularize o pagamento");
 ```
+
+### Critérios de aceite ligados a tenant/plano
+
+| Critério | Garantia |
+|---|---|
+| CASO 1 — CPF único por cliente | índice `ux_usuario_cpf` + validação |
+| CASO 2 — downgrade x utilização | validação de aplicação (acima) |
+| CASO 3 — 1 contrato ativo por imóvel | índice `ux_contrato_imovel_ativo` |
+| CASO 4 — plano sem NFS-e | `plano.permite_nfse` + policy |
+| CASO 5 — suspensa bloqueia Home | `AssinaturaSuspensaGuard` |
+| CASO 6/7/8 — competência/faturamento | índices únicos parciais (doc 03) |
 
 ## 6. Considerações Supabase
 

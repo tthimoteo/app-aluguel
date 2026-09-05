@@ -1,35 +1,29 @@
 # 02 — Estrutura dos Projetos
 
-Solução .NET 9 organizada em **Clean Architecture**. Um único `Aluguel.sln` com projetos por camada, mais testes.
+O produto tem **dois repositórios/artefatos**: o **frontend Next.js 15** (deploy na Vercel) e o **backend .NET 9** (deploy em Render/Azure). Este documento detalha o backend em **Clean Architecture** e resume o frontend.
 
-## 1. Visão geral da solução
+## 1. Backend — solução .NET
 
 ```text
-app-aluguel/
+app-aluguel-api/
 ├── Aluguel.sln
-├── Directory.Build.props            # versões, nullable, langversion, analyzers
-├── Directory.Packages.props         # Central Package Management (versões centralizadas)
-├── docker-compose.yml               # Postgres + Redis + (Supabase local opcional)
-├── .editorconfig
-│
+├── Directory.Build.props            # nullable, langversion, analyzers
+├── Directory.Packages.props         # Central Package Management
+├── docker-compose.yml               # Postgres + Redis
 ├── src/
 │   ├── Aluguel.Domain/              # Núcleo: entidades, VOs, eventos, contratos
 │   ├── Aluguel.Application/         # Casos de uso (CQRS/MediatR), ports, validators
-│   ├── Aluguel.Infrastructure/      # EF Core, repositórios, adapters externos
-│   ├── Aluguel.Api/                 # ASP.NET Core Web API (host HTTP)
-│   └── Aluguel.Worker/              # Worker Service (jobs Quartz + processador Outbox)
-│
-├── tests/
-│   ├── Aluguel.Domain.UnitTests/
-│   ├── Aluguel.Application.UnitTests/
-│   ├── Aluguel.Infrastructure.IntegrationTests/   # Testcontainers (Postgres)
-│   └── Aluguel.Api.FunctionalTests/               # WebApplicationFactory
-│
-└── build/
-    └── migrations-bundle.sh         # gera bundle de migrations para CI/CD
+│   ├── Aluguel.Infrastructure/      # EF Core + Identity, repositórios, adapters
+│   ├── Aluguel.Api/                 # ASP.NET Core Web API
+│   └── Aluguel.Worker/              # Worker Service (Quartz + Outbox)
+└── tests/
+    ├── Aluguel.Domain.UnitTests/
+    ├── Aluguel.Application.UnitTests/
+    ├── Aluguel.Infrastructure.IntegrationTests/   # Testcontainers (Postgres)
+    └── Aluguel.Api.FunctionalTests/               # WebApplicationFactory + BDD (§18)
 ```
 
-## 2. Dependências entre projetos
+### Dependências entre projetos
 
 ```mermaid
 flowchart TD
@@ -42,165 +36,143 @@ flowchart TD
     INFRA --> DOMAIN
 ```
 
-> `Domain` **não** referencia nenhum outro projeto. `Application` referencia apenas `Domain`. `Infrastructure` referencia `Application` + `Domain`. Os hosts (`Api`, `Worker`) referenciam `Application` + `Infrastructure` (a última apenas para *wire-up* de DI na composição raiz).
-
-## 3. `Aluguel.Domain`
-
-Sem dependências de framework (nem EF, nem ASP.NET). Regras de negócio puras.
+## 2. `Aluguel.Domain`
 
 ```text
 Aluguel.Domain/
-├── Common/
-│   ├── Entity.cs                 # base com Id (Guid), domain events
-│   ├── AggregateRoot.cs
-│   ├── ITenantOwned.cs           # marca entidades com TenantId
-│   ├── ISoftDeletable.cs
-│   ├── IAuditable.cs             # CreatedAt/UpdatedAt/CreatedBy...
-│   └── ValueObject.cs
-├── Tenancy/
-│   └── Tenant.cs
-├── Clientes/
-│   ├── Cliente.cs                # agregado (PF/PJ)
-│   ├── TipoPessoa.cs (enum)
-│   └── StatusCliente.cs (enum)
-├── Usuarios/
-│   ├── Usuario.cs
-│   └── PerfilUsuario.cs (enum: Admin, Operador, ...)
-├── Assinaturas/
-│   ├── Assinatura.cs             # agregado + máquina de estados
-│   ├── PagamentoPlano.cs
-│   ├── Plano.cs                  # catálogo (Trial, Básico...)
-│   ├── StatusAssinatura.cs (enum)
-│   ├── AuditoriaAssinatura.cs
-│   └── Events/                   # AssinaturaAtivadaEvent, SuspensaEvent...
-├── Imoveis/
-│   ├── Imovel.cs
-│   ├── TipoImovel.cs (enum)
-│   └── StatusImovel.cs (enum)
-├── Inquilinos/
-│   └── Inquilino.cs
-├── Locacoes/
-│   ├── Contrato.cs               # vínculo imóvel <-> inquilino
-│   └── Recebimento.cs            # parcela mensal de aluguel
-├── Fiscal/
-│   ├── NotaFiscalServico.cs      # NFS-e
-│   ├── StatusNfse.cs (enum)
-│   ├── CertificadoDigital.cs
-│   └── DocumentoFiscal.cs        # metadados de arquivos no Storage
-├── Auditoria/
-│   └── AuditLog.cs
-├── ValueObjects/
-│   ├── Cpf.cs
-│   ├── Cnpj.cs
-│   ├── Dinheiro.cs               # (valor + moeda BRL)
-│   ├── Email.cs
-│   └── Endereco.cs
-└── Abstractions/
-    ├── IRepository.cs
-    ├── IUnitOfWork.cs
-    └── Repositories/             # IClienteRepository, IAssinaturaRepository...
+├── Common/            Entity, AggregateRoot, ITenantOwned, ISoftDeletable, IAuditable, ValueObject
+├── Tenancy/           Tenant
+├── Clientes/          Cliente (PF/PJ), TipoPessoa, StatusCliente
+├── Usuarios/          Usuario, PerfilUsuario (Gestor/Analista/AdminSistema), StatusUsuario (Ativo/Inativo/Bloqueado)
+├── Assinaturas/       Assinatura, PagamentoPlano, Plano, StatusAssinatura, AuditoriaAssinatura, Events/
+├── Imoveis/           Imovel, TipoImovel (Residencial/Comercial/Galpao/Sala/Outro), StatusImovel (Ativo/Inativo)
+├── Inquilinos/        Inquilino
+├── Contratos/         Contrato, StatusContrato (Ativo/Encerrado/Cancelado)
+├── Fiscal/            Faturamento (NFS-e), StatusNfse (Rascunho/EmProcessamento/Emitida/Rejeitada/
+│                      CancelamentoSolicitado/Cancelada), CertificadoDigital, DocumentoFiscal
+├── Financeiro/        Pagamento (aluguel), Despesa (IPTU/Outras), TipoDespesa
+├── Auditoria/         AuditLog
+├── ValueObjects/      Cpf, Cnpj, Dinheiro, Email, Endereco, Competencia
+└── Abstractions/      IRepository, IUnitOfWork, Repositories/
 ```
 
-## 4. `Aluguel.Application`
-
-Casos de uso via **MediatR** (Command/Query handlers). Define *ports* implementadas na Infra.
+## 3. `Aluguel.Application`
 
 ```text
 Aluguel.Application/
 ├── Common/
-│   ├── Behaviors/                # ValidationBehavior, LoggingBehavior, TransactionBehavior
-│   ├── Mappings/                 # perfis Mapster
-│   └── Exceptions/               # NotFound, PlanoLimiteExcedido, ...
-├── Abstractions/                 # PORTS (interfaces)
-│   ├── ICurrentTenant.cs         # resolve TenantId da requisição
-│   ├── ICurrentUser.cs
-│   ├── IFileStorage.cs           # Supabase Storage
-│   ├── IPagamentoGateway.cs      # Mercado Pago
-│   ├── INfseProvider.cs          # provedor NFS-e
-│   ├── ISecretProtector.cs       # cripto de senha de certificado
-│   ├── IEmailSender.cs
-│   └── IDateTimeProvider.cs
-├── Clientes/
-│   ├── Commands/ (Criar, Atualizar, ...)
-│   └── Queries/  (ObterPorId, Listar, ...)
-├── Usuarios/
-├── Assinaturas/
-│   ├── Commands/ (ContratarPlano, Upgrade, Downgrade, Cancelar, ProcessarWebhook)
-│   └── Queries/
-├── Imoveis/ · Inquilinos/ · Locacoes/
-├── Fiscal/
-│   ├── Commands/ (EmitirNfse, CancelarNfse, UploadCertificado)
-│   └── Queries/
-└── DependencyInjection.cs        # AddApplication()
+│   ├── Behaviors/     ValidationBehavior, LoggingBehavior, TransactionBehavior, AuditBehavior
+│   ├── Mappings/      perfis Mapster
+│   └── Exceptions/    NotFound, PlanoLimiteExcedido, CompetenciaJaFaturada, ContratoAtivoExistente...
+├── Abstractions/      (PORTS)
+│   ├── ICurrentTenant / ICurrentUser
+│   ├── IFileStorage           (Supabase Storage)
+│   ├── IPagamentoGateway      (Mercado Pago)
+│   ├── INfseNacionalProvider  (API Nacional da NFS-e)
+│   ├── ISecretProtector       (senha do certificado)
+│   ├── IPdfGenerator          (QuestPDF)
+│   ├── IPlanilhaExporter       (ClosedXML - XLSX/CSV)
+│   ├── IEmailSender / IDateTimeProvider
+├── Clientes/ · Usuarios/ · Imoveis/ · Inquilinos/ · Contratos/
+├── Assinaturas/   (ContratarPlano, Upgrade, Downgrade, Cancelar, ProcessarWebhook)
+├── Fiscal/        (EmitirNfse, CancelarNfse, ConsultarHistorico, UploadCertificado)
+├── Financeiro/    (RegistrarPagamento, RegistrarIptu, RegistrarDespesa)
+├── Relatorios/    (ContasAReceber, ContasAPagar, ExportarXlsxCsv)
+├── Home/          (Indicadores + filtros da tela inicial)
+└── DependencyInjection.cs
 ```
 
-## 5. `Aluguel.Infrastructure`
-
-Implementa persistência e integrações.
+## 4. `Aluguel.Infrastructure`
 
 ```text
 Aluguel.Infrastructure/
 ├── Persistence/
-│   ├── AppDbContext.cs
-│   ├── Configurations/           # IEntityTypeConfiguration<T> por entidade
-│   ├── Interceptors/
-│   │   ├── TenantSaveInterceptor.cs      # injeta TenantId ao inserir
-│   │   ├── AuditableInterceptor.cs       # CreatedAt/UpdatedAt
-│   │   ├── SoftDeleteInterceptor.cs
-│   │   └── OutboxInterceptor.cs          # captura domain events -> Outbox
-│   ├── Repositories/
-│   ├── Migrations/
-│   └── Outbox/ Inbox/
-├── Tenancy/
-│   ├── TenantResolver.cs         # lê claim tenant_id do JWT
-│   └── RlsConnectionInterceptor.cs  # SET app.tenant_id na conexão (RLS)
+│   ├── AppDbContext.cs           (herda IdentityDbContext<AppUser, AppRole, Guid>)
+│   ├── Configurations/           IEntityTypeConfiguration<T>
+│   ├── Interceptors/             Tenant, Auditable, SoftDelete, Outbox, RlsConnection
+│   ├── Repositories/ · Migrations/ · Outbox/ · Inbox/
+├── Identity/                     AppUser, AppRole, JwtTokenService, políticas de perfil
+├── Tenancy/                      TenantResolver (claim tenant_id/cliente_id)
 ├── Integrations/
-│   ├── MercadoPago/              # IPagamentoGateway
-│   ├── Nfse/                     # INfseProvider (ABRASF)
-│   ├── Storage/SupabaseStorage/  # IFileStorage
+│   ├── MercadoPago/              IPagamentoGateway
+│   ├── NfseNacional/             INfseNacionalProvider (API Nacional)
+│   ├── Storage/SupabaseStorage/  IFileStorage
 │   └── Email/
-├── Security/
-│   └── DataProtectionSecretProtector.cs  # ISecretProtector (AES/DataProtection)
-└── DependencyInjection.cs        # AddInfrastructure(config)
+├── Reporting/
+│   ├── QuestPdf/                 IPdfGenerator
+│   └── ClosedXml/                IPlanilhaExporter
+├── Security/                     DataProtectionSecretProtector (senha do certificado)
+└── DependencyInjection.cs
 ```
 
-## 6. `Aluguel.Api`
+## 5. `Aluguel.Api`
 
 ```text
 Aluguel.Api/
-├── Program.cs                    # composição raiz (DI, middlewares, pipeline)
-├── Controllers/                  # ClientesController, AssinaturasController, NfseController...
-├── Webhooks/                     # MercadoPagoWebhookController (idempotente)
-├── Middleware/
-│   ├── TenantMiddleware.cs
-│   ├── ExceptionHandlingMiddleware.cs   # ProblemDetails
-│   └── PlanoGuardMiddleware.cs          # bloqueia funções quando Suspensa
-├── Auth/                         # JWT bearer, policies (roles + plano)
+├── Program.cs
+├── Controllers/          Clientes, Usuarios, Imoveis, Inquilinos, Contratos,
+│                         Assinaturas, Nfse, Pagamentos, Despesas, Relatorios, Home
+├── Webhooks/             MercadoPagoWebhookController (idempotente + HMAC)
+├── Middleware/           TenantMiddleware, ExceptionHandling (ProblemDetails),
+│                         AssinaturaSuspensaGuard (CASO 5)
+├── Auth/                 JWT bearer, policies (perfis + plano)
 ├── appsettings.json
-└── Extensions/                   # Swagger, CORS, versionamento
+└── Extensions/           Swagger, CORS (origem Vercel), versionamento, rate limiting
 ```
 
-## 7. `Aluguel.Worker`
+## 6. `Aluguel.Worker`
 
 ```text
 Aluguel.Worker/
-├── Program.cs
-├── Jobs/
-│   ├── TrialExpiradoJob.cs             # trial -> suspensa/liberação manual
-│   ├── ToleranciaInadimplenciaJob.cs   # fim da tolerância -> suspensa
-│   ├── GerarCobrancaRenovacaoJob.cs
-│   ├── ReprocessarWebhookJob.cs
-│   └── ProcessarFilaNfseJob.cs
-├── Outbox/OutboxProcessor.cs           # publica eventos / dispara handlers
+├── Jobs/                 TrialExpiradoJob, ToleranciaInadimplenciaJob, GerarCobrancaRenovacaoJob,
+│                         ReprocessarWebhookJob, ProcessarFilaNfseJob (emissão/cancelamento)
+├── Outbox/OutboxProcessor.cs
 └── Scheduling/QuartzConfig.cs
 ```
 
-## 8. Convenções
+## 7. Frontend — Next.js 15 (resumo)
 
-- **Central Package Management** (`Directory.Packages.props`) para versionar pacotes uma única vez.
-- **Nullable** habilitado e *warnings as errors* nos analyzers.
-- Nomes de domínio em **português** (linguagem ubíqua do negócio); infraestrutura/técnico em inglês.
-- Migrations versionadas e aplicadas via *bundle* no deploy (nunca `EnsureCreated`).
-- Cada `Command`/`Query` tem seu *handler*, *validator* e testes.
+```text
+app-aluguel-web/                   # deploy na Vercel
+├── app/                           # App Router (Next.js 15)
+│   ├── (auth)/login
+│   ├── (app)/home                 # Home: filtros + indicadores + lista de imóveis
+│   ├── (app)/clientes             # somente admin do sistema
+│   ├── (app)/minha-conta          # gestor: plano/upgrade/histórico
+│   ├── (app)/relatorios
+│   └── (app)/imoveis|inquilinos|contratos
+├── components/ui/                 # shadcn/ui
+├── lib/api/                       # client REST (fetch + JWT)
+├── lib/theme/                     # tema claro/escuro (§13)
+├── charts/                        # Recharts (indicadores)
+└── next.config (next-pwa)         # PWA
+```
+
+Segue o design system **Lucrare** (skill `.cursor/skills/lucrare-frontend`) e Tailwind v4 + shadcn/ui.
+
+## 8. Pacotes NuGet principais
+
+```text
+Microsoft.EntityFrameworkCore                       9.*
+Npgsql.EntityFrameworkCore.PostgreSQL               9.*
+Microsoft.AspNetCore.Identity.EntityFrameworkCore   9.*
+Microsoft.AspNetCore.Authentication.JwtBearer       9.*
+EFCore.NamingConventions                            9.*    (snake_case)
+MediatR                                             12.*
+FluentValidation                                    11.*
+Mapster                                              7.*
+Quartz / Quartz.Extensions.Hosting                   3.*
+Polly                                                8.*
+QuestPDF                                            2025.*  (PDF)
+ClosedXML                                            0.104.* (XLSX)
+Serilog.AspNetCore + OpenTelemetry                   *
+```
+
+## 9. Convenções
+
+- **Central Package Management**; **Nullable** + *warnings as errors*.
+- Linguagem ubíqua em **português**; técnico em inglês.
+- Migrations versionadas e aplicadas via *bundle* no deploy.
+- Cada Command/Query com validator e testes; cenários **BDD (§18)** cobertos em `FunctionalTests`.
 
 Próximo: [03 — Modelo PostgreSQL](03-Modelo-PostgreSQL.md).

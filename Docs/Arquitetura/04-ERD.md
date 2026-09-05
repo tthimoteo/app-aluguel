@@ -1,8 +1,19 @@
 # 04 — ERD (Entity Relationship Diagram)
 
-Diagrama entidade-relacionamento completo da plataforma APP Aluguel. Renderiza no GitHub/Cursor (Mermaid).
+ERD completo, alinhado ao modelo da especificação (§15) e ao [03 — Modelo PostgreSQL](03-Modelo-PostgreSQL.md).
 
-## 1. Diagrama completo
+## 1. Resumo da especificação (§15)
+
+```text
+Cliente ├─ Imóvel (N) ├─ Usuário (N) └─ Certificado (1)
+Imóvel    └─ Contrato (N)
+Inquilino └─ Contrato (N)
+Contrato  ├─ NFS-e (N)
+NFS-e (1:1) Pagamentos
+AuditLog
+```
+
+## 2. Diagrama de domínio
 
 ```mermaid
 erDiagram
@@ -10,253 +21,202 @@ erDiagram
     PLANO  ||--o{ CLIENTE : "plano atual"
     PLANO  ||--o{ ASSINATURA : referencia
 
-    CLIENTE ||--o{ USUARIO : "tem"
-    CLIENTE ||--o{ ASSINATURA : "assina"
-    CLIENTE ||--o{ IMOVEL : "cadastra"
+    CLIENTE ||--o{ USUARIO : "tem (N)"
+    CLIENTE ||--o{ IMOVEL : "cadastra (N)"
     CLIENTE ||--o{ INQUILINO : "cadastra"
-    CLIENTE ||--o{ CONTRATO : "gerencia"
-    CLIENTE ||--o{ CERTIFICADO_DIGITAL : "possui"
-    CLIENTE ||--o{ NOTA_FISCAL_SERVICO : "emite"
-    CLIENTE ||--o{ AUDITORIA_ASSINATURA : "registra"
+    CLIENTE ||--o| CERTIFICADO_DIGITAL : "certificado (1 ativo)"
+    CLIENTE ||--o{ ASSINATURA : "assina"
 
     ASSINATURA ||--o{ PAGAMENTO_PLANO : "gera"
     ASSINATURA ||--o{ AUDITORIA_ASSINATURA : "audita"
 
-    IMOVEL ||--o{ CONTRATO : "objeto de"
-    INQUILINO ||--o{ CONTRATO : "parte de"
-    CONTRATO ||--o{ RECEBIMENTO : "origina"
+    IMOVEL ||--o{ CONTRATO : "objeto de (N)"
+    INQUILINO ||--o{ CONTRATO : "parte de (N)"
+    CONTRATO ||--o{ NOTA_FISCAL_SERVICO : "fatura (N)"
 
-    RECEBIMENTO ||--o| NOTA_FISCAL_SERVICO : "documenta"
-    NOTA_FISCAL_SERVICO ||--o{ DOCUMENTO_FISCAL : "arquivos"
+    IMOVEL ||--o{ NOTA_FISCAL_SERVICO : "referente a"
+    IMOVEL ||--o{ PAGAMENTO : "recebe"
+    IMOVEL ||--o{ DESPESA : "IPTU/outras"
 
-    USUARIO ||--o{ AUDITORIA_ASSINATURA : "executa"
+    NOTA_FISCAL_SERVICO ||--o| PAGAMENTO : "1:1 (opcional)"
+    NOTA_FISCAL_SERVICO ||--o{ DOCUMENTO_FISCAL : "XML/PDF/evento"
 
     TENANT {
         uuid id PK
         varchar nome
         varchar subdominio UK
-        boolean ativo
     }
-
     PLANO {
         uuid id PK
         varchar codigo UK
-        varchar nome
         int max_imoveis
         int max_usuarios
         boolean permite_nfse
-        int trial_dias
         numeric valor_mensal
     }
-
     CLIENTE {
         uuid id PK
         uuid tenant_id FK
         varchar tipo_pessoa
         uuid plano_id FK
         varchar status
-        varchar nome
         varchar cpf
-        varchar razao_social
         varchar cnpj
         varchar inscricao_municipal
-        varchar cnae
-        citext email
-        timestamptz deleted_at
+        varchar cnae_principal
     }
-
     USUARIO {
         uuid id PK
         uuid tenant_id FK
         uuid cliente_id FK
         varchar perfil
+        varchar status
         varchar nome
+        varchar cpf
         citext email
-        uuid auth_user_id
-        boolean ativo
     }
-
     ASSINATURA {
         uuid id PK
-        uuid tenant_id FK
         uuid cliente_id FK
         uuid plano_id FK
         varchar status
-        timestamptz data_inicio
         timestamptz data_fim_trial
         timestamptz proxima_cobranca
-        timestamptz inicio_tolerancia
-        timestamptz fim_ciclo_pago
-        numeric valor_mensal
         varchar mercadopago_subscription_id
     }
-
     PAGAMENTO_PLANO {
         uuid id PK
-        uuid tenant_id FK
         uuid assinatura_id FK
         numeric valor
-        timestamptz data_vencimento
-        timestamptz data_pagamento
         varchar status
         varchar metodo_pagamento
-        varchar mercadopago_payment_id UK
+        varchar mercadopago_payment_id
     }
-
     AUDITORIA_ASSINATURA {
         uuid id PK
-        uuid tenant_id FK
-        uuid assinatura_id FK
         uuid cliente_id FK
-        uuid usuario_id FK
         varchar evento
-        timestamptz data_hora
-        inet ip
         varchar plano_anterior
         varchar novo_plano
-        numeric valor
-        text descricao
+        inet ip
     }
-
-    IMOVEL {
-        uuid id PK
-        uuid tenant_id FK
-        uuid cliente_id FK
-        varchar codigo
-        varchar tipo
-        numeric valor_aluguel
-        varchar status
-        timestamptz deleted_at
-    }
-
-    INQUILINO {
-        uuid id PK
-        uuid tenant_id FK
-        uuid cliente_id FK
-        varchar tipo_pessoa
-        varchar nome
-        varchar documento
-        citext email
-        timestamptz deleted_at
-    }
-
-    CONTRATO {
-        uuid id PK
-        uuid tenant_id FK
-        uuid cliente_id FK
-        uuid imovel_id FK
-        uuid inquilino_id FK
-        numeric valor_aluguel
-        int dia_vencimento
-        date data_inicio
-        date data_fim
-        varchar status
-    }
-
-    RECEBIMENTO {
-        uuid id PK
-        uuid tenant_id FK
-        uuid cliente_id FK
-        uuid contrato_id FK
-        char competencia
-        numeric valor
-        date data_vencimento
-        date data_pagamento
-        varchar status
-    }
-
     CERTIFICADO_DIGITAL {
         uuid id PK
-        uuid tenant_id FK
         uuid cliente_id FK
         text storage_path
         varchar thumbprint
         timestamptz validade
         bytea senha_cifrada
-        boolean ativo
     }
-
+    IMOVEL {
+        uuid id PK
+        uuid cliente_id FK
+        varchar nome
+        varchar tipo
+        varchar numero_iptu
+        varchar numero_matricula
+        varchar status
+    }
+    INQUILINO {
+        uuid id PK
+        uuid cliente_id FK
+        varchar tipo_pessoa
+        varchar nome
+        varchar documento
+        varchar status
+    }
+    CONTRATO {
+        uuid id PK
+        uuid imovel_id FK
+        uuid inquilino_id FK
+        varchar numero_contrato
+        varchar status
+        date data_inicio
+        int dia_vencimento
+        numeric valor_aluguel
+        numeric juros_atraso_pct
+        numeric multa_atraso_pct
+        text anexo_path
+    }
     NOTA_FISCAL_SERVICO {
         uuid id PK
-        uuid tenant_id FK
-        uuid cliente_id FK
-        uuid recebimento_id FK
-        bigint numero_rps
-        bigint numero_nfse
-        varchar codigo_verificacao
-        numeric valor_servico
-        numeric valor_iss
+        uuid imovel_id FK
+        uuid contrato_id FK
+        char competencia
+        bigint numero
+        varchar serie
+        varchar chave_acesso
         varchar status
-        timestamptz emitida_em
-        timestamptz cancelada_em
+        numeric valor_faturado
+        uuid usuario_emissor_id
+        text motivo_cancelamento
+        varchar protocolo_cancelamento
     }
-
     DOCUMENTO_FISCAL {
         uuid id PK
-        uuid tenant_id FK
         uuid nfse_id FK
         varchar tipo
         text storage_path
         varchar content_hash
-        bigint tamanho_bytes
+    }
+    PAGAMENTO {
+        uuid id PK
+        uuid imovel_id FK
+        uuid nfse_id FK
+        char competencia
+        numeric valor_pago
+        date data_pagamento
+    }
+    DESPESA {
+        uuid id PK
+        uuid imovel_id FK
+        varchar tipo
+        varchar categoria
+        varchar fornecedor
+        char competencia
+        numeric valor
     }
 ```
 
-## 2. Tabelas de infraestrutura (não relacionadas por FK ao domínio)
+## 3. Infraestrutura (sem FK ao domínio) e Identity
 
 ```mermaid
 erDiagram
+    ASP_NET_USERS ||--o{ ASP_NET_USER_ROLES : tem
+    ASP_NET_ROLES ||--o{ ASP_NET_USER_ROLES : atribui
+
     AUDIT_LOG {
         bigint id PK
         uuid tenant_id
-        varchar entidade
-        uuid entidade_id
-        varchar acao
         uuid usuario_id
-        jsonb dados_antes
-        jsonb dados_depois
-        timestamptz data_hora
+        varchar acao
+        varchar tabela
+        uuid registro_id
+        jsonb valores_antes
+        jsonb valores_depois
+        inet ip
     }
-    OUTBOX_MESSAGE {
-        uuid id PK
-        uuid tenant_id
-        varchar tipo
-        jsonb conteudo
-        timestamptz ocorrido_em
-        timestamptz processado_em
-        int tentativas
-    }
-    INBOX_MESSAGE {
-        uuid id PK
-        varchar origem
-        varchar chave_externa
-        jsonb payload
-        timestamptz processado_em
-    }
+    OUTBOX_MESSAGE { uuid id PK  varchar tipo  jsonb conteudo  timestamptz processado_em }
+    INBOX_MESSAGE  { uuid id PK  varchar origem  varchar chave_externa  timestamptz processado_em }
+    ASP_NET_USERS  { uuid id PK  citext email  text password_hash  uuid tenant_id  uuid cliente_id  varchar perfil }
+    ASP_NET_ROLES  { uuid id PK  varchar name }
+    ASP_NET_USER_ROLES { uuid user_id PK  uuid role_id PK }
 ```
 
-## 3. Cardinalidades e regras
+> `USUARIO` (domínio) = `ASP_NET_USERS` estendido (`AppUser : IdentityUser<Guid>`), mantido no schema `identity` (doc 03/08).
 
-| Relacionamento | Cardinalidade | Regra de negócio |
+## 4. Cardinalidades e regras
+
+| Relacionamento | Cardinalidade | Regra |
 |---|---|---|
-| `tenant` → `cliente` | 1 : N | Isolamento multi-tenant; na prática 1 conta = 1 cliente principal. |
-| `plano` → `cliente` | 1 : N | Plano vigente do cliente (limites de imóveis/usuários). |
-| `cliente` → `usuario` | 1 : N | Limitado por `plano.max_usuarios`. |
-| `cliente` → `assinatura` | 1 : N (1 vigente) | Índice único garante 1 assinatura em Trial/Pendente/Ativa. |
-| `assinatura` → `pagamento_plano` | 1 : N | Histórico de cobranças Mercado Pago. |
-| `assinatura`/`cliente` → `auditoria_assinatura` | 1 : N | Um registro por transição de estado. |
-| `cliente` → `imovel` | 1 : N | Limitado por `plano.max_imoveis`. |
-| `cliente` → `inquilino` | 1 : N | — |
-| `imovel` + `inquilino` → `contrato` | N : 1 cada | Um contrato liga um imóvel a um inquilino. |
-| `contrato` → `recebimento` | 1 : N | Uma parcela por competência (índice único). |
-| `recebimento` → `nota_fiscal_servico` | 1 : 0..1 | NFS-e opcional, só em planos com `permite_nfse`. |
-| `nota_fiscal_servico` → `documento_fiscal` | 1 : N | XML, PDF e RPS armazenados no Supabase Storage. |
-| `cliente` → `certificado_digital` | 1 : N (1 ativo) | Certificado A1 obrigatório para emitir NFS-e. |
-
-## 4. Notas de integridade
-
-- Todas as FKs de negócio carregam também `tenant_id` para reforço de isolamento e índices compostos eficientes.
-- `deleted_at` implementa *soft delete* — no cancelamento de assinatura os dados são preservados (exigência da especificação).
-- Chaves de idempotência: `pagamento_plano.mercadopago_payment_id` (único) e `inbox_message(origem, chave_externa)` (único).
+| `cliente` → `imovel` | 1 : N | Limitado por `plano.max_imoveis` (CASO 2). |
+| `cliente` → `usuario` | 1 : N | Limitado por `plano.max_usuarios`; CPF único por cliente (CASO 1). |
+| `cliente` → `certificado_digital` | 1 : 0..1 ativo | Obrigatório para emitir NFS-e. |
+| `imovel` → `contrato` | 1 : N (1 ativo) | Só 1 contrato `Ativo` por imóvel ⇒ 1 inquilino por vez (CASO 3). |
+| `contrato` → `nota_fiscal_servico` | 1 : N | 1 faturamento não-cancelado por competência (CASO 6/7/8). |
+| `nota_fiscal_servico` → `pagamento` | 1 : 0..1 | `pagamento.nfse_id` opcional (§12). |
+| `nota_fiscal_servico` → `documento_fiscal` | 1 : N | XML, PDF e XML do evento de cancelamento. |
+| `imovel` → `pagamento` / `despesa` | 1 : N | Pagamento único por competência (CASO 6). |
+| `assinatura` → `pagamento_plano` | 1 : N | Cobranças Mercado Pago. |
 
 Próximo: [05 — Entidades do Entity Framework](05-Entidades-EntityFramework.md).

@@ -1,83 +1,90 @@
 # 01 — Arquitetura da Solução
 
-> Plataforma **APP Aluguel** — SaaS multi-tenant para gestão de locações, recebimentos, inadimplência e emissão de **NFS-e**, operada pela **Lucrare Contabilidade Estratégia LTDA** (CNPJ 51.095.456/0001-13).
+> Plataforma **APP Aluguel** — SaaS multi-tenant para gestão de locações, recebimentos, inadimplência e emissão de **NFS-e** (via **API Nacional da NFS-e**), operada pela **Lucrare Contabilidade Estratégia LTDA** (CNPJ 51.095.456/0001-13), hospedada em subdomínio de `lucrarecontabilidade.com.br`.
 
-## 1. Objetivos arquiteturais
+## 1. Stack oficial (definida na especificação, §19)
+
+| Camada | Tecnologia |
+|---|---|
+| **Frontend** | **Next.js 15** · React 19 · TypeScript · Tailwind v4 · shadcn/ui · Lucide · **Recharts** · **next-pwa** |
+| **Backend** | **.NET 9 Web API** · **EF Core** · **FluentValidation** · **JWT** · **ASP.NET Core Identity** · **QuestPDF** (PDF) · **ClosedXML** (XLSX) |
+| **Banco** | **PostgreSQL** (Supabase) |
+| **Storage** | **Supabase Storage** |
+| **Pagamentos** | **Mercado Pago** (assinaturas + webhooks) |
+| **NFS-e** | **API Nacional da NFS-e** (primeiro momento) |
+| **Hospedagem** | **Vercel** (frontend) · **Render** ou **Azure App Service** (backend) · **Supabase** (DB + Storage) |
+
+Complementos de backend adotados: **MediatR** (CQRS leve), **Mapster**, **Quartz.NET** (jobs), **Polly** (resiliência), **Serilog + OpenTelemetry** (observabilidade).
+
+## 2. Objetivos arquiteturais
 
 | Objetivo | Como é atendido |
 |---|---|
-| **Multi-tenant** com isolamento lógico forte | Banco único PostgreSQL com coluna `tenant_id` + *EF Core global query filters* + **RLS** (Row Level Security) do PostgreSQL como segunda barreira. Ver [06 — Multi-tenant](06-Estrategia-Multi-Tenant.md). |
-| **Segurança fiscal** (certificado A1, XML/PDF de NFS-e) | Segredos e senha do certificado criptografados no backend; arquivos em **Supabase Storage** com buckets privados e *signed URLs*. Ver [07](07-Estrategia-Supabase-Storage.md). |
-| **Cobrança recorrente confiável** (Mercado Pago) | Webhooks idempotentes + *Outbox/Inbox pattern* + *state machine* de assinatura + jobs agendados de tolerância/suspensão. |
-| **Auditoria completa** | Tabela `auditoria_assinatura` + `audit_log` genérico gravados de forma assíncrona (interceptor EF + domain events). |
-| **Resiliência de integrações externas** | Polly (retry/circuit breaker), fila de reprocessamento, workers desacoplados. |
-| **Escalabilidade horizontal** | API *stateless* (JWT), jobs em processo worker separado, banco gerenciado (Supabase). |
-| **Observabilidade** | Serilog estruturado + OpenTelemetry (traces/metrics) + health checks. |
+| **Multi-tenant com segregação total** (RNF §14) | `tenant_id` em todas as tabelas + *EF Core global query filters* + **RLS** do PostgreSQL. Um usuário nunca vê dados de outro cliente. Ver [06](06-Estrategia-Multi-Tenant.md). |
+| **Segurança fiscal** (certificado A1) | Arquivo PFX no bucket `certificates`; **senha criptografada** no backend, nunca exposta ao frontend. Ver [07](07-Estrategia-Supabase-Storage.md). |
+| **Cobrança recorrente confiável** | Mercado Pago + webhooks idempotentes (Inbox) + *state machine* de assinatura + jobs de tolerância/suspensão/reativação. |
+| **Trilha de auditoria completa** | `audit_log` genérico (login, emissão, cancelamento, pagamento, despesas, alteração cadastral) + `auditoria_assinatura`. |
+| **Emissão/cancelamento de NFS-e** | Módulo fiscal integrando a **API Nacional da NFS-e**; XML/PDF/chave de acesso persistidos e disponíveis para download. |
+| **Performance** (RNF: < 2s, paginação) | Consultas paginadas, índices, cache Redis, projeções (sem *over-fetch*). |
+| **LGPD + Backup** | *Soft delete* (dados não excluídos no cancelamento), backup diário e retenção mínima de 90 dias. |
 
-## 2. Estilo arquitetural
+## 3. Estilo arquitetural
 
-Adotamos **Clean Architecture / Onion** com pitadas de **DDD tático** (agregados, domain events, value objects) e **CQRS leve** via *MediatR* (separação de *Commands* e *Queries*, sem event sourcing).
+**Clean Architecture / Onion** com **DDD tático** (agregados, domain events, value objects) e **CQRS leve** via MediatR.
 
 ```mermaid
 flowchart TD
-    subgraph Client["Clientes"]
-      WEB["Frontend Web SPA<br/>(React - Lucrare)"]
+    subgraph Client["Clientes / Externos"]
+      WEB["Frontend Next.js 15 (PWA)<br/>Vercel"]
       MP["Mercado Pago<br/>(Webhooks)"]
-      PREF["Prefeitura / Provedor NFS-e<br/>(ABRASF / API municipal)"]
+      NFSE["API Nacional da NFS-e"]
     end
 
-    subgraph Edge["Borda"]
-      GW["API Gateway / Reverse Proxy<br/>(YARP ou Nginx + TLS)"]
+    subgraph App["Backend .NET 9 (Render / Azure App Service)"]
+      API["ASP.NET Core Web API<br/>REST + JWT (ASP.NET Identity)"]
+      WORKER["Worker Service<br/>(Quartz jobs + Outbox)"]
     end
 
-    subgraph App["Aplicação .NET 9"]
-      API["ASP.NET Core Web API<br/>(REST + JWT)"]
-      WORKER["Worker Service<br/>(Jobs agendados + fila)"]
-    end
-
-    subgraph Data["Dados & Infra"]
-      PG[("PostgreSQL<br/>(Supabase / RLS)")]
+    subgraph Data["Dados & Infra (Supabase)"]
+      PG[("PostgreSQL<br/>(RLS + Identity)")]
       REDIS[("Redis<br/>cache + fila leve")]
-      STORAGE[["Supabase Storage<br/>(buckets privados)"]]
-      AUTH["Supabase Auth (GoTrue)<br/>emissor de JWT"]
+      STORAGE[["Supabase Storage<br/>contracts/certificates/<br/>nfse-xml/nfse-pdf/reports"]]
     end
 
-    WEB -->|HTTPS| GW --> API
-    MP -->|webhook HTTPS| GW
+    WEB -->|HTTPS + Bearer JWT| API
+    MP -->|webhook HTTPS assinado| API
     API <-->|EF Core / Npgsql| PG
     API <--> REDIS
-    API -->|signed URL / SDK| STORAGE
-    API -->|valida JWT| AUTH
-    WEB -->|login| AUTH
+    API -->|signed URL / SDK S3| STORAGE
     WORKER <-->|EF Core| PG
     WORKER <--> REDIS
-    WORKER -->|emite / cancela| PREF
+    WORKER -->|emite / cancela NFS-e| NFSE
     WORKER -->|consulta cobrança| MP
     WORKER -->|salva XML/PDF| STORAGE
 ```
 
-## 3. Camadas (Clean Architecture)
+## 4. Camadas (Clean Architecture)
 
 ```mermaid
 flowchart LR
     subgraph Domain["Domain (núcleo)"]
-      D1["Entidades / Agregados<br/>Cliente, Assinatura, Imovel,<br/>Inquilino, Recebimento, NfSe..."]
-      D2["Value Objects<br/>Cpf, Cnpj, Dinheiro, Endereco"]
-      D3["Domain Events + Interfaces<br/>de repositório"]
+      D1["Agregados: Cliente, Assinatura,<br/>Imovel, Contrato, Faturamento(NFS-e),<br/>Pagamento, Despesa..."]
+      D2["Value Objects: Cpf, Cnpj,<br/>Dinheiro, Endereco, Competencia"]
+      D3["Domain Events + contratos<br/>de repositório"]
     end
-    subgraph Application["Application (casos de uso)"]
+    subgraph Application["Application"]
       A1["Commands / Queries (MediatR)"]
       A2["Validators (FluentValidation)"]
-      A3["DTOs, Ports (interfaces de<br/>Storage, Fiscal, Pagamento)"]
+      A3["Ports: Storage, Fiscal (NFS-e),<br/>Pagamento, PDF, Planilha, E-mail"]
     end
     subgraph Infrastructure["Infrastructure"]
-      I1["EF Core DbContext + Migrations"]
-      I2["Repositórios, Interceptors<br/>(auditoria, tenant, outbox)"]
-      I3["Adapters: MercadoPago, NFS-e,<br/>Supabase Storage, E-mail"]
+      I1["EF Core + Identity + Migrations"]
+      I2["Interceptors (tenant, auditoria,<br/>soft delete, outbox)"]
+      I3["Adapters: MercadoPago, API Nacional NFS-e,<br/>Supabase Storage, QuestPDF, ClosedXML"]
     end
     subgraph Presentation["Presentation"]
-      P1["Web API (Controllers/Minimal)"]
-      P2["Worker (HostedServices/Jobs)"]
+      P1["Web API (Controllers)"]
+      P2["Worker (Quartz + Outbox)"]
     end
 
     Presentation --> Application --> Domain
@@ -86,21 +93,21 @@ flowchart LR
     Presentation --> Infrastructure
 ```
 
-Regra de dependência: **tudo aponta para o `Domain`**; `Domain` não referencia nada externo. `Application` define *ports* (interfaces) e `Infrastructure` implementa os *adapters*.
+Regra de dependência: **tudo aponta para o `Domain`**; `Domain` não referencia nada externo.
 
-## 4. Componentes de aplicação
+## 5. Componentes de aplicação
 
 | Componente | Responsabilidade |
 |---|---|
-| **API (`Aluguel.Api`)** | Endpoints REST, autenticação/autorização, validação de plano (limites de imóveis/usuários), recepção de webhooks Mercado Pago (assíncrono via Outbox). |
-| **Worker (`Aluguel.Worker`)** | Jobs recorrentes: verificação de trial expirado, período de tolerância, suspensão por inadimplência, geração de cobranças, processamento de fila de emissão de NFS-e, reprocessamento de webhooks. |
-| **Módulo Fiscal** | Orquestra emissão/cancelamento de NFS-e usando o certificado A1 do tenant; persiste XML/PDF e trilha fiscal. |
-| **Módulo Billing** | *State machine* de `Assinatura`, integração Mercado Pago (assinaturas/pagamentos), upgrade/downgrade com validação de limites. |
-| **Módulo Storage** | Abstração sobre Supabase Storage (upload, signed URL, versionamento de documentos). |
+| **API (`Aluguel.Api`)** | Endpoints REST, autenticação/autorização (Identity + JWT, perfis Gestor/Analista/AdminSistema), validação de plano/limites, guarda de assinatura suspensa, recepção de webhooks Mercado Pago. |
+| **Worker (`Aluguel.Worker`)** | Jobs: trial expirado, tolerância, suspensão, reativação, geração de cobrança, fila de emissão/cancelamento de NFS-e, reprocessamento de webhooks. |
+| **Módulo Fiscal** | Emissão/cancelamento via API Nacional da NFS-e; controle de competência; persistência de XML/PDF/chave. |
+| **Módulo Billing** | *State machine* de `Assinatura`; Mercado Pago; upgrade/downgrade com validação de limites. |
+| **Módulo Financeiro** | Faturamento, registro de pagamentos de aluguel, IPTU e outras despesas. |
+| **Módulo Relatórios** | Exportação XLSX/CSV (ClosedXML) e PDF (QuestPDF): Contas a Receber, Contas a Pagar, faturamentos. |
+| **Módulo Storage** | Abstração sobre Supabase Storage (upload, signed URL). |
 
-## 5. Máquina de estados da Assinatura
-
-Regras extraídas da especificação (Trial 7 dias → tolerância 7 dias → suspensão; reativação automática via webhook; cancelamento mantém acesso até o fim do ciclo).
+## 6. Máquina de estados da Assinatura
 
 ```mermaid
 stateDiagram-v2
@@ -116,40 +123,39 @@ stateDiagram-v2
     Suspensa --> [*]
     note right of Suspensa
       Permitido: Login, Minha Conta, Pagamentos.
-      Bloqueado: demais funcionalidades.
+      Bloqueado: demais funcionalidades (CASO 5).
       Dados nunca são excluídos.
     end note
 ```
 
-Cada transição gera um registro em `auditoria_assinatura` (Cliente, Usuário, Data/Hora, IP, Plano anterior, Novo plano, Valor, Descrição).
+Cada transição gera `auditoria_assinatura` (Cliente, Usuário, Data/Hora, IP, Plano anterior, Novo plano, Valor, Descrição).
 
-## 6. Fluxos-chave
+## 7. Fluxos-chave
 
-### 6.1 Contratação de plano (com Mercado Pago)
+### 7.1 Contratação de plano (Mercado Pago)
 
 ```mermaid
 sequenceDiagram
-    participant U as Usuário
+    participant U as Usuário (Gestor)
     participant API as API
     participant DB as PostgreSQL
     participant MP as Mercado Pago
     participant W as Worker
 
-    U->>API: POST /assinaturas (planoId)
+    U->>API: POST /assinaturas (planoId) [Minha Conta]
     API->>API: valida limites do novo plano
     API->>DB: cria Assinatura (PendentePagamento)
-    API->>MP: cria preference/preapproval
-    MP-->>API: init_point (URL de pagamento)
+    API->>MP: cria preapproval/preference
+    MP-->>API: init_point
     API-->>U: redirect init_point
     U->>MP: paga (PIX/cartão)
-    MP-->>API: webhook (payment.updated)
-    API->>DB: grava Inbox (idempotente) + Outbox
-    W->>MP: consulta status do pagamento
-    W->>DB: Assinatura -> Ativa, PagamentoPlano -> Pago
-    W->>DB: auditoria + liberação fiscal (se plano permitir)
+    MP-->>API: webhook (payment)
+    API->>DB: Inbox (idempotente) + Outbox
+    W->>MP: consulta status
+    W->>DB: Assinatura para Ativa (libera fiscal se plano permitir)
 ```
 
-### 6.2 Emissão de NFS-e
+### 7.2 Emissão de NFS-e (API Nacional)
 
 ```mermaid
 sequenceDiagram
@@ -158,53 +164,50 @@ sequenceDiagram
     participant DB as PostgreSQL
     participant ST as Supabase Storage
     participant W as Worker
-    participant PR as Provedor NFS-e
+    participant NAC as API Nacional NFS-e
 
-    U->>API: POST /nfse (recebimentoId)
-    API->>API: verifica plano permite NFS-e + assinatura Ativa
-    API->>DB: cria NotaFiscalServico (Processando) + Outbox
+    U->>API: POST /nfse (contrato, competência, descontos, multa, juros)
+    API->>API: valida plano permite NFS-e + assinatura Ativa (CASO 4/5)
+    API->>DB: valida competência (CASO 6/7/8) e cria Faturamento (Rascunho/EmProcessamento)
     W->>ST: baixa certificado A1 (senha descriptografada em memória)
-    W->>PR: envia RPS assinado (XML)
-    PR-->>W: número/protocolo NFS-e
-    W->>ST: salva XML + PDF (bucket privado do tenant)
-    W->>DB: NotaFiscalServico -> Autorizada + trilha fiscal
-    W-->>U: notificação (SignalR/e-mail)
+    W->>NAC: envia emissão
+    NAC-->>W: número, série, chave de acesso, XML, PDF, status
+    W->>ST: salva XML (nfse-xml) + PDF (nfse-pdf)
+    W->>DB: Faturamento para Emitida + histórico (usuário emissor, data)
 ```
 
-## 7. Stack tecnológico
+### 7.3 Cancelamento de NFS-e
 
-| Camada | Tecnologia |
-|---|---|
-| Runtime | **.NET 9 / C# 13** |
-| API | ASP.NET Core Web API (Controllers) + **MediatR** + **FluentValidation** + **Mapster** |
-| ORM | **EF Core 9** + **Npgsql** |
-| Banco | **PostgreSQL 16** (Supabase gerenciado) |
-| Storage | **Supabase Storage** (S3-compatível) |
-| Auth | **Supabase Auth (GoTrue)** emitindo JWT, validado pela API (ver [08](08-Estrategia-Autenticacao.md)) |
-| Jobs | **Quartz.NET** (agendados) + Outbox para eventos |
-| Cache/fila leve | **Redis** (StackExchange.Redis) |
-| Resiliência | **Polly** |
-| Observabilidade | **Serilog** + **OpenTelemetry** + HealthChecks |
-| Fiscal | Biblioteca ABRASF/NFS-e (ex.: integração com provedor municipal) + assinatura XML (`System.Security.Cryptography.Xml`) |
-| Pagamento | SDK/HTTP **Mercado Pago** (Assinaturas/Preapproval + Payments) |
-| Testes | xUnit + FluentAssertions + Testcontainers (PostgreSQL) |
-| CI/CD | GitHub Actions + EF Core migrations bundle |
-| Container | Docker (multi-stage) |
+```mermaid
+sequenceDiagram
+    participant U as Usuário
+    participant API as API
+    participant W as Worker
+    participant NAC as API Nacional NFS-e
+    participant DB as PostgreSQL
+    participant ST as Supabase Storage
 
-## 8. Ambientes
+    U->>API: POST /nfse/{id}/cancelamento (motivo)
+    API->>DB: status para CancelamentoSolicitado + Outbox
+    W->>NAC: envia evento de cancelamento
+    NAC-->>W: protocolo + XML do evento
+    W->>ST: salva XML do evento (nfse-xml)
+    W->>DB: status para Cancelada (motivo, protocolo) + log no histórico
+```
+
+## 8. Requisitos não funcionais (§14)
+
+- **Segurança**: HTTPS obrigatório; senhas com hash (ASP.NET Identity); **MFA opcional**; segregação total entre tenants (RLS); LGPD.
+- **Performance**: telas < 2s (índices, cache, paginação obrigatória em listas).
+- **Backup**: diário, retenção mínima de 90 dias (PITR do Supabase + export de documentos fiscais).
+- **Idempotência**: webhooks via `inbox_message` com chave única.
+
+## 9. Ambientes
 
 | Ambiente | Descrição |
 |---|---|
-| **Local** | Docker Compose (PostgreSQL + Redis + Supabase local opcional). |
-| **Staging** | Supabase (projeto dedicado) + deploy container. Mercado Pago em *sandbox*, NFS-e em homologação. |
-| **Produção** | Subdomínio da Lucrare, Supabase produção, certificados reais, NFS-e em produção. |
-
-## 9. Requisitos não-funcionais
-
-- **Segurança**: TLS obrigatório; senha de certificado nunca trafega ao frontend; segredos em *secret manager*/variáveis de ambiente; RLS no banco.
-- **LGPD**: dados de clientes/inquilinos com base legal; *soft delete* (dados não são apagados no cancelamento) e trilha de auditoria.
-- **Idempotência**: todo webhook processado via `Inbox` com chave única do provedor.
-- **Disponibilidade**: API stateless permite múltiplas réplicas atrás do gateway.
-- **Backups**: PITR do Supabase + export periódico de documentos fiscais.
+| **Local** | Docker Compose (PostgreSQL + Redis) + Supabase local opcional; Mercado Pago e NFS-e em *sandbox*/homologação. |
+| **Staging** | Backend em Render/Azure, Supabase dedicado, integrações em homologação. |
+| **Produção** | Subdomínio da Lucrare (frontend na Vercel), Supabase produção, NFS-e e Mercado Pago em produção. |
 
 Próximo: [02 — Estrutura dos Projetos](02-Estrutura-dos-Projetos.md).

@@ -11,25 +11,29 @@ Armazenamento de arquivos fiscais (XML/PDF de NFS-e, RPS) e **certificados digit
 3. **Isolamento por tenant** no caminho (path) do objeto + políticas de Storage.
 4. **Defesa em profundidade para o certificado**: o arquivo PFX fica no Storage; a **senha** fica no banco criptografada (`certificado_digital.senha_cifrada`) com chave gerenciada pela aplicação (`ISecretProtector`), nunca no Storage nem no frontend.
 
-## 2. Buckets
+## 2. Buckets (§16)
 
-| Bucket | Conteúdo | Público | Retenção |
-|---|---|---|---|
-| `certificados` | PFX/P12 dos clientes | Não | Enquanto válido + histórico |
-| `nfse` | XML e PDF de NFS-e autorizadas/canceladas | Não | Legal (mín. 5 anos) |
-| `rps` | RPS gerados/assinados | Não | Legal |
-| `anexos` | Documentos gerais (contratos, comprovantes) | Não | Configurável |
+Os cinco buckets são exatamente os definidos na especificação. Todos **privados**.
+
+| Bucket | Conteúdo | Retenção |
+|---|---|---|
+| `contracts` | Contratos de aluguel anexados (§9) | Configurável |
+| `certificates` | Certificados A1 (PFX/P12) dos clientes | Enquanto válido + histórico |
+| `nfse-xml` | XML de NFS-e e XML do evento de cancelamento | Legal (mín. 5 anos) |
+| `nfse-pdf` | PDF (DANFSe) das NFS-e | Legal |
+| `reports` | Relatórios/exportações geradas (XLSX/CSV/PDF) | Temporária |
 
 ## 3. Convenção de caminho (path)
 
 Prefixo sempre iniciando pelo `tenant_id`, permitindo políticas de Storage baseadas no primeiro segmento:
 
 ```text
-certificados/{tenant_id}/{cliente_id}/{certificado_id}.pfx
-nfse/{tenant_id}/{cliente_id}/{ano}/{mes}/{nfse_id}.xml
-nfse/{tenant_id}/{cliente_id}/{ano}/{mes}/{nfse_id}.pdf
-rps/{tenant_id}/{cliente_id}/{ano}/{mes}/{nfse_id}.xml
-anexos/{tenant_id}/{cliente_id}/{entidade}/{id}/{arquivo}
+contracts/{tenant_id}/{cliente_id}/{contrato_id}.pdf
+certificates/{tenant_id}/{cliente_id}/{certificado_id}.pfx
+nfse-xml/{tenant_id}/{cliente_id}/{ano}/{mes}/{nfse_id}.xml
+nfse-xml/{tenant_id}/{cliente_id}/{ano}/{mes}/{nfse_id}-cancelamento.xml
+nfse-pdf/{tenant_id}/{cliente_id}/{ano}/{mes}/{nfse_id}.pdf
+reports/{tenant_id}/{usuario_id}/{report_id}.xlsx
 ```
 
 Os metadados (path, hash, tamanho) ficam em `documento_fiscal` / `certificado_digital` (doc 03), que são a fonte de verdade e respeitam a RLS do PostgreSQL.
@@ -106,21 +110,21 @@ sequenceDiagram
 Além do backend mediar o acesso, aplicamos políticas em `storage.objects` para o caso de credenciais escopadas por usuário (defesa extra), usando o primeiro segmento do path como `tenant_id`:
 
 ```sql
--- Leitura restrita ao tenant do JWT (quando acesso via session token do usuário)
-CREATE POLICY "tenant_read_nfse"
+-- Leitura restrita ao tenant (quando acesso via session token do usuário)
+CREATE POLICY "tenant_read_nfse_pdf"
 ON storage.objects FOR SELECT
 USING (
-    bucket_id = 'nfse'
+    bucket_id = 'nfse-pdf'
     AND (storage.foldername(name))[1] = (auth.jwt() ->> 'tenant_id')
 );
 
 -- Escrita apenas pelo role de serviço (uploads server-side)
-CREATE POLICY "service_write_nfse"
+CREATE POLICY "service_write_nfse_xml"
 ON storage.objects FOR INSERT
-WITH CHECK ( bucket_id = 'nfse' AND auth.role() = 'service_role' );
+WITH CHECK ( bucket_id = 'nfse-xml' AND auth.role() = 'service_role' );
 ```
 
-> O bucket `certificados` **não** recebe política de leitura por usuário — acesso somente pelo *service role* do backend.
+> Como o backend .NET roda em **Render/Azure** (fora da borda do Supabase), o acesso padrão é **server-side** com Access Key/Secret; o app emite *signed URLs* para o frontend. As políticas acima valem caso se opte por credenciais escopadas por usuário. O bucket `certificates` **nunca** recebe política de leitura por usuário — acesso somente pelo backend.
 
 ## 8. Backup, integridade e LGPD
 

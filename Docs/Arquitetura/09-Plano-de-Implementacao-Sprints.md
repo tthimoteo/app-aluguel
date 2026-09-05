@@ -1,172 +1,155 @@
 # 09 — Plano de Implementação (Sprints)
 
-Divisão em **incrementos verticais** (sprints) que entregam valor testável a cada iteração. Cada sprint tem objetivo, entregáveis e *Definition of Done* (DoD). As sprints são iterações lógicas com escopo fechado; a equipe pode *time-boxá-las* conforme sua cadência — a ordenação abaixo respeita as dependências técnicas, não um calendário fixo.
+Incrementos verticais alinhados à **prioridade de MVP (§20)**, aos **casos de uso (§17)** e aos **critérios de aceite BDD (§18)**. Cada sprint tem objetivo, entregáveis e *Definition of Done*. São iterações de escopo fechado (a equipe define o *time-box*); a ordem respeita as dependências técnicas.
 
-## Visão geral
+## Prioridade de MVP (§20)
+
+`1. Home · 2. Menu · 3. Clientes · 4. Usuários · 5. Imóveis · 6. Inquilinos · 7. Controle de planos · 8. Emissão de NFS-e · 9. Histórico · 10. Registro de pagamentos · 11. Relatórios básicos`
 
 ```mermaid
 flowchart LR
-    S0["S0 · Fundação"] --> S1["S1 · Auth + Tenant + Cadastros base"]
-    S1 --> S2["S2 · Locação (imóveis→recebimentos)"]
-    S1 --> S3["S3 · Assinaturas + Mercado Pago"]
-    S3 --> S4["S4 · Inadimplência + Jobs + Estado"]
-    S2 --> S5["S5 · Fiscal: Certificado + Emissão NFS-e"]
-    S5 --> S6["S6 · NFS-e Cancelamento + Documentos + Auditoria"]
-    S4 --> S7["S7 · Hardening, Observabilidade e Deploy"]
-    S6 --> S7
+    S0["S0 · Fundação"] --> S1["S1 · Auth + Tenant + Clientes/Usuários"]
+    S1 --> S2["S2 · Imóveis, Inquilinos, Contratos + Home/Menu"]
+    S1 --> S3["S3 · Planos + Assinatura + Mercado Pago"]
+    S3 --> S4["S4 · Inadimplência + Jobs"]
+    S2 --> S5["S5 · Certificado + Emissão NFS-e (API Nacional)"]
+    S5 --> S6["S6 · Cancelamento NFS-e + Pagamentos + Despesas + Histórico"]
+    S6 --> S7["S7 · Relatórios/Contabilidade + Auditoria"]
+    S4 --> S8["S8 · Hardening, PWA, Deploy"]
+    S7 --> S8
 ```
 
 ---
 
 ## Sprint 0 — Fundação técnica
+**Objetivo:** esqueleto pronto para features.
+- Solução .NET 9 (`Domain/Application/Infrastructure/Api/Worker`) + repositório frontend Next.js 15.
+- Docker Compose (Postgres + Redis) + projeto Supabase (staging).
+- `AppDbContext` (IdentityDbContext) + naming snake_case + migration inicial (`tenant`, `plano` seed).
+- CI (build, testes, format, migrations bundle); Serilog + HealthChecks + Swagger; ProblemDetails.
 
-**Objetivo:** esqueleto da solução pronto para receber features.
-
-- Solução .NET 9 com projetos `Domain/Application/Infrastructure/Api/Worker` (doc 02) + `Directory.Packages.props`.
-- Docker Compose (PostgreSQL 16 + Redis) e projeto Supabase (staging).
-- `AppDbContext` inicial, *naming conventions* snake_case, primeira migration (`tenant`, `plano` + seed).
-- Pipeline CI (build, testes, `dotnet format`, migrations bundle) no GitHub Actions.
-- Serilog + HealthChecks + Swagger; `ProblemDetails` global.
-- Testcontainers configurado nos testes de integração.
-
-**DoD:** `docker compose up` sobe API/Worker; migration aplica no Supabase; CI verde; `/health` OK.
+**DoD:** `docker compose up` sobe API/Worker; migration aplica; CI verde; `/health` OK.
 
 ---
 
-## Sprint 1 — Autenticação, Multi-tenant e Cadastros base
+## Sprint 1 — Autenticação, Multi-tenant, Clientes e Usuários (MVP 3, 4)
+**Objetivo:** login real, isolamento e cadastros de conta.
+- **ASP.NET Identity + JWT** (perfis Gestor/Analista/AdminSistema, status) — doc 08.
+- `ICurrentTenant/ICurrentUser`, `TenantMiddleware`, global query filter + **RLS** — doc 06.
+- **UC001** Cadastrar Cliente (PF/PJ); **UC002** Criar Usuário; provisionamento do 1º usuário (Gestor) para PF.
+- Interceptors (tenant, auditável, soft delete, audit log).
 
-**Objetivo:** login real, isolamento por tenant e cadastros de Cliente/Usuário.
-
-- Integração **Supabase Auth**: validação de JWT (JWKS), *access token hook* com `tenant_id/cliente_id/perfil` (doc 08).
-- `ICurrentTenant`/`ICurrentUser`, `TenantMiddleware`, *global query filter* e **RLS** com `SET app.tenant_id` (doc 06).
-- Entidades + migrations: `cliente` (PF/PJ), `usuario`; provisionamento de usuário via Admin API.
-- CRUD de Clientes e Usuários (Commands/Queries, validators, políticas por perfil).
-- Interceptors: `TenantSaveInterceptor`, `AuditableInterceptor`, `SoftDeleteInterceptor`.
-
-**DoD:** dois tenants isolados comprovados por teste de integração (EF + RLS); login→CRUD com JWT; limites de usuário por plano aplicados.
+**DoD:** dois tenants isolados (teste EF + RLS); **CASO 1** (CPF único por cliente) coberto; login gera `AuditLog`.
 
 ---
 
-## Sprint 2 — Locação: Imóveis, Inquilinos, Contratos e Recebimentos
+## Sprint 2 — Imóveis, Inquilinos, Contratos + Home/Menu (MVP 1, 2, 5, 6)
+**Objetivo:** núcleo operacional e tela inicial.
+- **UC003** Imóvel (tipo residencial/comercial/galpão/sala; IPTU; matrícula; status).
+- Inquilino (1 por imóvel por vez); **UC004** Contrato (nº, datas, vencimento, valor, juros/multa, anexo em `contracts`).
+- **Home (§10)**: filtros (competência, imóvel, inquilino, NFS-e/pagamento pendente) + indicadores (faturamento, inadimplência, qtd imóveis, qtd notas) + lista de imóveis com ações.
+- Menu (§13) e tema claro/escuro.
 
-**Objetivo:** núcleo operacional do produto e dashboard.
-
-- Entidades + migrations: `imovel`, `inquilino`, `contrato`, `recebimento`.
-- CRUD completo com **enforcement de `plano.max_imoveis`** (doc 06).
-- Geração de `recebimento` por competência a partir do contrato (regra de vencimento).
-- Marcar recebimento como pago; cálculo de atraso.
-- Endpoints de dashboard (totais, alugados, recebido no mês, em aberto).
-
-**DoD:** fluxo imóvel→contrato→recebimento ponta a ponta testado; bloqueio ao exceder limite do plano; dashboard consistente.
+**DoD:** fluxo imóvel→contrato ponta a ponta; **CASO 3** (1 contrato ativo por imóvel) coberto; Home paginada (<2s).
 
 ---
 
-## Sprint 3 — Assinaturas e Mercado Pago
-
+## Sprint 3 — Planos, Assinatura e Mercado Pago (MVP 7)
 **Objetivo:** contratação e cobrança recorrente.
+- Agregado `Assinatura` (state machine) + `pagamento_plano`; trial de 7 dias no cadastro.
+- Adapter `IPagamentoGateway` (Mercado Pago) + contratação (`PendentePagamento`→`init_point`).
+- **Webhook** idempotente (Inbox) + HMAC + Outbox; ativação automática.
+- Upgrade/Downgrade com validação de limites — **CASO 2**.
 
-- Agregado `Assinatura` com máquina de estados (doc 01/05) + `pagamento_plano`.
-- Trial automático de 7 dias na criação de conta.
-- Adapter `IPagamentoGateway` (Mercado Pago Preapproval/Payments) com Polly.
-- Fluxo de contratação: cria assinatura `PendentePagamento` → `init_point` → retorno.
-- **Webhook** idempotente (`inbox_message`) + HMAC + `Outbox` (doc 08); ativação por evento de pagamento.
-- Upgrade/Downgrade com validação de limites (bloqueio no downgrade que excede).
-
-**DoD:** contratação em *sandbox* ativa a assinatura via webhook; upgrade/downgrade respeitam limites; auditoria registrada.
+**DoD:** contratação em sandbox ativa via webhook; upgrade/downgrade respeitam limites; auditoria de assinatura registrada.
 
 ---
 
-## Sprint 4 — Inadimplência, Jobs e Ciclo de Vida
+## Sprint 4 — Inadimplência e Jobs
+**Objetivo:** ciclo Trial→Tolerância→Suspensão→Reativação.
+- `Aluguel.Worker` (Quartz) + processador de Outbox.
+- Jobs: trial expirado, tolerância (7 dias), gerar cobrança, reprocessar webhook.
+- Falha de pagamento → `PendentePagamento` + e-mail/alerta; fim da tolerância → `Suspensa`; reativação automática; cancelamento mantém acesso até o fim do ciclo (dados preservados).
+- `AssinaturaSuspensaGuard` — **CASO 5**.
 
-**Objetivo:** automação do ciclo Trial→Tolerância→Suspensão→Reativação.
-
-- `Aluguel.Worker` com **Quartz.NET** + processador de `Outbox`.
-- Jobs: `TrialExpiradoJob`, `ToleranciaInadimplenciaJob` (7 dias), `GerarCobrancaRenovacaoJob`, `ReprocessarWebhookJob`.
-- Falha de pagamento → `PendentePagamento` + e-mail/alerta; fim da tolerância → `Suspensa`.
-- Reativação automática ao confirmar pagamento; cancelamento mantém acesso até fim do ciclo, depois `Suspensa` (dados preservados).
-- `PlanoGuardMiddleware`: em `Suspensa`, libera só Login/Minha Conta/Pagamentos.
-- `IEmailSender` (notificações de cobrança/falha).
-
-**DoD:** simulação de inadimplência percorre todos os estados corretamente (testes de integração com relógio controlável via `IDateTimeProvider`).
+**DoD:** simulação de inadimplência percorre todos os estados (relógio controlável via `IDateTimeProvider`).
 
 ---
 
-## Sprint 5 — Fiscal: Certificado Digital e Emissão de NFS-e
+## Sprint 5 — Certificado + Emissão de NFS-e (MVP 8)
+**Objetivo:** emitir NFS-e via **API Nacional da NFS-e**.
+- Buckets Supabase (`certificates`, `nfse-xml`, `nfse-pdf`) + `IFileStorage` (doc 07).
+- Upload/validação do certificado A1 (thumbprint, validade); senha cifrada (`ISecretProtector`).
+- Adapter `INfseNacionalProvider`; **UC005** Emitir NFS-e (valida plano/assinatura — **CASO 4**; valida competência — **CASO 8**).
+- Faturamento `Rascunho`→`EmProcessamento`→`Emitida`; persistência de número, série, chave, XML, PDF, usuário emissor.
 
-**Objetivo:** emitir NFS-e com o certificado A1 do cliente.
-
-- Buckets Supabase Storage + `IFileStorage` (doc 07); RLS de Storage.
-- Upload/validação de certificado A1 (thumbprint, validade); senha cifrada via `ISecretProtector`.
-- Adapter `INfseProvider` (ABRASF/provedor municipal): geração de RPS, assinatura XML, envio.
-- Comando `EmitirNfse` (checa `PlanoComNfse` + `AssinaturaAtiva`) → `NotaFiscalServico` (`Processando`→`Autorizada`), via fila/worker.
-- Persistência de XML/PDF em `documento_fiscal` + `content_hash`.
-
-**DoD:** emissão em homologação retorna número/protocolo; XML/PDF no Storage com *signed URL*; senha do certificado nunca exposta.
+**DoD:** emissão em homologação retorna chave/XML/PDF; **CASO 8** (competência já faturada) bloqueado; senha do certificado nunca exposta.
 
 ---
 
-## Sprint 6 — NFS-e: Cancelamento, Documentos e Auditoria
+## Sprint 6 — Cancelamento, Pagamentos, Despesas e Histórico (MVP 9, 10)
+**Objetivo:** completar o ciclo fiscal e financeiro.
+- **UC006** Cancelar NFS-e (motivo→evento API→protocolo→XML do evento→status `Cancelada`); log no histórico.
+- **CASO 7**: após cancelada, permitir nova emissão na mesma competência.
+- **UC007** Registrar Pagamento (aluguel) — pop-up competência/data; **CASO 6** (sem duplicidade). IPTU e outras despesas.
+- Tela de **Histórico (§12)**: mês a mês, download de XML/PDF, edição de pagamento, log de modificações.
 
-**Objetivo:** completar o ciclo fiscal e a trilha de auditoria.
-
-- Cancelamento de NFS-e (`CancelarNfse`) com motivo e atualização de estado/arquivos.
-- Consulta/listagem de notas, *download* de XML/PDF por *signed URL*.
-- `OutboxInterceptor` publicando *domain events*; `audit_log` genérico (jsonb antes/depois).
-- Trilha `auditoria_assinatura` completa para todos os eventos (doc 03).
-- Reprocessamento de rejeições e reemissão.
-
-**DoD:** emissão e cancelamento auditados; trilha consultável por cliente; documentos íntegros (hash conferido).
+**DoD:** emissão e cancelamento auditados; **CASO 6/7** cobertos; XML/PDF baixáveis por signed URL.
 
 ---
 
-## Sprint 7 — Hardening, Observabilidade e Deploy
+## Sprint 7 — Relatórios / Dados para Contabilidade + Auditoria (MVP 11)
+**Objetivo:** exportações e trilha completa.
+- **UC008** Relatórios: faturamentos, pagamentos, despesas.
+- **Dados para Contabilidade (§13)**: Contas a Receber (base NFS-e) e Contas a Pagar (base IPTU/despesas) em **XLSX/CSV** (ClosedXML) e PDF (QuestPDF); arquivos em `reports`.
+- Auditoria (§13): `audit_log` completo (login, emissão, cancelamento, pagamento, despesas, alteração cadastral) com valores antes/depois.
 
+**DoD:** exportações XLSX/CSV corretas; auditoria consultável; campos conforme §13.
+
+---
+
+## Sprint 8 — Hardening, PWA e Deploy
 **Objetivo:** prontidão para produção.
+- Frontend **next-pwa**, tema, acessibilidade; OpenTelemetry + alertas.
+- Testes: domínio, integração (Testcontainers), funcional/BDD (§18 — CASO 1 a 8), isolamento multi-tenant.
+- Segurança (RLS force, MFA, rate limit, CORS Vercel, LGPD); performance (<2s, paginação).
+- **Backup diário + retenção 90 dias** (§14); deploy: Vercel (front), Render/Azure (back), Supabase (DB+Storage); migrations bundle.
 
-- OpenTelemetry (traces/metrics) + dashboards; alertas de falha de webhook/job.
-- Testes: cobertura de domínio, integração (Testcontainers), funcional (`WebApplicationFactory`), e de isolamento multi-tenant.
-- Revisão de segurança (RLS *force*, segredos, LGPD, rate limiting, CORS) e testes de carga básicos.
-- Migrations bundle no deploy; *blue/green* ou *rolling*; PITR/backup de Storage.
-- Documentação operacional (runbooks) e *seed* de produção (planos).
-
-**DoD:** ambiente de produção no subdomínio da Lucrare; NFS-e e Mercado Pago em produção; observabilidade ativa; testes verdes.
+**DoD:** produção no subdomínio da Lucrare; NFS-e e Mercado Pago em produção; 8/8 cenários BDD verdes.
 
 ---
 
-## Temas transversais (todas as sprints)
+## Rastreabilidade
 
-- **Segurança & LGPD**: TLS, segredos fora do repo, *soft delete*, auditoria.
-- **Qualidade**: cada Command/Query com validator e testes; PRs pequenos; *analyzers* como erro.
-- **Idempotência & resiliência**: Inbox/Outbox, Polly, *retries* com *backoff*.
-- **Documentação viva**: manter os docs `01`–`08` sincronizados com o código.
-
-## Matriz de rastreabilidade (spec → sprint)
-
-| Requisito da especificação | Sprint |
+| Caso de uso (§17) | Sprint |
 |---|---|
-| Multi-tenant, subdomínio | S1 |
-| Cadastro de Clientes (PF/PJ) e Usuários | S1 |
-| Planos e limites (imóveis/usuários) | S1–S2 |
-| Imóveis, inquilinos, recebimentos, dashboard | S2 |
-| Trial 7 dias | S3 |
-| Contratação/renovação (Mercado Pago) + webhook | S3 |
-| Falha de pagamento, tolerância, suspensão, reativação | S4 |
-| Upgrade/Downgrade/Cancelamento | S3–S4 |
-| Certificado digital + emissão de NFS-e | S5 |
-| Cancelamento de NFS-e + documentos fiscais | S6 |
-| Auditoria de assinaturas + auditoria geral | S1 (base) → S6 (completa) |
-| Armazenamento criptografado (Storage) | S5 |
-| Autenticação | S1 |
+| UC001 Cadastrar Cliente | S1 |
+| UC002 Criar Usuário | S1 |
+| UC003 Criar Imóvel | S2 |
+| UC004 Criar Contrato | S2 |
+| UC005 Emitir NFS-e | S5 |
+| UC006 Cancelar NFS-e | S6 |
+| UC007 Registrar Pagamento | S6 |
+| UC008 Gerar Relatório | S7 |
+
+| Critério BDD (§18) | Sprint |
+|---|---|
+| CASO 1 (CPF único) | S1 |
+| CASO 2 (downgrade) | S3 |
+| CASO 3 (1 contrato/imóvel) | S2 |
+| CASO 4 (plano sem NFS-e) | S5 |
+| CASO 5 (suspensa → pagamento) | S4 |
+| CASO 6 (pagamento único) | S6 |
+| CASO 7 (reemissão após cancelamento) | S6 |
+| CASO 8 (competência já faturada) | S5 |
 
 ## Riscos e mitigações
 
 | Risco | Mitigação |
 |---|---|
-| Variação de provedor NFS-e por município | `INfseProvider` com implementações plugáveis; começar por 1 município. |
-| PgBouncer *transaction pooling* x `SET` de sessão | usar `SET LOCAL` em transação ou conexão *session mode* (doc 06). |
-| Segurança da senha do certificado | cifra dedicada + acesso só no worker + auditoria (doc 07). |
-| Divergência de webhooks Mercado Pago | Inbox idempotente + reconciliação por job (doc 03/04). |
+| Maturidade da API Nacional da NFS-e | Adapter `INfseNacionalProvider` isolado; ambiente de homologação; *feature flag* por município/regime. |
+| PgBouncer x `SET` de sessão (RLS) | `SET LOCAL` em transação ou modo *session* (doc 06). |
+| Segurança da senha do certificado A1 | cifra dedicada + acesso só no worker + auditoria (doc 07). |
+| Divergência de webhooks Mercado Pago | Inbox idempotente + reconciliação por job. |
 
----
-
-Índice da arquitetura: [README](README.md).
+Índice: [README](README.md).
