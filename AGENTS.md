@@ -2,6 +2,17 @@
 
 Guia para agentes que trabalham neste repositório. Complementa as skills em `.cursor/skills/`.
 
+## Papel do agente: Tech Lead que implementa
+
+Atue como **tech lead que implementa** (não apenas arquiteto que documenta). Ou seja:
+
+- **Escreva código funcional**, seguindo a arquitetura em `Docs/Arquitetura/` e a especificação em `Docs/APP-Aluguel-Especificacao.md`. A arquitetura é o contrato; o entregável principal passa a ser **software que compila, roda e passa nos testes**.
+- **Entregue em fatias verticais** conforme o plano de sprints (`Docs/Arquitetura/09-...`), começando pela fundação (Sprint 0) e evoluindo por incrementos testáveis.
+- **Teste de verdade**: build + testes automatizados (unit/integração) e verificação ponta a ponta (ex.: `dotnet build`, `dotnet test`, subir a API e validar endpoints como `/health`).
+- **Decida com autonomia** detalhes de implementação equivalentes (nomes, libs auxiliares já previstas na stack), documentando escolhas relevantes. Mudanças de escopo ou de stack exigem confirmação.
+- **Mantenha a documentação viva**: ao implementar, ajuste os docs de arquitetura quando a realidade divergir do plano, preservando a rastreabilidade (`§` e `CASO 1`–`8`).
+- **Qualidade de tech lead**: código limpo e testável, tratamento de erros, validações (FluentValidation), segurança (RLS/tenant, segredos) e observabilidade conforme os docs.
+
 ## Contexto do projeto
 
 - **APP Aluguel** — SaaS multi-tenant da **Lucrare** para gestão de locações, recebimentos, inadimplência e emissão de **NFS-e** (via **API Nacional da NFS-e**), hospedado em subdomínio de `lucrarecontabilidade.com.br`.
@@ -48,8 +59,14 @@ Todo diagrama **Mermaid** adicionado ou alterado em arquivos `.md` deve ser **va
 
 ## Testes
 
-- Entrega atual é **documentação** (Markdown + diagramas): a validação equivalente é o **render bem-sucedido dos diagramas** e a coerência com a especificação.
-- Quando houver código, siga o plano de sprints (`Docs/Arquitetura/09-...`) e cubra os cenários BDD (`Docs/Arquitetura/11-...`, `CASO 1`–`8`) em testes funcionais.
+- **Código**: todo incremento deve **compilar** (`dotnet build`) e ter **testes** passando (`dotnet test`). Cubra domínio (unit), infraestrutura/persistência (integração) e os cenários **BDD** (`Docs/Arquitetura/11-...`, `CASO 1`–`8`) em testes funcionais. Valide a API ponta a ponta (ex.: `/health`, endpoints do slice implementado).
+- **Documentação/diagramas**: a validação equivalente é o **render bem-sucedido dos diagramas Mermaid** e a coerência com a especificação.
+
+## Ambiente de desenvolvimento
+
+- **Backend**: .NET 9 SDK (`dotnet`). Se ausente, instale via `dotnet-install.sh` (`--channel 9.0`).
+- **Banco**: PostgreSQL local (Docker Compose quando disponível; senão instância local). Configure a connection string por variável de ambiente / user-secrets — nunca commite segredos.
+- **Frontend**: Node 22+ (`node`), Next.js 15.
 
 ## Frontend / identidade visual
 
