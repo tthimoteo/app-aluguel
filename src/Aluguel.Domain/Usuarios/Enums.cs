@@ -5,7 +5,7 @@ public enum PerfilUsuario
 {
     Gestor = 1,
     Analista = 2,
-    AdminSistema = 9,
+    Administrador = 9,
 }
 
 /// <summary>Situação do usuário (especificação §6).</summary>
