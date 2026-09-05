@@ -1,6 +1,8 @@
 using System.Text;
+using System.Text.Json.Serialization;
 using Aluguel.Api.Auth;
 using Aluguel.Api.Endpoints;
+using Aluguel.Api.Middleware;
 using Aluguel.Api.Setup;
 using Aluguel.Application;
 using Aluguel.Application.Abstractions;
@@ -60,6 +62,9 @@ builder.Services.AddAuthorization(o =>
     o.AddPolicy(Politicas.CancelarNfse, p => p.RequireRole(Perfis.Administrador, Perfis.Gestor, Perfis.Analista));
 });
 
+builder.Services.ConfigureHttpJsonOptions(o =>
+    o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -103,6 +108,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -114,6 +121,7 @@ app.MapGet("/api/planos", async (ISender sender, CancellationToken ct) =>
     .WithName("ObterPlanos");
 
 app.MapAuthEndpoints();
+app.MapClienteEndpoints();
 
 // Endpoints de diagnóstico para demonstrar a autorização por role/política.
 app.MapGet("/api/admin/ping", () => Results.Ok(new { escopo = "Administrador", ok = true }))
