@@ -29,7 +29,24 @@ ASPNETCORE_ENVIRONMENT=Development dotnet run --project src/Aluguel.Api
 
 Connection string em `src/Aluguel.Api/appsettings.json` (`ConnectionStrings:Postgres`) — sobrescreva por variável de ambiente/secret em ambientes reais. A senha padrão é apenas para desenvolvimento local.
 
-## Endpoints atuais (Sprint 0)
+## Modelo de dados (entidades EF)
+
+Modelo de domínio completo mapeado no `AppDbContext` (schema `app`; Identity no schema `identity`):
+
+`Tenant`, `Plano`, `Cliente` (PF/PJ, `Endereco` owned, soft delete), `AppUser`/`AppRole` (Usuário via ASP.NET Identity), `CertificadoDigital`, `Assinatura`, `PagamentoPlano`, `AuditoriaAssinatura`, `Imovel`, `Inquilino`, `Contrato`, `NotaFiscalServico` (NFS-e), `DocumentoFiscal`, `Pagamento`, `Despesa`, `AuditLog`.
+
+Pontos de modelagem:
+
+- **`TenantId`** em todas as entidades de negócio (`ITenantOwned`) + **filtro global** de tenant e de soft delete (`ISoftDeletable`) aplicados automaticamente no `OnModelCreating`. A resolução do tenant (`ICurrentTenant`) usa um provider nulo por ora; a versão baseada na claim `tenant_id` do JWT entra junto da autenticação.
+- **Enums** persistidos como texto; monetários em `numeric(14,2)`; percentuais em `numeric(6,3)`; competência em `char(7)` (`MM/AAAA`).
+- **Índices únicos parciais** que materializam as regras de negócio: CPF/CNPJ por tenant (CASO 1), 1 contrato ativo por imóvel (CASO 3), 1 NFS-e não-cancelada por imóvel/competência e 1 pagamento por imóvel/competência (CASO 6/7/8), assinatura vigente única por cliente, `mercado_pago_payment_id` único.
+- **Relacionamentos** configurados via `IEntityTypeConfiguration<T>` com `ON DELETE RESTRICT` (exceto coleções filhas em cascade: `Assinatura→PagamentoPlano`, `NFS-e→DocumentoFiscal`). FK cross-schema `asp_net_users → app.cliente`.
+
+Migrations: `InitialCreate` (Tenant/Plano/Identity) e `AddDomainModel` (demais entidades).
+
+> Controllers/endpoints de CRUD ainda **não** implementados nesta etapa (apenas o modelo, o `DbContext` e as migrations).
+
+## Endpoints atuais
 
 - `GET /health` — verificação de saúde.
 - `GET /api/planos` — catálogo de planos (seed conforme especificação §3).
@@ -44,4 +61,4 @@ dotnet test Aluguel.sln
 
 ## Estado
 
-Sprint 0 (fundação) + fatia vertical de **Planos** entregues. Próximos incrementos seguem o plano de sprints (auth/tenant, imóveis/contratos, assinatura/Mercado Pago, NFS-e, etc.).
+Sprint 0 (fundação) + fatia vertical de **Planos** + **modelo de domínio completo (entidades EF, relacionamentos, `TenantId`, `DbContext`, migrations)** entregues. Próximos incrementos seguem o plano de sprints (auth/tenant, casos de uso de imóveis/contratos, assinatura/Mercado Pago, NFS-e, etc.).
