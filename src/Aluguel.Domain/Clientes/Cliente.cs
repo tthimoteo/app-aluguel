@@ -79,5 +79,55 @@ public class Cliente : AggregateRoot, ITenantOwned, IAuditable, ISoftDeletable
         };
     }
 
-    public void DefinirPlano(Guid planoId) => PlanoId = planoId;
+    public void DefinirPlano(Guid? planoId)
+    {
+        PlanoId = planoId;
+        Touch();
+    }
+
+    /// <summary>Atualiza os dados cadastrais de um cliente Pessoa Física (CPF e tipo são imutáveis).</summary>
+    public void AtualizarDadosPessoaFisica(string nome, DateOnly? dataNascimento,
+        string? telefone, string? email, Endereco? endereco)
+    {
+        if (TipoPessoa != TipoPessoa.PF)
+            throw new InvalidOperationException("Cliente não é Pessoa Física.");
+        if (string.IsNullOrWhiteSpace(nome))
+            throw new ArgumentException("Nome é obrigatório.", nameof(nome));
+
+        Nome = nome;
+        DataNascimento = dataNascimento;
+        Telefone = telefone;
+        Email = email;
+        if (endereco is not null) Endereco = endereco;
+        Touch();
+    }
+
+    /// <summary>Atualiza os dados cadastrais de um cliente Pessoa Jurídica (CNPJ e tipo são imutáveis).</summary>
+    public void AtualizarDadosPessoaJuridica(string razaoSocial, string? nomeFantasia,
+        string? inscricaoMunicipal, string? cnaePrincipal, string? telefone, string? email, Endereco? endereco)
+    {
+        if (TipoPessoa != TipoPessoa.PJ)
+            throw new InvalidOperationException("Cliente não é Pessoa Jurídica.");
+        if (string.IsNullOrWhiteSpace(razaoSocial))
+            throw new ArgumentException("Razão social é obrigatória.", nameof(razaoSocial));
+
+        RazaoSocial = razaoSocial;
+        NomeFantasia = nomeFantasia;
+        InscricaoMunicipal = inscricaoMunicipal;
+        CnaePrincipal = cnaePrincipal;
+        Telefone = telefone;
+        Email = email;
+        if (endereco is not null) Endereco = endereco;
+        Touch();
+    }
+
+    /// <summary>Exclusão lógica (soft delete) — preserva histórico e libera o índice único de CPF/CNPJ.</summary>
+    public void Remover()
+    {
+        if (DeletedAt is not null) return;
+        DeletedAt = DateTimeOffset.UtcNow;
+        Touch();
+    }
+
+    private void Touch() => UpdatedAt = DateTimeOffset.UtcNow;
 }
