@@ -65,6 +65,25 @@ Config em `appsettings.json` → seção `Jwt` (`Issuer`, `Audience`, `SigningKe
 
 Em **Development**, o startup cria roles e usuários demo para testes: `admin@aluguel.local` / `Admin@123456` (Administrador), `gestor@demo.local` / `Gestor@123456` (Gestor), `analista@demo.local` / `Analista@123456` (Analista).
 
+## Módulo Clientes (CRUD)
+
+CRUD de clientes (PF/PJ) em CQRS (MediatR), com validação, isolamento multi-tenant e DTOs.
+
+Endpoints (`/api/clientes`, exigem autenticação):
+
+- `GET /api/clientes?termo=&tipo=PF|PJ&skip=&take=` — lista paginada do tenant (filtro por nome/CPF/CNPJ).
+- `GET /api/clientes/{id}` — obtém por id (404 se não existir no tenant).
+- `POST /api/clientes` — cria PF ou PJ (201). Requer política `GerenciaUsuarios` (Administrador/Gestor).
+- `PUT /api/clientes/{id}` — atualiza dados cadastrais (tipo e CPF/CNPJ são imutáveis). Requer `GerenciaUsuarios`.
+- `DELETE /api/clientes/{id}` — exclusão lógica (soft delete, 204). Requer `GerenciaUsuarios`.
+
+Características:
+
+- **Multi-tenant**: o `TenantId` vem do JWT (nunca do corpo). Leituras/gravações passam pelos filtros globais de tenant e soft delete do `AppDbContext`; a unicidade de CPF/CNPJ é por tenant.
+- **Validações** (FluentValidation, executadas por `ValidationBehavior` no pipeline do MediatR): dígitos verificadores de CPF/CNPJ, obrigatoriedades por tipo de pessoa, unicidade de CPF/CNPJ, e-mail, UF (2), CEP (8 dígitos). Máscaras de CPF/CNPJ/CEP são normalizadas. Erros retornam `400` em formato ProblemDetails (via `ExceptionHandlingMiddleware`).
+- **DTOs**: `ClienteDto`/`EnderecoDto` (resposta) e `EnderecoInput` (entrada); listagem em `PaginaDto<T>`.
+- **Swagger**: os cinco endpoints aparecem no grupo **Clientes**; enums são serializados como texto.
+
 ## Endpoints atuais
 
 - `GET /health` — verificação de saúde.
@@ -80,4 +99,4 @@ dotnet test Aluguel.sln
 
 ## Estado
 
-Sprint 0 (fundação) + fatia vertical de **Planos** + **modelo de domínio completo (entidades EF, relacionamentos, `TenantId`, `DbContext`, migrations)** + **autenticação (ASP.NET Identity + JWT + refresh token + RBAC)** entregues. Próximos incrementos seguem o plano de sprints (casos de uso de clientes/usuários, imóveis/contratos, assinatura/Mercado Pago, NFS-e, etc.).
+Sprint 0 (fundação) + fatia vertical de **Planos** + **modelo de domínio completo (entidades EF, relacionamentos, `TenantId`, `DbContext`, migrations)** + **autenticação (ASP.NET Identity + JWT + refresh token + RBAC)** + **módulo Clientes (CRUD + validações + multi-tenant)** entregues. Próximos incrementos seguem o plano de sprints (usuários, imóveis/contratos, assinatura/Mercado Pago, NFS-e, etc.).
