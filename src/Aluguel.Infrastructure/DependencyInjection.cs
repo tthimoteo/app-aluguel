@@ -31,6 +31,9 @@ public static class DependencyInjection
             .AddRoles<AppRole>()
             .AddEntityFrameworkStores<AppDbContext>();
 
+        services.AddScoped<IJwtTokenService, JwtTokenService>();
+        services.AddScoped<IAuthService, AuthService>();
+
         services.AddScoped<IPlanoRepository, PlanoRepository>();
 
         return services;

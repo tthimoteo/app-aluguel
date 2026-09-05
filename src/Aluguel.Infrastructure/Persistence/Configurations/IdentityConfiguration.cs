@@ -53,3 +53,19 @@ public class IdentityRoleClaimConfiguration : IEntityTypeConfiguration<IdentityR
 {
     public void Configure(EntityTypeBuilder<IdentityRoleClaim<Guid>> b) => b.ToTable("asp_net_role_claims", "identity");
 }
+
+public class RefreshTokenConfiguration : IEntityTypeConfiguration<RefreshToken>
+{
+    public void Configure(EntityTypeBuilder<RefreshToken> b)
+    {
+        b.ToTable("refresh_token", "identity");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.TokenHash).HasMaxLength(64).IsRequired();
+        b.Property(x => x.CreatedByIp).HasMaxLength(60);
+        b.Property(x => x.RevokedByIp).HasMaxLength(60);
+        b.Property(x => x.ReplacedByTokenHash).HasMaxLength(64);
+        b.HasIndex(x => x.TokenHash).IsUnique();
+        b.HasIndex(x => x.UserId);
+        b.HasOne<AppUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+    }
+}

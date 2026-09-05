@@ -39,6 +39,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentTenant
     public DbSet<Pagamento> Pagamentos => Set<Pagamento>();
     public DbSet<Despesa> Despesas => Set<Despesa>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<Identity.RefreshToken> RefreshTokens => Set<Identity.RefreshToken>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
