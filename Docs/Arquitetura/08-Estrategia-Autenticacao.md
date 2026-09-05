@@ -12,9 +12,11 @@
 
 ## 2. Perfis e regras de acesso (§4, §6)
 
+> **Implementado (Sprint 1):** roles do Identity `Administrador`, `Gestor`, `Analista` (nomes coincidem com `PerfilUsuario`); endpoints `POST /api/auth/login`, `POST /api/auth/refresh`, `POST /api/auth/logout` (+ `GET /api/auth/me`); JWT HS256 com refresh tokens rotativos persistidos em `identity.refresh_token`; autorização por role via `[Authorize]`/políticas. Claim de role = `role`; `MapInboundClaims=false`.
+
 | Perfil | Escopo | Permissões |
 |---|---|---|
-| **AdminSistema** | Plataforma (Lucrare) | Tudo; gestão de clientes/usuários/imóveis/inquilinos; emissão/cancelamento de NFS-e; registrar pagamento. Remoção só se não houver dependentes. Menu **Clientes**. |
+| **Administrador** | Plataforma (Lucrare) | Tudo; gestão de clientes/usuários/imóveis/inquilinos; emissão/cancelamento de NFS-e; registrar pagamento. Remoção só se não houver dependentes. Menu **Clientes**. |
 | **Gestor** | Um cliente | Editar dados do próprio cliente (inclui mudar de plano); CRUD de usuários do cliente; CRUD de imóveis/inquilinos/contratos; emitir NFS-e; consultar histórico. Menu **Minha Conta**. |
 | **Analista** | Um cliente | Consultar imóveis/inquilinos; emitir NFS-e; consultar histórico; **cancelar NFS-e**. |
 
@@ -30,9 +32,10 @@ O *token service* emite claims a partir de `AppUser`:
 {
   "sub": "usuario-uuid",
   "email": "gestor@cliente.com",
+  "name": "Gestor Demo",
   "tenant_id": "TENANT-UUID",
   "cliente_id": "CLIENTE-UUID",
-  "perfil": "Gestor",
+  "role": "Gestor",
   "exp": 1788620000,
   "jti": "..."
 }
@@ -72,17 +75,21 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(key),   // ou chave assimétrica (RSA/ECDSA)
-            RoleClaimType = "perfil"
+            RoleClaimType = "role",
+            NameClaimType = "name"
         };
+        o.MapInboundClaims = false;   // preserva os nomes de claim (role, tenant_id, ...)
     });
 ```
 
 ## 5. Autorização (RBAC + estado da assinatura)
 
 ```csharp
-options.AddPolicy("GerenciaUsuarios", p => p.RequireRole("Gestor", "AdminSistema"));
-options.AddPolicy("EmitirNfse",       p => p.RequireRole("Gestor", "Analista", "AdminSistema"));
-options.AddPolicy("CancelarNfse",     p => p.RequireRole("Analista", "Gestor", "AdminSistema"));
+// Implementado (Sprint 1):
+options.AddPolicy("GerenciaUsuarios", p => p.RequireRole("Administrador", "Gestor"));
+options.AddPolicy("EmitirNfse",       p => p.RequireRole("Administrador", "Gestor", "Analista"));
+options.AddPolicy("CancelarNfse",     p => p.RequireRole("Administrador", "Gestor", "Analista"));
+// Planejado:
 options.AddPolicy("PlanoComNfse",     p => p.AddRequirements(new PlanoPermiteNfseRequirement()));   // CASO 4
 options.AddPolicy("AssinaturaAtiva",  p => p.AddRequirements(new AssinaturaAtivaRequirement()));    // CASO 5
 ```

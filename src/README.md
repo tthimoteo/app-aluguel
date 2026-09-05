@@ -46,11 +46,30 @@ Migrations: `InitialCreate` (Tenant/Plano/Identity) e `AddDomainModel` (demais e
 
 > Controllers/endpoints de CRUD ainda **não** implementados nesta etapa (apenas o modelo, o `DbContext` e as migrations).
 
+## Autenticação (ASP.NET Identity + JWT)
+
+Autenticação própria com ASP.NET Core Identity emitindo **access token JWT** (HS256, curto) + **refresh token rotativo** persistido/revogável em `identity.refresh_token` (guarda-se apenas o hash SHA-256).
+
+Roles (RBAC): **Administrador**, **Gestor**, **Analista** (coincidem com `PerfilUsuario`). O JWT carrega `sub`, `email`, `name`, `tenant_id`, `cliente_id` e `role` — o `tenant_id` alimenta o filtro global multi-tenant do EF.
+
+Endpoints:
+
+- `POST /api/auth/login` — `{ email, senha }` → access/refresh + dados do usuário.
+- `POST /api/auth/refresh` — `{ refreshToken }` → rotaciona o refresh e emite novo access (reuso do antigo é bloqueado).
+- `POST /api/auth/logout` — `{ refreshToken }` (requer Bearer) → revoga o refresh (204).
+- `GET /api/auth/me` — claims do usuário autenticado.
+
+Autorização por role/política (`Program.cs`): `GerenciaUsuarios` (Administrador, Gestor), `EmitirNfse`/`CancelarNfse` (Administrador, Gestor, Analista). Endpoints de diagnóstico: `GET /api/admin/ping`, `/api/gestao/ping`, `/api/nfse/ping`.
+
+Config em `appsettings.json` → seção `Jwt` (`Issuer`, `Audience`, `SigningKey`, `AccessTokenMinutes`, `RefreshTokenDays`). **A `SigningKey` do repositório é apenas para desenvolvimento** — use secret/variável de ambiente em ambientes reais.
+
+Em **Development**, o startup cria roles e usuários demo para testes: `admin@aluguel.local` / `Admin@123456` (Administrador), `gestor@demo.local` / `Gestor@123456` (Gestor), `analista@demo.local` / `Analista@123456` (Analista).
+
 ## Endpoints atuais
 
 - `GET /health` — verificação de saúde.
 - `GET /api/planos` — catálogo de planos (seed conforme especificação §3).
-- `GET /swagger` — documentação interativa (ambiente Development).
+- `GET /swagger` — documentação interativa com botão **Authorize** (Bearer JWT), ambiente Development.
 
 ## Testes
 
@@ -61,4 +80,4 @@ dotnet test Aluguel.sln
 
 ## Estado
 
-Sprint 0 (fundação) + fatia vertical de **Planos** + **modelo de domínio completo (entidades EF, relacionamentos, `TenantId`, `DbContext`, migrations)** entregues. Próximos incrementos seguem o plano de sprints (auth/tenant, casos de uso de imóveis/contratos, assinatura/Mercado Pago, NFS-e, etc.).
+Sprint 0 (fundação) + fatia vertical de **Planos** + **modelo de domínio completo (entidades EF, relacionamentos, `TenantId`, `DbContext`, migrations)** + **autenticação (ASP.NET Identity + JWT + refresh token + RBAC)** entregues. Próximos incrementos seguem o plano de sprints (casos de uso de clientes/usuários, imóveis/contratos, assinatura/Mercado Pago, NFS-e, etc.).
