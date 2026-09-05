@@ -1,0 +1,11 @@
+# .NET
+bin/
+obj/
+*.user
+# Rider/VS
+.idea/
+.vs/
+# Node
+node_modules/
+# OS
+.DS_Store

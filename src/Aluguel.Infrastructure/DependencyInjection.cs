@@ -1,0 +1,35 @@
+using Aluguel.Application.Abstractions;
+using Aluguel.Infrastructure.Identity;
+using Aluguel.Infrastructure.Persistence;
+using Aluguel.Infrastructure.Persistence.Repositories;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Aluguel.Infrastructure;
+
+public static class DependencyInjection
+{
+    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    {
+        var connectionString = configuration.GetConnectionString("Postgres")
+            ?? throw new InvalidOperationException("ConnectionStrings:Postgres não configurada.");
+
+        services.AddDbContext<AppDbContext>(options =>
+            options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention());
+
+        services.AddIdentityCore<AppUser>(o =>
+            {
+                o.Password.RequiredLength = 10;
+                o.User.RequireUniqueEmail = true;
+                o.Lockout.MaxFailedAccessAttempts = 5;
+            })
+            .AddRoles<AppRole>()
+            .AddEntityFrameworkStores<AppDbContext>();
+
+        services.AddScoped<IPlanoRepository, PlanoRepository>();
+
+        return services;
+    }
+}
