@@ -2,7 +2,7 @@ using Aluguel.Application.Abstractions;
 using Aluguel.Infrastructure.Identity;
 using Aluguel.Infrastructure.Persistence;
 using Aluguel.Infrastructure.Persistence.Repositories;
-using Microsoft.AspNetCore.Identity;
+using Aluguel.Infrastructure.Tenancy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,6 +15,9 @@ public static class DependencyInjection
     {
         var connectionString = configuration.GetConnectionString("Postgres")
             ?? throw new InvalidOperationException("ConnectionStrings:Postgres não configurada.");
+
+        // Resolução de tenant: default nulo (a API registra a versão baseada no JWT ao habilitar auth).
+        services.AddScoped<ICurrentTenant, NullCurrentTenant>();
 
         services.AddDbContext<AppDbContext>(options =>
             options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention());

@@ -16,6 +16,9 @@ public class AppUserConfiguration : IEntityTypeConfiguration<AppUser>
         b.Property(x => x.Telefone).HasMaxLength(20);
         b.Property(x => x.Perfil).HasConversion<string>().HasMaxLength(20).IsRequired();
         b.Property(x => x.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
+        // Usuário pertence a um cliente (§6)
+        b.HasOne<Aluguel.Domain.Clientes.Cliente>().WithMany().HasForeignKey(x => x.ClienteId)
+            .OnDelete(DeleteBehavior.Restrict);
         // CASO 1: CPF único por cliente
         b.HasIndex(x => new { x.ClienteId, x.Cpf }).IsUnique().HasFilter("cpf IS NOT NULL");
     }

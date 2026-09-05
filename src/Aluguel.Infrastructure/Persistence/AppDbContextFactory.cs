@@ -1,3 +1,4 @@
+using Aluguel.Infrastructure.Tenancy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
@@ -16,6 +17,6 @@ public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
             .UseSnakeCaseNamingConvention()
             .Options;
 
-        return new AppDbContext(options);
+        return new AppDbContext(options, new NullCurrentTenant());
     }
 }
