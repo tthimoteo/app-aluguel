@@ -28,6 +28,10 @@ public class Contrato : AggregateRoot, ITenantOwned, IAuditable
         DateOnly dataInicio, int diaVencimento, decimal valorAluguel, DateOnly? dataFimPrevista = null,
         decimal? jurosAtrasoPct = null, decimal? multaAtrasoPct = null)
     {
+        if (string.IsNullOrWhiteSpace(numeroContrato))
+            throw new ArgumentException("Número do contrato é obrigatório.", nameof(numeroContrato));
+        ValidarRegras(diaVencimento, valorAluguel, dataInicio, dataFimPrevista);
+
         TenantId = tenantId;
         ClienteId = clienteId;
         ImovelId = imovelId;
@@ -40,4 +44,51 @@ public class Contrato : AggregateRoot, ITenantOwned, IAuditable
         JurosAtrasoPct = jurosAtrasoPct;
         MultaAtrasoPct = multaAtrasoPct;
     }
+
+    /// <summary>Atualiza cláusulas do contrato. Permitido apenas enquanto Ativo.</summary>
+    public void Atualizar(DateOnly? dataFimPrevista, int diaVencimento, decimal valorAluguel,
+        decimal? jurosAtrasoPct, decimal? multaAtrasoPct, string? anexoPath)
+    {
+        if (Status != StatusContrato.Ativo)
+            throw new InvalidOperationException("Somente contratos ativos podem ser alterados.");
+        ValidarRegras(diaVencimento, valorAluguel, DataInicio, dataFimPrevista);
+
+        DataFimPrevista = dataFimPrevista;
+        DiaVencimento = diaVencimento;
+        ValorAluguel = valorAluguel;
+        JurosAtrasoPct = jurosAtrasoPct;
+        MultaAtrasoPct = multaAtrasoPct;
+        AnexoPath = anexoPath;
+        Touch();
+    }
+
+    /// <summary>Encerra o contrato (fim natural). Libera o imóvel (CASO 3).</summary>
+    public void Encerrar()
+    {
+        if (Status != StatusContrato.Ativo)
+            throw new InvalidOperationException("Somente contratos ativos podem ser encerrados.");
+        Status = StatusContrato.Encerrado;
+        Touch();
+    }
+
+    /// <summary>Cancela o contrato. Libera o imóvel (CASO 3).</summary>
+    public void Cancelar()
+    {
+        if (Status != StatusContrato.Ativo)
+            throw new InvalidOperationException("Somente contratos ativos podem ser cancelados.");
+        Status = StatusContrato.Cancelado;
+        Touch();
+    }
+
+    private static void ValidarRegras(int diaVencimento, decimal valorAluguel, DateOnly dataInicio, DateOnly? dataFimPrevista)
+    {
+        if (diaVencimento is < 1 or > 31)
+            throw new ArgumentException("Dia de vencimento deve estar entre 1 e 31.", nameof(diaVencimento));
+        if (valorAluguel <= 0)
+            throw new ArgumentException("Valor do aluguel deve ser positivo.", nameof(valorAluguel));
+        if (dataFimPrevista is { } fim && fim < dataInicio)
+            throw new ArgumentException("Data fim prevista não pode ser anterior à data de início.", nameof(dataFimPrevista));
+    }
+
+    private void Touch() => UpdatedAt = DateTimeOffset.UtcNow;
 }

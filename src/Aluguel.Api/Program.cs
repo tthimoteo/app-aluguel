@@ -59,6 +59,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization(o =>
 {
     o.AddPolicy(Politicas.GerenciaUsuarios, p => p.RequireRole(Perfis.Administrador, Perfis.Gestor));
+    o.AddPolicy(Politicas.GerenciaCadastros, p => p.RequireRole(Perfis.Administrador, Perfis.Gestor));
     o.AddPolicy(Politicas.EmitirNfse, p => p.RequireRole(Perfis.Administrador, Perfis.Gestor, Perfis.Analista));
     o.AddPolicy(Politicas.CancelarNfse, p => p.RequireRole(Perfis.Administrador, Perfis.Gestor, Perfis.Analista));
 });
@@ -124,6 +125,9 @@ app.MapGet("/api/planos", async (ISender sender, CancellationToken ct) =>
 app.MapAuthEndpoints();
 app.MapClienteEndpoints();
 app.MapUsuarioEndpoints();
+app.MapImovelEndpoints();
+app.MapInquilinoEndpoints();
+app.MapContratoEndpoints();
 
 // Endpoints de diagnóstico para demonstrar a autorização por role/política.
 app.MapGet("/api/admin/ping", () => Results.Ok(new { escopo = "Administrador", ok = true }))
