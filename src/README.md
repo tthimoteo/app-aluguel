@@ -84,6 +84,28 @@ Características:
 - **DTOs**: `ClienteDto`/`EnderecoDto` (resposta) e `EnderecoInput` (entrada); listagem em `PaginaDto<T>`.
 - **Swagger**: os cinco endpoints aparecem no grupo **Clientes**; enums são serializados como texto.
 
+## Módulo Usuários (CRUD)
+
+CRUD dos **usuários do cliente** (§6) em CQRS (MediatR), sobre o ASP.NET Identity (senha via `PasswordHasher`, role atribuída pelo `UserManager`). O usuário é o `AppUser` (tabela `identity.asp_net_users`) — nenhuma migration nova é necessária.
+
+Endpoints (`/api/usuarios`, exigem a política `GerenciaUsuarios` = **Administrador** ou **Gestor**):
+
+- `GET /api/usuarios?clienteId=&termo=&skip=&take=` — lista paginada (filtro por nome/e-mail). O Gestor lista apenas o próprio cliente; o Administrador informa `clienteId`.
+- `GET /api/usuarios/{id}` — obtém por id (404 fora do escopo do cliente).
+- `POST /api/usuarios` — cria usuário Gestor/Analista (201). O cliente alvo é o do Gestor; o Administrador informa `clienteId` no corpo.
+- `PUT /api/usuarios/{id}` — atualiza nome, telefone, perfil e status (e-mail e CPF são imutáveis).
+- `DELETE /api/usuarios/{id}` — desativação lógica (`Status = Inativo`, 204) preservando o histórico/auditoria.
+
+Regras da documentação implementadas:
+
+- **Limite por plano (UC002)**: a criação (e a reativação) respeita `plano.max_usuarios` do cliente — contam os usuários **Ativos**. Excedente retorna `400`.
+- **CPF único por cliente (CASO 1)**: além do índice único parcial `ux_usuario_cpf`, validação em `FluentValidation` com dígitos verificadores.
+- **Perfis Gestor e Analista (§6)**: este módulo só provisiona/edita `Gestor`/`Analista`; o perfil vira role do Identity. `Administrador` é papel de plataforma e não é criado aqui.
+- **Multi-tenant / isolamento (§6)**: leituras escopadas pelo `tenant_id` do JWT; um Gestor só enxerga/gerencia usuários do seu próprio cliente (fora do escopo → `404`). Não é permitido remover o próprio usuário.
+- **Status** `Ativo`/`Inativo`/`Bloqueado`: inativo/bloqueado não autentica (validado no login).
+
+Validações (FluentValidation, via `ValidationBehavior`): e-mail obrigatório/único/formato, senha ≥ 10, perfil ∈ {Gestor, Analista}, CPF (quando informado) válido e único no cliente, limite do plano. Erros retornam `400` em ProblemDetails.
+
 ## Endpoints atuais
 
 - `GET /health` — verificação de saúde.
@@ -99,4 +121,4 @@ dotnet test Aluguel.sln
 
 ## Estado
 
-Sprint 0 (fundação) + fatia vertical de **Planos** + **modelo de domínio completo (entidades EF, relacionamentos, `TenantId`, `DbContext`, migrations)** + **autenticação (ASP.NET Identity + JWT + refresh token + RBAC)** + **módulo Clientes (CRUD + validações + multi-tenant)** entregues. Próximos incrementos seguem o plano de sprints (usuários, imóveis/contratos, assinatura/Mercado Pago, NFS-e, etc.).
+Sprint 0 (fundação) + fatia vertical de **Planos** + **modelo de domínio completo (entidades EF, relacionamentos, `TenantId`, `DbContext`, migrations)** + **autenticação (ASP.NET Identity + JWT + refresh token + RBAC)** + **módulo Clientes (CRUD + validações + multi-tenant)** + **módulo Usuários (CRUD + limites por plano + perfis Gestor/Analista + isolamento)** entregues. Próximos incrementos seguem o plano de sprints (imóveis/contratos, assinatura/Mercado Pago, NFS-e, etc.).

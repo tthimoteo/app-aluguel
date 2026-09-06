@@ -33,6 +33,7 @@ public static class DependencyInjection
 
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IUsuarioService, UsuarioService>();
 
         services.AddScoped<IPlanoRepository, PlanoRepository>();
         services.AddScoped<IClienteRepository, ClienteRepository>();
