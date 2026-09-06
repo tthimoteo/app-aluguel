@@ -106,6 +106,26 @@ Regras da documentação implementadas:
 
 Validações (FluentValidation, via `ValidationBehavior`): e-mail obrigatório/único/formato, senha ≥ 10, perfil ∈ {Gestor, Analista}, CPF (quando informado) válido e único no cliente, limite do plano. Erros retornam `400` em ProblemDetails.
 
+## Módulos Imóveis, Inquilinos e Contratos (CRUD + endpoints REST)
+
+Cadastros operacionais (§7, §8, §9) em CQRS (MediatR), com repositórios EF Core escopados por tenant/soft delete. As tabelas `imovel`, `inquilino` e `contrato` já existem na migration `AddDomainModel` — **nenhuma migration nova**.
+
+Leitura liberada a qualquer perfil autenticado (o **Analista** consulta); escrita e transições de estado exigem a política `GerenciaCadastros` = **Administrador** ou **Gestor**. Não-admins operam apenas no próprio cliente (fora do escopo → `404`); o Administrador informa `clienteId`.
+
+**Imóveis** (`/api/imoveis`): `GET /` (filtros `clienteId`, `termo`, `tipo`, `status`, paginação), `GET /{id}`, `POST /`, `PUT /{id}` (inclui `status` Ativo/Inativo), `DELETE /{id}` (exclusão lógica).
+
+**Inquilinos** (`/api/inquilinos`): `GET /` (filtros `clienteId`, `termo`, `tipoPessoa`, `status`), `GET /{id}`, `POST /`, `PUT /{id}`, `DELETE /{id}` (exclusão lógica). Tipo de pessoa e documento são imutáveis.
+
+**Contratos** (`/api/contratos`): `GET /` (filtros `clienteId`, `imovelId`, `inquilinoId`, `status`), `GET /{id}`, `POST /`, `PUT /{id}` (cláusulas, só enquanto Ativo), `POST /{id}/encerrar`, `POST /{id}/cancelar`. Não há `DELETE`: o contrato não é *soft-deletable*; o término se dá por Encerrar/Cancelar (Ativo → Encerrado/Cancelado), preservando o histórico.
+
+Regras da documentação implementadas:
+
+- **Limite de imóveis por plano (UC003)**: a criação (e a reativação de um imóvel inativo) respeita `plano.max_imoveis` — contam apenas imóveis **Ativos** (inativar libera vaga, alinhado ao CASO 2 de downgrade). Excedente retorna `400`.
+- **CASO 3 — 1 contrato ativo por imóvel**: validado na aplicação e reforçado pelo índice único parcial `ux_contrato_imovel_ativo`. Encerrar/cancelar libera o imóvel para novo contrato.
+- **Mesmo cliente**: imóvel e inquilino de um contrato devem pertencer ao mesmo cliente; o `clienteId` do contrato é derivado do imóvel.
+- **Exclusão só sem dependentes (§4)**: não remove imóvel/inquilino com contrato ativo (`400`).
+- **Validações** (FluentValidation): tamanhos conforme DDL, `tipo`/`status` válidos, CPF/CNPJ do inquilino (dígitos verificadores) por tipo de pessoa, `diaVencimento` 1..31, `valorAluguel` > 0, `dataFimPrevista` ≥ `dataInicio`, CEP com 8 dígitos.
+
 ## Endpoints atuais
 
 - `GET /health` — verificação de saúde.
@@ -121,4 +141,4 @@ dotnet test Aluguel.sln
 
 ## Estado
 
-Sprint 0 (fundação) + fatia vertical de **Planos** + **modelo de domínio completo (entidades EF, relacionamentos, `TenantId`, `DbContext`, migrations)** + **autenticação (ASP.NET Identity + JWT + refresh token + RBAC)** + **módulo Clientes (CRUD + validações + multi-tenant)** + **módulo Usuários (CRUD + limites por plano + perfis Gestor/Analista + isolamento)** entregues. Próximos incrementos seguem o plano de sprints (imóveis/contratos, assinatura/Mercado Pago, NFS-e, etc.).
+Sprint 0 (fundação) + fatia vertical de **Planos** + **modelo de domínio completo (entidades EF, relacionamentos, `TenantId`, `DbContext`, migrations)** + **autenticação (ASP.NET Identity + JWT + refresh token + RBAC)** + **módulo Clientes (CRUD + validações + multi-tenant)** + **módulo Usuários (CRUD + limites por plano + perfis Gestor/Analista + isolamento)** + **módulos Imóveis/Inquilinos/Contratos (CRUD + endpoints REST + limite por plano + CASO 3 + dependentes)** entregues. Próximos incrementos seguem o plano de sprints (assinatura/Mercado Pago, NFS-e, financeiro, etc.).
