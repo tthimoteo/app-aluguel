@@ -35,4 +35,19 @@ public class PlanoTests
     {
         Basico().PermiteNfse.Should().BeFalse();
     }
+
+    [Theory]
+    [InlineData(0, true)]
+    [InlineData(1, false)]
+    [InlineData(2, false)]
+    public void PermiteMaisUsuarios_respeita_limite_do_plano(int totalAtual, bool esperado) =>
+        Basico().PermiteMaisUsuarios(totalAtual).Should().Be(esperado);
+
+    [Fact]
+    public void Plano_Pro_nao_tem_limite_de_usuarios()
+    {
+        var pro = Pro();
+        pro.PermiteMaisUsuarios(1000).Should().BeTrue();
+        pro.MaxUsuarios.Should().BeNull();
+    }
 }
