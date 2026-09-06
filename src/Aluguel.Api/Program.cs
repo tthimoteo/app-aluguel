@@ -29,6 +29,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 // Resolução de tenant a partir do JWT (sobrescreve o provider nulo registrado na Infraestrutura).
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentTenant, JwtCurrentTenant>();
+builder.Services.AddScoped<ICurrentUser, JwtCurrentUser>();
 
 var jwt = builder.Configuration.GetSection(JwtOptions.Section).Get<JwtOptions>() ?? new JwtOptions();
 if (string.IsNullOrWhiteSpace(jwt.SigningKey) || jwt.SigningKey.Length < 32)
@@ -122,6 +123,7 @@ app.MapGet("/api/planos", async (ISender sender, CancellationToken ct) =>
 
 app.MapAuthEndpoints();
 app.MapClienteEndpoints();
+app.MapUsuarioEndpoints();
 
 // Endpoints de diagnóstico para demonstrar a autorização por role/política.
 app.MapGet("/api/admin/ping", () => Results.Ok(new { escopo = "Administrador", ok = true }))
