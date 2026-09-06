@@ -27,6 +27,9 @@ public class Inquilino : AggregateRoot, ITenantOwned, IAuditable, ISoftDeletable
     public Inquilino(Guid tenantId, Guid clienteId, TipoPessoa tipoPessoa, string nome, string documento,
         string? telefone = null, string? email = null, Endereco? endereco = null, string? inscricaoMunicipal = null)
     {
+        if (string.IsNullOrWhiteSpace(nome)) throw new ArgumentException("Nome é obrigatório.", nameof(nome));
+        if (string.IsNullOrWhiteSpace(documento)) throw new ArgumentException("Documento é obrigatório.", nameof(documento));
+
         TenantId = tenantId;
         ClienteId = clienteId;
         TipoPessoa = tipoPessoa;
@@ -37,4 +40,40 @@ public class Inquilino : AggregateRoot, ITenantOwned, IAuditable, ISoftDeletable
         Endereco = endereco ?? Endereco.Vazio();
         InscricaoMunicipal = inscricaoMunicipal;
     }
+
+    /// <summary>Atualiza dados cadastrais. Tipo de pessoa e documento são imutáveis.</summary>
+    public void Atualizar(string nome, string? inscricaoMunicipal, string? telefone, string? email, Endereco? endereco)
+    {
+        if (string.IsNullOrWhiteSpace(nome)) throw new ArgumentException("Nome é obrigatório.", nameof(nome));
+
+        Nome = nome;
+        InscricaoMunicipal = inscricaoMunicipal;
+        Telefone = telefone;
+        Email = email;
+        if (endereco is not null) Endereco = endereco;
+        Touch();
+    }
+
+    public void Inativar()
+    {
+        Status = StatusAtivoInativo.Inativo;
+        Touch();
+    }
+
+    public void Ativar()
+    {
+        Status = StatusAtivoInativo.Ativo;
+        Touch();
+    }
+
+    /// <summary>Exclusão lógica (soft delete). Só deve ocorrer sem dependentes (§4).</summary>
+    public void Remover()
+    {
+        if (DeletedAt is not null) return;
+        DeletedAt = DateTimeOffset.UtcNow;
+        Status = StatusAtivoInativo.Inativo;
+        Touch();
+    }
+
+    private void Touch() => UpdatedAt = DateTimeOffset.UtcNow;
 }

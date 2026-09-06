@@ -16,6 +16,9 @@ public static class Politicas
     /// <summary>Gestão de usuários/cadastros do cliente.</summary>
     public const string GerenciaUsuarios = nameof(GerenciaUsuarios);
 
+    /// <summary>Gestão de cadastros operacionais (imóveis, inquilinos e contratos).</summary>
+    public const string GerenciaCadastros = nameof(GerenciaCadastros);
+
     /// <summary>Emissão de NFS-e.</summary>
     public const string EmitirNfse = nameof(EmitirNfse);
 
