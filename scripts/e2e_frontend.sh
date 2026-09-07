@@ -41,6 +41,27 @@ else
   echo "PASS [home admin sem ClienteID]"
   PASS=$((PASS+1))
 fi
+if echo "$BODY" | grep -q "Cadastro da plataforma"; then
+  echo "PASS [home admin card clientes]"
+  PASS=$((PASS+1))
+else
+  echo "FAIL [home admin card clientes] sem card de quantidade de clientes"
+  FAIL=$((FAIL+1))
+fi
+if echo "$BODY" | grep -q "Pessoas físicas e jurídicas"; then
+  echo "FAIL [home admin sem card inquilinos] ainda renderiza card de inquilinos"
+  FAIL=$((FAIL+1))
+else
+  echo "PASS [home admin sem card inquilinos]"
+  PASS=$((PASS+1))
+fi
+if echo "$BODY" | grep -q "Ativos, encerrados e cancelados"; then
+  echo "FAIL [home admin sem card contratos] ainda renderiza card de contratos"
+  FAIL=$((FAIL+1))
+else
+  echo "PASS [home admin sem card contratos]"
+  PASS=$((PASS+1))
+fi
 if echo "$BODY" | grep -q ">Imóveis</h3>"; then
   echo "FAIL [home admin sem lista de imóveis] ainda renderiza h3 Imóveis"
   FAIL=$((FAIL+1))
@@ -80,6 +101,20 @@ if echo "$BODY" | grep -q "Nome (razão social)"; then
   FAIL=$((FAIL+1))
 else
   echo "PASS [home gestor sem lista de clientes]"
+  PASS=$((PASS+1))
+fi
+if echo "$BODY" | grep -q "Pessoas físicas e jurídicas" && echo "$BODY" | grep -q "Ativos, encerrados e cancelados"; then
+  echo "PASS [home gestor cards inquilinos e contratos]"
+  PASS=$((PASS+1))
+else
+  echo "FAIL [home gestor cards inquilinos e contratos] cards operacionais ausentes"
+  FAIL=$((FAIL+1))
+fi
+if echo "$BODY" | grep -q "Cadastro da plataforma"; then
+  echo "FAIL [home gestor sem card clientes] renderiza card de clientes"
+  FAIL=$((FAIL+1))
+else
+  echo "PASS [home gestor sem card clientes]"
   PASS=$((PASS+1))
 fi
 

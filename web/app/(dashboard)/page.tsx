@@ -17,8 +17,8 @@ export default async function HomePage() {
 
   const [imoveis, inquilinos, contratos, planos, clientes] = await Promise.all([
     api.imoveis({ take: ehAdmin ? 1 : 8 }),
-    api.inquilinos({ take: 1 }),
-    api.contratos({ take: 1 }),
+    ehAdmin ? Promise.resolve(null) : api.inquilinos({ take: 1 }),
+    ehAdmin ? Promise.resolve(null) : api.contratos({ take: 1 }),
     api.planos(),
     ehAdmin ? api.clientes({ take: 20 }) : Promise.resolve<Pagina<Cliente> | null>(null),
   ]);
@@ -45,22 +45,33 @@ export default async function HomePage() {
         }
       />
 
-      <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className={cn("mb-6 grid gap-3 sm:grid-cols-2", ehAdmin ? "xl:grid-cols-3" : "xl:grid-cols-4")}>
+        {ehAdmin ? (
+          <IndicadorCard
+            titulo="Clientes"
+            valor={clientes?.total ?? 0}
+            detalhe="Cadastro da plataforma"
+          />
+        ) : null}
         <IndicadorCard
           titulo="Imóveis"
           valor={imoveis.total}
           detalhe="Cadastro ativo no tenant"
         />
-        <IndicadorCard
-          titulo="Inquilinos"
-          valor={inquilinos.total}
-          detalhe="Pessoas físicas e jurídicas"
-        />
-        <IndicadorCard
-          titulo="Contratos"
-          valor={contratos.total}
-          detalhe="Ativos, encerrados e cancelados"
-        />
+        {ehAdmin ? null : (
+          <>
+            <IndicadorCard
+              titulo="Inquilinos"
+              valor={inquilinos?.total ?? 0}
+              detalhe="Pessoas físicas e jurídicas"
+            />
+            <IndicadorCard
+              titulo="Contratos"
+              valor={contratos?.total ?? 0}
+              detalhe="Ativos, encerrados e cancelados"
+            />
+          </>
+        )}
         <IndicadorCard
           titulo="Planos"
           valor={planos.length}

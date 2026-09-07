@@ -10,7 +10,7 @@ Detalha as telas e regras funcionais (§10–§14) e como mapeiam para endpoints
 
 **Botão "Incluir imóvel"** — visível conforme quantidade já cadastrada **e** plano contratado (`plano.max_imoveis`).
 
-**Administrador:** a lista da home é de **clientes** (nome/razão social, CPF ou CNPJ, plano, status), não de imóveis. Gestor e Analista continuam com a lista de imóveis.
+**Administrador:** a lista da home é de **clientes** (nome/razão social, CPF ou CNPJ, plano, status), não de imóveis. Os cards de indicadores exibem quantidade de **clientes**, imóveis e planos (sem inquilinos nem contratos). Gestor e Analista continuam com a lista de imóveis e os cards de imóveis, inquilinos, contratos e planos.
 
 **Lista de imóveis** (Gestor/Analista), por linha:
 - Situação de NFS-e e pagamento: `Dentro do prazo` · `NFS-e pendente` · `Inadimplente`;
