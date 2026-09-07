@@ -2,7 +2,6 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Logo } from "@/components/brand/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,9 +50,6 @@ export function LoginForm() {
         <ThemeToggle className="text-foreground hover:bg-muted" />
       </div>
       <div className="w-full max-w-[400px] rounded-lg bg-card p-8 shadow-[0_4px_6px_rgba(0,0,0,0.1)] ring-1 ring-border">
-        <div className="mb-6 flex justify-center text-secondary dark:text-foreground">
-          <Logo />
-        </div>
         <h1 className="mb-6 text-center text-xl font-semibold text-secondary dark:text-foreground">Entrar</h1>
         <form
           action={(formData) => {
