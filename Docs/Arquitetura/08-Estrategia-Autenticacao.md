@@ -117,6 +117,7 @@ sequenceDiagram
 
 - **Provisionamento (§6)**: ao criar `Cliente` PF, o primeiro `AppUser` coincide com o cliente e recebe `Gestor`. `Gestor` cria demais usuários conforme `plano.max_usuarios`.
 - **Refresh tokens** persistidos/rotacionados (revogáveis); *logout* revoga o refresh.
+- **Frontend (Next.js):** o App Router atua como BFF — `POST /api/auth/login` (Next) chama a API, grava `access`/`refresh` em cookies **httpOnly** e as Server Components enviam `Authorization: Bearer`. O middleware renova o access via `POST /api/auth/refresh` quando só o refresh está presente. A API aceita CORS das origens em `Cors:Origins` (dev: `localhost:3000`).
 
 ## 7. Segurança de webhooks (Mercado Pago)
 

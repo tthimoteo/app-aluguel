@@ -130,25 +130,42 @@ Aluguel.Worker/
 └── Scheduling/QuartzConfig.cs
 ```
 
-## 7. Frontend — Next.js 15 (resumo)
+## 7. Frontend — Next.js 15 (`web/`)
+
+Aplicação no monorepo (`web/`, deploy na Vercel), App Router, identidade **Lucrare** (skill `.cursor/skills/lucrare-frontend`). Consome a API .NET via BFF (Route Handlers + cookies httpOnly) e `Authorization: Bearer` no servidor.
 
 ```text
-app-aluguel-web/                   # deploy na Vercel
-├── app/                           # App Router (Next.js 15)
-│   ├── (auth)/login
-│   ├── (app)/home                 # Home: filtros + indicadores + lista de imóveis
-│   ├── (app)/clientes             # somente admin do sistema
-│   ├── (app)/minha-conta          # gestor: plano/upgrade/histórico
-│   ├── (app)/relatorios
-│   └── (app)/imoveis|inquilinos|contratos
-├── components/ui/                 # shadcn/ui
-├── lib/api/                       # client REST (fetch + JWT)
-├── lib/theme/                     # tema claro/escuro (§13)
-├── charts/                        # Recharts (indicadores)
-└── next.config (next-pwa)         # PWA
+web/
+├── app/
+│   ├── login/                     # autenticação (card centralizado)
+│   ├── api/auth/                  # BFF: login, logout, refresh
+│   ├── api/usuarios/              # BFF: incluir, editar, remover (Administrador)
+│   └── (dashboard)/               # layout: menu lateral + header navy
+│       ├── page.tsx               # Home: indicadores + lista (clientes p/ Admin, imóveis p/ demais)
+│       ├── clientes/              # Administrador
+│       ├── imoveis|inquilinos|contratos
+│       ├── usuarios/              # Administrador / Gestor
+│       ├── minha-conta/           # Gestor
+│       ├── relatorios/            # Administrador / Gestor / Analista
+│       ├── contabilidade/         # Gestor
+│       └── auditoria/             # Administrador / Gestor
+├── components/
+│   ├── ui/                        # shadcn/ui
+│   ├── layout/                    # sidebar, header, tema
+│   ├── data/                      # tabela desktop → cards mobile
+│   ├── home/                      # listas da home por perfil (clientes/imóveis)
+│   └── usuarios/                  # gestão de usuários do cliente (Administrador)
+├── lib/
+│   ├── api/                       # client REST (fetch + JWT)
+│   ├── auth/                      # cookies, JWT payload, sessão
+│   └── navigation.ts              # menu §13 por perfil
+├── app/globals.css                # tokens Lucrare + tema claro/escuro
+└── middleware.ts                  # guarda de sessão + refresh
 ```
 
-Segue o design system **Lucrare** (skill `.cursor/skills/lucrare-frontend`) e Tailwind v4 + shadcn/ui.
+Tema claro/escuro (`next-themes`, classe `.dark`) e CORS da API para `http://localhost:3000` (produção: origem Vercel). PWA (`next-pwa`) permanece no Sprint 8.
+
+Segue o design system **Lucrare** e Tailwind v4 + shadcn/ui.
 
 ## 8. Pacotes NuGet principais
 

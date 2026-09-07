@@ -131,6 +131,7 @@ Regras da documentação implementadas:
 - `GET /health` — verificação de saúde.
 - `GET /api/planos` — catálogo de planos (seed conforme especificação §3).
 - `GET /swagger` — documentação interativa com botão **Authorize** (Bearer JWT), ambiente Development.
+- CORS (`Cors:Origins`) — origens do frontend Next.js (`http://localhost:3000` em desenvolvimento).
 
 ## Testes
 

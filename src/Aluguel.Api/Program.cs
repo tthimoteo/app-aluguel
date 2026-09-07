@@ -67,6 +67,17 @@ builder.Services.AddAuthorization(o =>
 builder.Services.ConfigureHttpJsonOptions(o =>
     o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
+var corsOrigins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>()
+    ?? ["http://localhost:3000", "http://127.0.0.1:3000"];
+builder.Services.AddCors(o =>
+{
+    o.AddPolicy("Frontend", p =>
+        p.WithOrigins(corsOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials());
+});
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -112,6 +123,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
+app.UseCors("Frontend");
 app.UseAuthentication();
 app.UseAuthorization();
 

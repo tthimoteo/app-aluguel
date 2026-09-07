@@ -1,0 +1,151 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--lucrare-font);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--lucrare-font);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-navy: var(--navy);
+  --radius-sm: 4px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 12px;
+  --radius-3xl: 16px;
+  --radius-4xl: 16px;
+}
+
+:root {
+  --lucrare-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  --lucrare-accent: #db6838;
+  --lucrare-accent-hover: #c55a32;
+  --lucrare-navy: #2c3e50;
+  --lucrare-slate: #34495e;
+  --background: #f8f9fa;
+  --foreground: #2c3e50;
+  --card: #ffffff;
+  --card-foreground: #2c3e50;
+  --popover: #ffffff;
+  --popover-foreground: #2c3e50;
+  --primary: #db6838;
+  --primary-foreground: #ffffff;
+  --secondary: #2c3e50;
+  --secondary-foreground: #ffffff;
+  --muted: #e9ecef;
+  --muted-foreground: #6c757d;
+  --accent: #f4e4dc;
+  --accent-foreground: #c55a32;
+  --destructive: #e74c3c;
+  --border: #dddddd;
+  --input: #dddddd;
+  --ring: #db6838;
+  --chart-1: #db6838;
+  --chart-2: #2c3e50;
+  --chart-3: #27ae60;
+  --chart-4: #007bff;
+  --chart-5: #ffc107;
+  --radius: 0.5rem;
+  --sidebar: #2c3e50;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #db6838;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #db6838;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #3d5366;
+  --sidebar-ring: #db6838;
+  --success: #27ae60;
+  --success-foreground: #155724;
+  --warning: #ffc107;
+  --info: #007bff;
+  --navy: #2c3e50;
+}
+
+.dark {
+  --background: #1a2332;
+  --foreground: #f8f9fa;
+  --card: #243447;
+  --card-foreground: #f8f9fa;
+  --popover: #243447;
+  --popover-foreground: #f8f9fa;
+  --primary: #db6838;
+  --primary-foreground: #ffffff;
+  --secondary: #34495e;
+  --secondary-foreground: #ffffff;
+  --muted: #2c3e50;
+  --muted-foreground: #95a5a6;
+  --accent: #3d2a22;
+  --accent-foreground: #f4cbb8;
+  --destructive: #e74c3c;
+  --border: #3d4f61;
+  --input: #3d4f61;
+  --ring: #db6838;
+  --chart-1: #db6838;
+  --chart-2: #7f9bb3;
+  --chart-3: #27ae60;
+  --chart-4: #5dade2;
+  --chart-5: #ffc107;
+  --sidebar: #151c27;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #db6838;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #db6838;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #2c3e50;
+  --sidebar-ring: #db6838;
+  --success: #27ae60;
+  --success-foreground: #d4edda;
+  --warning: #ffc107;
+  --info: #5dade2;
+  --navy: #1a2332;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background font-sans text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
