@@ -67,7 +67,7 @@ Tela mostra, **mês a mês**, o histórico de faturamento (XML e PDF para baixar
 
 | Item | Visibilidade | Função |
 |---|---|---|
-| **Clientes** | AdminSistema | Gestão de clientes e respectivos planos, usuários, imóveis, inquilinos; emissão/cancelamento de NFS-e; registrar pagamento (reutiliza telas por submenu). |
+| **Usuários** | Administrador (escolhe o cliente) / Gestor (próprio cliente) | Incluir, editar, remover e consultar detalhes (clique na linha). |
 | **Minha Conta** | Gestor | Dados de cliente/usuário; histórico de cobrança do app; plano atual; **upgrade**. |
 | **Relatório** | Administrador/Gestor/Analista | Extrair histórico de faturamentos, pagamentos, IPTU e demais despesas. |
 | **Dados para Contabilidade** | Gestor | Exportar Contas a Receber e Contas a Pagar em XLSX/CSV. |

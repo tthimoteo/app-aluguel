@@ -88,6 +88,95 @@ CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -b /tmp/fe_cookies_admin "$WEB/
 BODY=$(cat /tmp/fe_body)
 check 200 "$CODE" "GET /relatorios (admin)"
 
+line "USUÁRIOS ADMIN (CRUD)"
+CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -b /tmp/fe_cookies_admin "$WEB/usuarios")
+BODY=$(cat /tmp/fe_body)
+check 200 "$CODE" "GET /usuarios (admin lista clientes)"
+python3 - <<'PY' >/tmp/fe_usuarios_crud.env
+import json, os, re, urllib.error, urllib.request
+from pathlib import Path
+
+api = os.environ.get("API_URL", "http://127.0.0.1:5272")
+token = ""
+for line in Path("/tmp/fe_cookies_admin").read_text().splitlines():
+    if "aluguel_access" in line and not line.startswith("#"):
+        token = line.split()[-1]
+        break
+if not token:
+    raise SystemExit("sem token")
+ids = re.findall(r"clienteId=([0-9a-f-]{36})", Path("/tmp/fe_body").read_text())
+if not ids:
+    raise SystemExit("sem clienteId")
+
+def req(method, url, data=None):
+    body = None if data is None else json.dumps(data).encode()
+    headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+    if body is not None:
+        headers["Content-Type"] = "application/json"
+    r = urllib.request.Request(url, data=body, method=method, headers=headers)
+    try:
+        with urllib.request.urlopen(r) as res:
+            raw = res.read()
+            return res.status, raw.decode() if raw else ""
+    except urllib.error.HTTPError as e:
+        return e.code, e.read().decode()
+
+cliente_id = None
+for cid in dict.fromkeys(ids):
+    st, raw = req("GET", f"{api}/api/clientes/{cid}")
+    if st != 200:
+        continue
+    if not json.loads(raw).get("planoId"):
+        continue
+    st, raw = req("GET", f"{api}/api/usuarios?clienteId={cid}&take=50")
+    if st != 200:
+        continue
+    itens = json.loads(raw).get("itens", [])
+    for u in itens:
+        email = str(u.get("email") or "")
+        if email.startswith("e2e-") and u.get("status") == "Ativo":
+            req("DELETE", f"{api}/api/usuarios/{u['id']}")
+    cliente_id = cid
+    break
+
+if not cliente_id:
+    cliente_id = ids[0]
+print(f"CLIENTE_ID={cliente_id}")
+PY
+# shellcheck disable=SC1091
+. /tmp/fe_usuarios_crud.env
+echo "  clienteId=$CLIENTE_ID"
+CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -b /tmp/fe_cookies_admin "$WEB/usuarios?clienteId=$CLIENTE_ID")
+BODY=$(cat /tmp/fe_body)
+check 200 "$CODE" "GET /usuarios?clienteId (admin)"
+if echo "$BODY" | grep -q "Incluir usuário"; then
+  echo "PASS [admin incluir usuário visível]"
+  PASS=$((PASS+1))
+else
+  echo "FAIL [admin incluir usuário visível]"
+  FAIL=$((FAIL+1))
+fi
+EMAIL_E2E="e2e-admin-$(date +%s)@demo.local"
+CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -b /tmp/fe_cookies_admin -X POST "$WEB/api/usuarios" \
+  -H 'Content-Type: application/json' \
+  -d "{\"clienteId\":\"$CLIENTE_ID\",\"nome\":\"E2E Admin User\",\"email\":\"$EMAIL_E2E\",\"perfil\":\"Analista\",\"senha\":\"Usuario@123456\"}")
+BODY=$(cat /tmp/fe_body)
+check 201 "$CODE" "POST /api/usuarios (admin)"
+USER_ID=$(echo "$BODY" | jq -r '.id // empty')
+if [ -n "$USER_ID" ] && [ "$USER_ID" != "null" ]; then
+  CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -b /tmp/fe_cookies_admin "$WEB/api/usuarios/$USER_ID")
+  check 200 "$CODE" "GET /api/usuarios/{id} (admin)"
+  CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -b /tmp/fe_cookies_admin -X PUT "$WEB/api/usuarios/$USER_ID" \
+    -H 'Content-Type: application/json' \
+    -d '{"nome":"E2E Admin Editado","telefone":"11988887777","perfil":"Analista","status":"Ativo"}')
+  check 200 "$CODE" "PUT /api/usuarios/{id} (admin)"
+  CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -b /tmp/fe_cookies_admin -X DELETE "$WEB/api/usuarios/$USER_ID")
+  check 204 "$CODE" "DELETE /api/usuarios/{id} (admin)"
+else
+  echo "FAIL [criar usuário sem id] body=${BODY:0:300}"
+  FAIL=$((FAIL+3))
+fi
+
 line "LOGIN BFF (Gestor)"
 CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -c /tmp/fe_cookies -X POST "$WEB/api/auth/login" \
   -H 'Content-Type: application/json' \

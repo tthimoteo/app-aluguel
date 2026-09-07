@@ -4,6 +4,7 @@ import { EmptyState } from "@/components/data/empty-state";
 import { PageHeader } from "@/components/data/page-header";
 import { SearchForm } from "@/components/data/search-form";
 import { StatusBadge } from "@/components/data/status-badge";
+import { GestaoUsuarios } from "@/components/usuarios/gestao-usuarios";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api } from "@/lib/api/server";
 import { requireSession, temPerfil } from "@/lib/auth/session";
@@ -51,12 +52,27 @@ export default async function UsuariosPage({
     );
   }
 
-  const pagina = await api.usuarios({ termo, take: 50, clienteId });
+  const [pagina, cliente] = await Promise.all([
+    api.usuarios({ termo, take: 50, clienteId }),
+    ehAdmin && clienteId ? api.cliente(clienteId).catch(() => null) : Promise.resolve(null),
+  ]);
+
+  if (ehAdmin && clienteId) {
+    return (
+      <GestaoUsuarios
+        usuarios={pagina.itens}
+        total={pagina.total}
+        clienteId={clienteId}
+        clienteNome={cliente?.nomeExibicao}
+        termo={termo}
+      />
+    );
+  }
 
   return (
     <div>
       <PageHeader titulo="Usuários" descricao="Usuários do cliente (Gestor e Analista). Limite conforme o plano." />
-      <SearchForm placeholder="Nome ou e-mail" defaultValue={termo} hidden={clienteId ? { clienteId } : undefined} />
+      <SearchForm placeholder="Nome ou e-mail" defaultValue={termo} />
       {pagina.itens.length === 0 ? (
         <EmptyState />
       ) : (

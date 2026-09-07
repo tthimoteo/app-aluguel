@@ -139,6 +139,7 @@ web/
 ├── app/
 │   ├── login/                     # autenticação (card centralizado)
 │   ├── api/auth/                  # BFF: login, logout, refresh
+│   ├── api/usuarios/              # BFF: incluir, editar, remover (Administrador)
 │   └── (dashboard)/               # layout: menu lateral + header navy
 │       ├── page.tsx               # Home: indicadores + lista (clientes p/ Admin, imóveis p/ demais)
 │       ├── clientes/              # Administrador
@@ -152,7 +153,8 @@ web/
 │   ├── ui/                        # shadcn/ui
 │   ├── layout/                    # sidebar, header, tema
 │   ├── data/                      # tabela desktop → cards mobile
-│   └── home/                      # listas da home por perfil (clientes/imóveis)
+│   ├── home/                      # listas da home por perfil (clientes/imóveis)
+│   └── usuarios/                  # gestão de usuários do cliente (Administrador)
 ├── lib/
 │   ├── api/                       # client REST (fetch + JWT)
 │   ├── auth/                      # cookies, JWT payload, sessão
