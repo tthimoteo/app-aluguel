@@ -27,12 +27,19 @@ line "HOME ADMIN (lista de clientes)"
 CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -b /tmp/fe_cookies_admin "$WEB/")
 BODY=$(cat /tmp/fe_body)
 check 200 "$CODE" "GET / (admin)"
-if echo "$BODY" | grep -q "ClienteID" && echo "$BODY" | grep -q "CPF ou CNPJ"; then
+if echo "$BODY" | grep -q "Nome (razão social)" && echo "$BODY" | grep -q "CPF ou CNPJ"; then
   echo "PASS [home admin lista clientes]"
   PASS=$((PASS+1))
 else
   echo "FAIL [home admin lista clientes] body sem colunas esperadas"
   FAIL=$((FAIL+1))
+fi
+if echo "$BODY" | grep -q "ClienteID"; then
+  echo "FAIL [home admin sem ClienteID] ainda renderiza ClienteID"
+  FAIL=$((FAIL+1))
+else
+  echo "PASS [home admin sem ClienteID]"
+  PASS=$((PASS+1))
 fi
 if echo "$BODY" | grep -q ">Imóveis</h3>"; then
   echo "FAIL [home admin sem lista de imóveis] ainda renderiza h3 Imóveis"
@@ -68,8 +75,8 @@ else
   echo "FAIL [home gestor lista imóveis] body sem h3 Imóveis"
   FAIL=$((FAIL+1))
 fi
-if echo "$BODY" | grep -q "ClienteID"; then
-  echo "FAIL [home gestor sem lista de clientes] renderiza ClienteID"
+if echo "$BODY" | grep -q "Nome (razão social)"; then
+  echo "FAIL [home gestor sem lista de clientes] renderiza colunas de clientes"
   FAIL=$((FAIL+1))
 else
   echo "PASS [home gestor sem lista de clientes]"

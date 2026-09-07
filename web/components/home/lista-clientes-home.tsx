@@ -31,7 +31,6 @@ export function ListaClientesHome({
               <Table>
                 <TableHeader className="bg-[#34495e] [&_th]:text-white">
                   <TableRow className="hover:bg-transparent">
-                    <TableHead className="text-white">ClienteID</TableHead>
                     <TableHead className="text-white">Nome (razão social)</TableHead>
                     <TableHead className="text-white">CPF ou CNPJ</TableHead>
                     <TableHead className="text-white">Plano</TableHead>
@@ -41,9 +40,6 @@ export function ListaClientesHome({
                 <TableBody>
                   {clientes.itens.map((cliente) => (
                     <TableRow key={cliente.id}>
-                      <TableCell className="max-w-[220px] font-mono text-xs whitespace-normal break-all">
-                        {cliente.id}
-                      </TableCell>
                       <TableCell className="font-medium">{nomeCliente(cliente)}</TableCell>
                       <TableCell>{documentoCliente(cliente)}</TableCell>
                       <TableCell>{nomeDoPlano(planos, cliente.planoId)}</TableCell>
@@ -59,9 +55,6 @@ export function ListaClientesHome({
           mobile={clientes.itens.map((cliente) => (
             <MobileCard key={cliente.id}>
               <p className="mb-2 font-semibold">{nomeCliente(cliente)}</p>
-              <CardField label="ClienteID">
-                <span className="font-mono text-xs break-all">{cliente.id}</span>
-              </CardField>
               <CardField label="CPF ou CNPJ">{documentoCliente(cliente)}</CardField>
               <CardField label="Plano">{nomeDoPlano(planos, cliente.planoId)}</CardField>
               <CardField label="Status">
