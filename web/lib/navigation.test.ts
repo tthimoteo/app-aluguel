@@ -29,6 +29,7 @@ describe("itensVisiveis", () => {
     expect(hrefs).toContain("/minha-conta");
     expect(hrefs).toContain("/contabilidade");
     expect(hrefs).toContain("/usuarios");
+    expect(hrefs).toContain("/relatorios");
     expect(hrefs).not.toContain("/clientes");
   });
 });

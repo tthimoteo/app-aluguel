@@ -1,4 +1,3 @@
-import { FileText, Receipt, Users } from "lucide-react";
 import { IndicadorCard } from "@/components/data/data-list";
 import { PageHeader } from "@/components/data/page-header";
 import { ListaClientesHome } from "@/components/home/lista-clientes-home";
@@ -84,32 +83,6 @@ export default async function HomePage() {
       ) : (
         <ListaImoveisHome imoveis={imoveis} />
       )}
-
-      <div className="mt-8 grid gap-3 sm:grid-cols-3">
-        <Atalho href="/inquilinos" icone={Users} titulo="Inquilinos" />
-        <Atalho href="/contratos" icone={FileText} titulo="Contratos" />
-        <Atalho href="/relatorios" icone={Receipt} titulo="Relatórios" />
-      </div>
     </div>
-  );
-}
-
-function Atalho({
-  href,
-  icone: Icone,
-  titulo,
-}: {
-  href: string;
-  icone: typeof Users;
-  titulo: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="flex items-center gap-3 rounded-lg bg-card p-4 text-sm font-medium shadow-[0_2px_8px_rgba(0,0,0,0.1)] ring-1 ring-border transition-transform duration-200 hover:-translate-y-0.5"
-    >
-      <Icone className="size-4 text-primary" />
-      {titulo}
-    </Link>
   );
 }

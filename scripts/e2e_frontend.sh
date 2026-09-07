@@ -69,6 +69,20 @@ else
   echo "PASS [home admin sem lista de imóveis]"
   PASS=$((PASS+1))
 fi
+if echo "$BODY" | grep -q "sm:grid-cols-3"; then
+  echo "FAIL [home admin sem atalhos] ainda renderiza grade de atalhos"
+  FAIL=$((FAIL+1))
+else
+  echo "PASS [home admin sem atalhos]"
+  PASS=$((PASS+1))
+fi
+if echo "$BODY" | grep -q 'href="/relatorios"'; then
+  echo "FAIL [home admin sem relatorios na home] ainda aponta para /relatorios"
+  FAIL=$((FAIL+1))
+else
+  echo "PASS [home admin sem relatorios na home]"
+  PASS=$((PASS+1))
+fi
 
 line "LOGIN BFF (Gestor)"
 CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -c /tmp/fe_cookies -X POST "$WEB/api/auth/login" \
@@ -79,7 +93,7 @@ check 200 "$CODE" "login gestor via Next.js"
 echo "  nome=$(echo "$BODY" | jq -r '.usuario.nome // empty')"
 
 line "PÁGINAS AUTENTICADAS"
-for path in / /imoveis /inquilinos /contratos /minha-conta /usuarios; do
+for path in / /imoveis /inquilinos /contratos /minha-conta /usuarios /relatorios; do
   CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -b /tmp/fe_cookies "$WEB$path")
   BODY=$(cat /tmp/fe_body)
   check 200 "$CODE" "GET $path"
@@ -116,6 +130,20 @@ if echo "$BODY" | grep -q "Cadastro da plataforma"; then
 else
   echo "PASS [home gestor sem card clientes]"
   PASS=$((PASS+1))
+fi
+if echo "$BODY" | grep -q "sm:grid-cols-3"; then
+  echo "FAIL [home gestor sem atalhos] ainda renderiza grade de atalhos"
+  FAIL=$((FAIL+1))
+else
+  echo "PASS [home gestor sem atalhos]"
+  PASS=$((PASS+1))
+fi
+if echo "$BODY" | grep -q 'href="/relatorios"'; then
+  echo "PASS [menu gestor tem relatorios]"
+  PASS=$((PASS+1))
+else
+  echo "FAIL [menu gestor tem relatorios] Relatórios ausente do menu lateral"
+  FAIL=$((FAIL+1))
 fi
 
 line "LOGIN INVÁLIDO"
