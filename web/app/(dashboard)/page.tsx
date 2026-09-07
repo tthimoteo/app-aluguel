@@ -1,5 +1,4 @@
 import { Building2, FileText, Receipt, Users } from "lucide-react";
-import { IndicadoresChart } from "@/components/charts/indicadores-chart";
 import { EmptyState } from "@/components/data/empty-state";
 import { IndicadorCard } from "@/components/data/data-list";
 import { PageHeader } from "@/components/data/page-header";
@@ -19,13 +18,6 @@ export default async function HomePage() {
     api.contratos({ take: 1 }),
     api.planos(),
   ]);
-
-  const indicadores = [
-    { nome: "Imóveis", quantidade: imoveis.total },
-    { nome: "Inquilinos", quantidade: inquilinos.total },
-    { nome: "Contratos", quantidade: contratos.total },
-    { nome: "Planos", quantidade: planos.length },
-  ];
 
   const podeIncluir = usuario.roles.some((r) => r === "Administrador" || r === "Gestor");
 
@@ -64,11 +56,6 @@ export default async function HomePage() {
           valor={planos.length}
           detalhe="Catálogo disponível"
         />
-      </div>
-
-      <div className="mb-6 rounded-lg bg-card p-4 shadow-[0_2px_8px_rgba(0,0,0,0.1)] ring-1 ring-border">
-        <h3 className="mb-3 text-sm font-semibold">Cadastros</h3>
-        <IndicadoresChart dados={indicadores} />
       </div>
 
       <div className="mb-4 flex items-center justify-between">

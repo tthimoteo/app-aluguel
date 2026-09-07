@@ -151,8 +151,7 @@ web/
 ├── components/
 │   ├── ui/                        # shadcn/ui
 │   ├── layout/                    # sidebar, header, tema
-│   ├── data/                      # tabela desktop → cards mobile
-│   └── charts/                    # Recharts
+│   └── data/                      # tabela desktop → cards mobile
 ├── lib/
 │   ├── api/                       # client REST (fetch + JWT)
 │   ├── auth/                      # cookies, JWT payload, sessão
