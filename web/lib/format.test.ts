@@ -3,6 +3,7 @@ import {
   documentoCliente,
   formatarCpfCnpj,
   formatarData,
+  formatarDataHora,
   formatarMoeda,
   iniciais,
   nomeCliente,
@@ -24,6 +25,13 @@ describe("formatarMoeda", () => {
 describe("formatarData", () => {
   it("converte ISO para pt-BR", () => {
     expect(formatarData("2026-03-01")).toBe("01/03/2026");
+  });
+});
+
+describe("formatarDataHora", () => {
+  it("retorna traço para vazio", () => {
+    expect(formatarDataHora(null)).toBe("—");
+    expect(formatarDataHora(undefined)).toBe("—");
   });
 });
 
