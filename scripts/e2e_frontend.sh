@@ -77,12 +77,16 @@ else
   PASS=$((PASS+1))
 fi
 if echo "$BODY" | grep -q 'href="/relatorios"'; then
-  echo "FAIL [home admin sem relatorios na home] ainda aponta para /relatorios"
-  FAIL=$((FAIL+1))
-else
-  echo "PASS [home admin sem relatorios na home]"
+  echo "PASS [menu admin tem relatorios]"
   PASS=$((PASS+1))
+else
+  echo "FAIL [menu admin tem relatorios] Relatórios ausente do menu lateral"
+  FAIL=$((FAIL+1))
 fi
+
+CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -b /tmp/fe_cookies_admin "$WEB/relatorios")
+BODY=$(cat /tmp/fe_body)
+check 200 "$CODE" "GET /relatorios (admin)"
 
 line "LOGIN BFF (Gestor)"
 CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -c /tmp/fe_cookies -X POST "$WEB/api/auth/login" \

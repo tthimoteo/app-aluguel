@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 
 export default async function RelatoriosPage() {
   const usuario = await requireSession();
-  if (!temPerfil(usuario, "Gestor", "Analista")) redirect("/");
+  if (!temPerfil(usuario, "Administrador", "Gestor", "Analista")) redirect("/");
 
   return (
     <div>

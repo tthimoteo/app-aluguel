@@ -16,12 +16,12 @@ describe("itensVisiveis", () => {
     expect(itensVisiveis(["Analista"]).some((i) => i.href === "/clientes")).toBe(false);
   });
 
-  it("mostra Clientes e Auditoria para Administrador", () => {
+  it("mostra Clientes, Relatórios e Auditoria para Administrador", () => {
     const hrefs = itensVisiveis(["Administrador"]).map((i) => i.href);
     expect(hrefs).toContain("/clientes");
+    expect(hrefs).toContain("/relatorios");
     expect(hrefs).toContain("/auditoria");
     expect(hrefs).not.toContain("/minha-conta");
-    expect(hrefs).not.toContain("/relatorios");
   });
 
   it("mostra Minha Conta e Dados para Contabilidade só para Gestor", () => {

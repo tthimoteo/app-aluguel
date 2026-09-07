@@ -145,7 +145,7 @@ web/
 │       ├── imoveis|inquilinos|contratos
 │       ├── usuarios/              # Administrador / Gestor
 │       ├── minha-conta/           # Gestor
-│       ├── relatorios/            # Gestor / Analista
+│       ├── relatorios/            # Administrador / Gestor / Analista
 │       ├── contabilidade/         # Gestor
 │       └── auditoria/             # Administrador / Gestor
 ├── components/

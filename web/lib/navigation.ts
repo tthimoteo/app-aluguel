@@ -16,7 +16,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/contratos", label: "Contratos", icone: "file", visivelPara: "todos" },
   { href: "/usuarios", label: "Usuários", icone: "userCog", visivelPara: ["Administrador", "Gestor"] },
   { href: "/minha-conta", label: "Minha Conta", icone: "user", visivelPara: ["Gestor"] },
-  { href: "/relatorios", label: "Relatórios", icone: "barChart", visivelPara: ["Gestor", "Analista"] },
+  { href: "/relatorios", label: "Relatórios", icone: "barChart", visivelPara: ["Administrador", "Gestor", "Analista"] },
   {
     href: "/contabilidade",
     label: "Dados para Contabilidade",
