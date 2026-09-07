@@ -10,7 +10,9 @@ Detalha as telas e regras funcionais (§10–§14) e como mapeiam para endpoints
 
 **Botão "Incluir imóvel"** — visível conforme quantidade já cadastrada **e** plano contratado (`plano.max_imoveis`).
 
-**Lista de imóveis**, por linha:
+**Administrador:** a lista da home é de **clientes** (ClienteID, nome/razão social, CPF ou CNPJ, plano, status), não de imóveis. Gestor e Analista continuam com a lista de imóveis.
+
+**Lista de imóveis** (Gestor/Analista), por linha:
 - Situação de NFS-e e pagamento: `Dentro do prazo` · `NFS-e pendente` · `Inadimplente`;
 - Próxima data de vencimento do aluguel **ou** última data de vencimento sem emissão de NFS-e;
 - Nome do inquilino;

@@ -140,7 +140,7 @@ web/
 │   ├── login/                     # autenticação (card centralizado)
 │   ├── api/auth/                  # BFF: login, logout, refresh
 │   └── (dashboard)/               # layout: menu lateral + header navy
-│       ├── page.tsx               # Home: indicadores + lista de imóveis
+│       ├── page.tsx               # Home: indicadores + lista (clientes p/ Admin, imóveis p/ demais)
 │       ├── clientes/              # Administrador
 │       ├── imoveis|inquilinos|contratos
 │       ├── usuarios/              # Administrador / Gestor
@@ -151,7 +151,8 @@ web/
 ├── components/
 │   ├── ui/                        # shadcn/ui
 │   ├── layout/                    # sidebar, header, tema
-│   └── data/                      # tabela desktop → cards mobile
+│   ├── data/                      # tabela desktop → cards mobile
+│   └── home/                      # listas da home por perfil (clientes/imóveis)
 ├── lib/
 │   ├── api/                       # client REST (fetch + JWT)
 │   ├── auth/                      # cookies, JWT payload, sessão

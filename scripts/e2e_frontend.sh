@@ -16,6 +16,32 @@ CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' "$API/health") || CODE=000
 BODY=$(cat /tmp/fe_body 2>/dev/null || true)
 check 200 "$CODE" "API saudável"
 
+line "LOGIN BFF (Administrador)"
+CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -c /tmp/fe_cookies_admin -X POST "$WEB/api/auth/login" \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"admin@aluguel.local","senha":"Admin@123456"}')
+BODY=$(cat /tmp/fe_body)
+check 200 "$CODE" "login admin via Next.js"
+
+line "HOME ADMIN (lista de clientes)"
+CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -b /tmp/fe_cookies_admin "$WEB/")
+BODY=$(cat /tmp/fe_body)
+check 200 "$CODE" "GET / (admin)"
+if echo "$BODY" | grep -q "ClienteID" && echo "$BODY" | grep -q "CPF ou CNPJ"; then
+  echo "PASS [home admin lista clientes]"
+  PASS=$((PASS+1))
+else
+  echo "FAIL [home admin lista clientes] body sem colunas esperadas"
+  FAIL=$((FAIL+1))
+fi
+if echo "$BODY" | grep -q ">Imóveis</h3>"; then
+  echo "FAIL [home admin sem lista de imóveis] ainda renderiza h3 Imóveis"
+  FAIL=$((FAIL+1))
+else
+  echo "PASS [home admin sem lista de imóveis]"
+  PASS=$((PASS+1))
+fi
+
 line "LOGIN BFF (Gestor)"
 CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -c /tmp/fe_cookies -X POST "$WEB/api/auth/login" \
   -H 'Content-Type: application/json' \
@@ -30,6 +56,25 @@ for path in / /imoveis /inquilinos /contratos /minha-conta /usuarios; do
   BODY=$(cat /tmp/fe_body)
   check 200 "$CODE" "GET $path"
 done
+
+line "HOME GESTOR (lista de imóveis)"
+CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -b /tmp/fe_cookies "$WEB/")
+BODY=$(cat /tmp/fe_body)
+check 200 "$CODE" "GET / (gestor)"
+if echo "$BODY" | grep -q ">Imóveis</h3>"; then
+  echo "PASS [home gestor lista imóveis]"
+  PASS=$((PASS+1))
+else
+  echo "FAIL [home gestor lista imóveis] body sem h3 Imóveis"
+  FAIL=$((FAIL+1))
+fi
+if echo "$BODY" | grep -q "ClienteID"; then
+  echo "FAIL [home gestor sem lista de clientes] renderiza ClienteID"
+  FAIL=$((FAIL+1))
+else
+  echo "PASS [home gestor sem lista de clientes]"
+  PASS=$((PASS+1))
+fi
 
 line "LOGIN INVÁLIDO"
 CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -X POST "$WEB/api/auth/login" \

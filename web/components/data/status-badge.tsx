@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { rotuloStatus } from "@/lib/format";
 import { semanticaStatus, type SemanticaStatus } from "@/lib/status";
 
 const ESTILOS: Record<SemanticaStatus, string> = {
@@ -18,7 +19,7 @@ export function StatusBadge({ status }: { status: string }) {
         ESTILOS[semanticaStatus(status)],
       )}
     >
-      {status}
+      {rotuloStatus(status)}
     </span>
   );
 }
