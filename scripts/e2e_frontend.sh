@@ -99,8 +99,9 @@ from pathlib import Path
 api = os.environ.get("API_URL", "http://127.0.0.1:5272")
 token = ""
 for line in Path("/tmp/fe_cookies_admin").read_text().splitlines():
-    if "aluguel_access" in line and not line.startswith("#"):
-        token = line.split()[-1]
+    parts = line.split()
+    if len(parts) >= 7 and parts[-2] == "aluguel_access":
+        token = parts[-1]
         break
 if not token:
     raise SystemExit("sem token")
