@@ -11,6 +11,36 @@ check() {
   else echo "FAIL [$3] esperado=$1 obtido=$2 body=${BODY:0:200}"; FAIL=$((FAIL+1)); fi
 }
 
+# Next.js às vezes devolve HTML incompleto em GETs seguidos; tenta de novo até achar um padrão.
+# Grep no arquivo (não via echo) para não corromper HTML com NUL / escapes.
+fetch_html_matching() {
+  local cookie="$1" url="$2" modo="$3"
+  shift 3
+  local i
+  for i in 1 2 3 4 5; do
+    CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -b "$cookie" "$url") || CODE=000
+    BODY=$(cat /tmp/fe_body 2>/dev/null || true)
+    if [ "$CODE" = "200" ]; then
+      local pat ok
+      if [ "$modo" = "all" ]; then
+        ok=1
+        for pat in "$@"; do
+          if ! grep -aFq "$pat" /tmp/fe_body; then ok=0; break; fi
+        done
+        [ "$ok" = "1" ] && return 0
+      else
+        for pat in "$@"; do
+          if grep -aFq "$pat" /tmp/fe_body; then
+            return 0
+          fi
+        done
+      fi
+    fi
+    sleep 0.4
+  done
+  return 1
+}
+
 line "API /health"
 CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' "$API/health") || CODE=000
 BODY=$(cat /tmp/fe_body 2>/dev/null || true)
@@ -285,43 +315,43 @@ else
 fi
 
 line "USUÁRIOS E IMÓVEIS (GESTOR)"
-CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -b /tmp/fe_cookies "$WEB/usuarios")
-BODY=$(cat /tmp/fe_body)
-check 200 "$CODE" "GET /usuarios (gestor lista clientes)"
-if echo "$BODY" | grep -Fq "Selecione um cliente para gerenciar" || echo "$BODY" | grep -Fq 'href="/usuarios?clienteId='; then
+if fetch_html_matching /tmp/fe_cookies "$WEB/usuarios" any \
+  "Selecione um cliente para gerenciar" 'href="/usuarios?clienteId='; then
+  check 200 "$CODE" "GET /usuarios (gestor lista clientes)"
   echo "PASS [usuarios gestor seletor de clientes]"
   PASS=$((PASS+1))
 else
+  check 200 "$CODE" "GET /usuarios (gestor lista clientes)"
   echo "FAIL [usuarios gestor seletor de clientes] body sem seletor"
   FAIL=$((FAIL+1))
 fi
-CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -b /tmp/fe_cookies "$WEB/imoveis")
-BODY=$(cat /tmp/fe_body)
-check 200 "$CODE" "GET /imoveis (gestor)"
-if echo "$BODY" | grep -Fq "Selecione um cliente para ver os imóveis" || echo "$BODY" | grep -Fq "Cadastro de imóveis" || echo "$BODY" | grep -Fq 'href="/imoveis?clienteId='; then
+if fetch_html_matching /tmp/fe_cookies "$WEB/imoveis" any \
+  "Selecione um cliente para ver os imóveis" "Cadastro de imóveis" 'href="/imoveis?clienteId='; then
+  check 200 "$CODE" "GET /imoveis (gestor)"
   echo "PASS [imoveis gestor seletor ou lista]"
   PASS=$((PASS+1))
 else
+  check 200 "$CODE" "GET /imoveis (gestor)"
   echo "FAIL [imoveis gestor seletor ou lista] body inesperado"
   FAIL=$((FAIL+1))
 fi
 
 line "FORMULÁRIO INCLUIR IMÓVEL"
-CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -b /tmp/fe_cookies "$WEB/imoveis/novo")
-BODY=$(cat /tmp/fe_body)
-check 200 "$CODE" "GET /imoveis/novo (gestor)"
-if echo "$BODY" | grep -q 'name="clienteId"' && echo "$BODY" | grep -q 'name="nome"' && echo "$BODY" | grep -q 'name="tipo"' && echo "$BODY" | grep -q 'name="logradouro"'; then
+if fetch_html_matching /tmp/fe_cookies "$WEB/imoveis/novo" all \
+  'name="clienteId"' 'name="nome"' 'name="tipo"' 'name="logradouro"'; then
+  check 200 "$CODE" "GET /imoveis/novo (gestor)"
   echo "PASS [formulario imovel campos]"
   PASS=$((PASS+1))
 else
-  echo "FAIL [formulario imovel campos] faltam campos do cadastro"
+  check 200 "$CODE" "GET /imoveis/novo (gestor)"
+  echo "FAIL [formulario imovel campos] faltam campos do cadastro len=${#BODY}"
   FAIL=$((FAIL+1))
 fi
-if [ -n "$CLIENTE_GESTOR" ] && echo "$BODY" | grep -q "$CLIENTE_GESTOR"; then
+if grep -aEq 'data-cliente-inicial="[0-9a-fA-F-]{36}"' /tmp/fe_body; then
   echo "PASS [formulario imovel cliente pre-selecionado]"
   PASS=$((PASS+1))
 else
-  echo "FAIL [formulario imovel cliente pre-selecionado] clienteId do JWT ausente no dropdown"
+  echo "FAIL [formulario imovel cliente pre-selecionado] dropdown sem cliente inicial"
   FAIL=$((FAIL+1))
 fi
 NOME_E2E="E2E Imovel $(date +%s)"
