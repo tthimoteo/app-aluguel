@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filtrarClientesAcessiveis } from "./clientes-acesso";
+import { clientePreselecionado, filtrarClientesAcessiveis } from "./clientes-acesso";
 
 describe("filtrarClientesAcessiveis", () => {
   const clientes = [
@@ -15,5 +15,21 @@ describe("filtrarClientesAcessiveis", () => {
     const r = filtrarClientesAcessiveis(clientes, "extra");
     expect(r).toHaveLength(1);
     expect(r[0]?.id).toBe("2");
+  });
+});
+
+describe("clientePreselecionado", () => {
+  const clientes = [{ id: "a" }, { id: "b" }];
+
+  it("usa o primeiro preferido que existe na lista", () => {
+    expect(clientePreselecionado(clientes, "x", "b", "a")).toBe("b");
+  });
+
+  it("cai no primeiro cliente quando nenhum preferido bate", () => {
+    expect(clientePreselecionado(clientes, "z")).toBe("a");
+  });
+
+  it("retorna vazio sem clientes", () => {
+    expect(clientePreselecionado([], "a")).toBe("");
   });
 });

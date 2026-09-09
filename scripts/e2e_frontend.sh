@@ -214,9 +214,10 @@ CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -c /tmp/fe_cookies -X POST "$WE
 BODY=$(cat /tmp/fe_body)
 check 200 "$CODE" "login gestor via Next.js"
 echo "  nome=$(echo "$BODY" | jq -r '.usuario.nome // empty')"
+CLIENTE_GESTOR=$(echo "$BODY" | jq -r '.usuario.clienteId // empty')
 
 line "PÁGINAS AUTENTICADAS"
-for path in / /imoveis /inquilinos /contratos /minha-conta /usuarios /relatorios; do
+for path in / /imoveis /imoveis/novo /inquilinos /contratos /minha-conta /usuarios /relatorios; do
   CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -b /tmp/fe_cookies "$WEB$path")
   BODY=$(cat /tmp/fe_body)
   check 200 "$CODE" "GET $path"
@@ -268,6 +269,13 @@ else
   echo "FAIL [menu gestor tem relatorios] Relatórios ausente do menu lateral"
   FAIL=$((FAIL+1))
 fi
+if echo "$BODY" | grep -q 'href="/imoveis/novo"'; then
+  echo "PASS [home gestor incluir imovel]"
+  PASS=$((PASS+1))
+else
+  echo "FAIL [home gestor incluir imovel] botão Incluir imóvel não aponta para o formulário"
+  FAIL=$((FAIL+1))
+fi
 if echo "$BODY" | grep -q 'href="/inquilinos"' || echo "$BODY" | grep -q 'href="/contratos"'; then
   echo "FAIL [menu gestor sem inquilinos/contratos] ainda renderiza itens no menu"
   FAIL=$((FAIL+1))
@@ -296,6 +304,59 @@ if echo "$BODY" | grep -Fq "Selecione um cliente para ver os imóveis" || echo "
 else
   echo "FAIL [imoveis gestor seletor ou lista] body inesperado"
   FAIL=$((FAIL+1))
+fi
+
+line "FORMULÁRIO INCLUIR IMÓVEL"
+CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -b /tmp/fe_cookies "$WEB/imoveis/novo")
+BODY=$(cat /tmp/fe_body)
+check 200 "$CODE" "GET /imoveis/novo (gestor)"
+if echo "$BODY" | grep -q 'name="clienteId"' && echo "$BODY" | grep -q 'name="nome"' && echo "$BODY" | grep -q 'name="tipo"' && echo "$BODY" | grep -q 'name="logradouro"'; then
+  echo "PASS [formulario imovel campos]"
+  PASS=$((PASS+1))
+else
+  echo "FAIL [formulario imovel campos] faltam campos do cadastro"
+  FAIL=$((FAIL+1))
+fi
+if [ -n "$CLIENTE_GESTOR" ] && echo "$BODY" | grep -q "$CLIENTE_GESTOR"; then
+  echo "PASS [formulario imovel cliente pre-selecionado]"
+  PASS=$((PASS+1))
+else
+  echo "FAIL [formulario imovel cliente pre-selecionado] clienteId do JWT ausente no dropdown"
+  FAIL=$((FAIL+1))
+fi
+NOME_E2E="E2E Imovel $(date +%s)"
+if [ -n "$CLIENTE_GESTOR" ]; then
+  CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -b /tmp/fe_cookies -X POST "$WEB/api/imoveis" \
+    -H 'Content-Type: application/json' \
+    -d "{\"clienteId\":\"$CLIENTE_GESTOR\",\"nome\":\"$NOME_E2E\",\"tipo\":\"Residencial\",\"numeroIptu\":\"IPTU-E2E\",\"endereco\":{\"cidade\":\"Sao Paulo\",\"uf\":\"SP\",\"cep\":\"01001000\"}}")
+  BODY=$(cat /tmp/fe_body)
+  if [ "$CODE" = "201" ]; then
+    echo "PASS [POST /api/imoveis via BFF] http=201"
+    PASS=$((PASS+1))
+    NOME_CRIADO=$(echo "$BODY" | jq -r '.nome // empty')
+    if [ "$NOME_CRIADO" = "$NOME_E2E" ]; then
+      echo "PASS [POST imovel nome]"
+      PASS=$((PASS+1))
+    else
+      echo "FAIL [POST imovel nome] nome=$NOME_CRIADO"
+      FAIL=$((FAIL+1))
+    fi
+    IMV_ID=$(echo "$BODY" | jq -r '.id // empty')
+    TOKEN=$(curl -s -X POST "$API/api/auth/login" -H 'Content-Type: application/json' \
+      -d '{"email":"gestor@demo.local","senha":"Gestor@123456"}' | jq -r '.accessToken // empty')
+    if [ -n "$IMV_ID" ] && [ -n "$TOKEN" ] && [ "$TOKEN" != "null" ]; then
+      curl -s -o /dev/null -X DELETE "$API/api/imoveis/$IMV_ID" -H "Authorization: Bearer $TOKEN"
+    fi
+  elif echo "$BODY" | grep -q "Limite de imóveis"; then
+    echo "PASS [POST /api/imoveis limite do plano] http=$CODE"
+    PASS=$((PASS+2))
+  else
+    echo "FAIL [POST /api/imoveis] esperado=201 obtido=$CODE body=${BODY:0:240}"
+    FAIL=$((FAIL+2))
+  fi
+else
+  echo "FAIL [POST imovel sem clienteId do JWT]"
+  FAIL=$((FAIL+2))
 fi
 
 line "LOGIN INVÁLIDO"

@@ -30,8 +30,9 @@ public static class EscopoVinculo
     }
 
     /// <summary>
-    /// Cliente obrigatório para gestão de usuários. Administrador informa; Gestor usa o informado
-    /// quando tem vínculo de Gestor naquele cliente (ou o cliente do JWT).
+    /// Cliente obrigatório para operações de gestão (usuários, cadastro de imóvel).
+    /// Administrador informa; Gestor usa o informado quando tem vínculo de Gestor naquele cliente
+    /// (ou o cliente do JWT).
     /// </summary>
     public static async Task<Guid> ExigirClienteComAcessoAsync(
         ICurrentUser atual,
@@ -43,7 +44,7 @@ public static class EscopoVinculo
         if (atual.EhAdministrador)
         {
             if (solicitado is null)
-                throw new InvalidOperationException("Informe o clienteId para listar os usuários.");
+                throw new InvalidOperationException("Informe o cliente.");
             return solicitado.Value;
         }
 
@@ -73,6 +74,6 @@ public static class EscopoVinculo
             throw new InvalidOperationException("Você não está vinculado a este cliente.");
 
         if (exigirGestor && !string.Equals(vinculo.Perfil, "Gestor", StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("Apenas o Gestor deste cliente pode gerenciar usuários.");
+            throw new InvalidOperationException("Apenas o Gestor deste cliente pode realizar esta operação.");
     }
 }

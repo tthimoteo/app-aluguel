@@ -20,12 +20,21 @@ export default async function ImoveisPage({
 }) {
   const usuario = await requireSession();
   const ehAdmin = temPerfil(usuario, "Administrador");
+  const podeIncluir = temPerfil(usuario, "Administrador", "Gestor");
   const { termo, clienteId } = await searchParams;
   const clientes = await listarClientesAcessiveis({ termo: clienteId ? undefined : termo });
 
   if (!clienteId) {
     if (clientes.length === 1 && !termo) {
-      return <ListaImoveisDoCliente clienteId={clientes[0]!.id} clienteNome={clientes[0]!.nome} termo={termo} mostrarVoltar={false} />;
+      return (
+        <ListaImoveisDoCliente
+          clienteId={clientes[0]!.id}
+          clienteNome={clientes[0]!.nome}
+          termo={termo}
+          mostrarVoltar={false}
+          podeIncluir={podeIncluir}
+        />
+      );
     }
 
     return (
@@ -33,6 +42,13 @@ export default async function ImoveisPage({
         <PageHeader
           titulo="Imóveis"
           descricao="Selecione um cliente para ver os imóveis cadastrados."
+          acao={
+            podeIncluir ? (
+              <Link href="/imoveis/novo" className={cn(buttonVariants(), "h-9 rounded-[4px] px-4")}>
+                Incluir imóvel
+              </Link>
+            ) : null
+          }
         />
         <SearchForm placeholder="Buscar cliente" defaultValue={termo} />
         <SeletorCliente clientes={clientes} hrefBase="/imoveis" vazio="Nenhum cliente disponível." />
@@ -58,6 +74,7 @@ export default async function ImoveisPage({
       clienteNome={clienteNome}
       termo={termo}
       mostrarVoltar={clientes.length > 1}
+      podeIncluir={podeIncluir}
     />
   );
 }
@@ -67,11 +84,13 @@ async function ListaImoveisDoCliente({
   clienteNome,
   termo,
   mostrarVoltar,
+  podeIncluir,
 }: {
   clienteId: string;
   clienteNome: string;
   termo?: string;
   mostrarVoltar: boolean;
+  podeIncluir: boolean;
 }) {
   let pagina;
   try {
@@ -108,6 +127,14 @@ async function ListaImoveisDoCliente({
         descricao={`Cadastro de imóveis de ${clienteNome} (UC003).`}
         acao={
           <div className="flex flex-wrap gap-2">
+            {podeIncluir ? (
+              <Link
+                href={`/imoveis/novo?clienteId=${clienteId}`}
+                className={cn(buttonVariants(), "h-9 rounded-[4px] px-4")}
+              >
+                Incluir imóvel
+              </Link>
+            ) : null}
             <Link
               href={`/inquilinos?clienteId=${clienteId}`}
               className={cn(buttonVariants({ variant: "outline" }), "h-9 rounded-[4px] px-4")}

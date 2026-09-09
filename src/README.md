@@ -110,7 +110,7 @@ Validações (FluentValidation, via `ValidationBehavior`): e-mail obrigatório/�
 
 Cadastros operacionais (§7, §8, §9) em CQRS (MediatR), com repositórios EF Core escopados por tenant/soft delete. As tabelas `imovel`, `inquilino` e `contrato` já existem na migration `AddDomainModel` — **nenhuma migration nova**.
 
-Leitura liberada a qualquer perfil autenticado (o **Analista** consulta); escrita e transições de estado exigem a política `GerenciaCadastros` = **Administrador** ou **Gestor**. Não-admins operam apenas no próprio cliente (fora do escopo → `404`); o Administrador informa `clienteId`.
+Leitura liberada a qualquer perfil autenticado (o **Analista** consulta); escrita e transições de estado exigem a política `GerenciaCadastros` = **Administrador** ou **Gestor**. O Gestor informa `clienteId` de um cliente no qual é Gestor (senão usa o do JWT); o Administrador informa `clienteId`. Fora do escopo → `400`/`404`.
 
 **Imóveis** (`/api/imoveis`): `GET /` (filtros `clienteId`, `termo`, `tipo`, `status`, paginação), `GET /{id}`, `POST /`, `PUT /{id}` (inclui `status` Ativo/Inativo), `DELETE /{id}` (exclusão lógica).
 

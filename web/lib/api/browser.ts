@@ -1,4 +1,4 @@
-import type { Usuario } from "@/lib/api/types";
+import type { Imovel, Usuario } from "@/lib/api/types";
 import { mensagemApiErro } from "@/lib/api/erro";
 
 export class BffError extends Error {
@@ -63,6 +63,23 @@ export type AtualizacaoUsuarioInput = {
   status: "Ativo" | "Inativo" | "Bloqueado";
 };
 
+export type NovoImovelInput = {
+  clienteId: string;
+  nome: string;
+  tipo: "Residencial" | "Comercial" | "Galpao" | "Sala" | "Outro";
+  numeroIptu?: string | null;
+  numeroMatricula?: string | null;
+  endereco?: {
+    logradouro?: string | null;
+    numero?: string | null;
+    complemento?: string | null;
+    bairro?: string | null;
+    cidade?: string | null;
+    uf?: string | null;
+    cep?: string | null;
+  } | null;
+};
+
 export const bff = {
   usuario: (id: string, clienteId?: string) =>
     bffFetch<Usuario>(`/api/usuarios/${id}${clienteId ? `?clienteId=${encodeURIComponent(clienteId)}` : ""}`),
@@ -82,6 +99,8 @@ export const bff = {
       `/api/usuarios/${id}${clienteId ? `?clienteId=${encodeURIComponent(clienteId)}` : ""}`,
       { method: "DELETE" },
     ),
+  criarImovel: (dados: NovoImovelInput) =>
+    bffFetch<Imovel>("/api/imoveis", { method: "POST", body: JSON.stringify(dados) }),
   selecionarCliente: (clienteId: string) =>
     bffFetch<{ usuario: unknown }>("/api/auth/contexto", {
       method: "POST",

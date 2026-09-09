@@ -33,16 +33,18 @@ export function itensVisiveis(roles: readonly string[]): NavItem[] {
 }
 
 const TITULOS_FORA_DO_MENU: Record<string, string> = {
+  "/imoveis/novo": "Incluir imóvel",
   "/inquilinos": "Inquilinos",
   "/contratos": "Contratos",
 };
 
 export function tituloDaRota(pathname: string): string {
   if (pathname === "/") return "Início";
-  const item = NAV_ITEMS.find((i) => i.href !== "/" && (pathname === i.href || pathname.startsWith(`${i.href}/`)));
-  if (item) return item.label;
-  const extra = Object.entries(TITULOS_FORA_DO_MENU).find(
-    ([href]) => pathname === href || pathname.startsWith(`${href}/`),
-  );
-  return extra?.[1] ?? "APP Aluguel";
+  const candidatos: { href: string; label: string }[] = [
+    ...Object.entries(TITULOS_FORA_DO_MENU).map(([href, label]) => ({ href, label })),
+    ...NAV_ITEMS.filter((i) => i.href !== "/").map((i) => ({ href: i.href, label: i.label })),
+  ];
+  candidatos.sort((a, b) => b.href.length - a.href.length);
+  const match = candidatos.find(({ href }) => pathname === href || pathname.startsWith(`${href}/`));
+  return match?.label ?? "APP Aluguel";
 }

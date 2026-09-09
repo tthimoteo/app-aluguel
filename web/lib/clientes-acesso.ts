@@ -5,6 +5,17 @@ export type ClienteOpcao = {
   perfil?: string;
 };
 
+/** Primeiro id da lista que estiver em `preferidos`; senão o primeiro cliente. */
+export function clientePreselecionado(
+  clientes: readonly { id: string }[],
+  ...preferidos: (string | null | undefined)[]
+): string {
+  for (const id of preferidos) {
+    if (id && clientes.some((c) => c.id === id)) return id;
+  }
+  return clientes[0]?.id ?? "";
+}
+
 export function filtrarClientesAcessiveis(
   clientes: ClienteOpcao[],
   termo?: string,

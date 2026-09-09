@@ -37,7 +37,7 @@ export default async function HomePage() {
               Incluir cliente
             </Link>
           ) : podeIncluirImovel ? (
-            <Link href="/imoveis" className={cn(buttonVariants(), "h-9 rounded-[4px] px-4")}>
+            <Link href="/imoveis/novo" className={cn(buttonVariants(), "h-9 rounded-[4px] px-4")}>
               Incluir imóvel
             </Link>
           ) : null

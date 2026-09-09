@@ -8,7 +8,7 @@ Detalha as telas e regras funcionais (§10–§14) e como mapeiam para endpoints
 
 **Indicadores (cards + Recharts):** faturamento, inadimplência, quantidade de imóveis, quantidade de notas emitidas.
 
-**Botão "Incluir imóvel"** — visível conforme quantidade já cadastrada **e** plano contratado (`plano.max_imoveis`).
+**Botão "Incluir imóvel"** — visível para Gestor conforme quantidade já cadastrada **e** plano contratado (`plano.max_imoveis`). Abre o formulário em `/imoveis/novo` com o **cliente do contexto pré-selecionado** em um dropdown editável (é possível trocar para outro cliente no qual o usuário seja Gestor) e os demais campos do cadastro (§7): nome, tipo, Nr. IPTU, Nr. Matrícula e endereço completo.
 
 **Administrador:** a lista da home é de **clientes** (nome/razão social, CPF ou CNPJ, plano, status), não de imóveis. Os cards de indicadores exibem quantidade de **clientes**, imóveis e planos (sem inquilinos nem contratos). Gestor e Analista continuam com a lista de imóveis e os cards de imóveis, inquilinos, contratos e planos.
 

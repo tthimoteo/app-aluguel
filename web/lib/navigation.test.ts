@@ -38,6 +38,7 @@ describe("tituloDaRota", () => {
   it("resolve o título a partir do caminho", () => {
     expect(tituloDaRota("/")).toBe("Início");
     expect(tituloDaRota("/imoveis")).toBe("Imóveis");
+    expect(tituloDaRota("/imoveis/novo")).toBe("Incluir imóvel");
     expect(tituloDaRota("/clientes/abc")).toBe("Clientes");
     expect(tituloDaRota("/inquilinos")).toBe("Inquilinos");
     expect(tituloDaRota("/contratos")).toBe("Contratos");
