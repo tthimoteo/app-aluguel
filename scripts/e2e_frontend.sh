@@ -190,8 +190,16 @@ if [ -n "$USER_ID" ] && [ "$USER_ID" != "null" ]; then
   check 200 "$CODE" "GET /api/usuarios/{id} (admin)"
   CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -b /tmp/fe_cookies_admin -X PUT "$WEB/api/usuarios/$USER_ID?clienteId=$CLIENTE_ID" \
     -H 'Content-Type: application/json' \
-    -d '{"nome":"E2E Admin Editado","telefone":"11988887777","perfil":"Analista","status":"Ativo"}')
+    -d "{\"nome\":\"E2E Admin Editado\",\"email\":\"e2e-admin-edit-$(date +%s)@demo.local\",\"telefone\":\"11988887777\",\"perfil\":\"Analista\",\"status\":\"Ativo\"}")
   check 200 "$CODE" "PUT /api/usuarios/{id} (admin)"
+  EMAIL_EDITADO=$(echo "$(cat /tmp/fe_body)" | jq -r '.email // empty')
+  if echo "$EMAIL_EDITADO" | grep -q 'e2e-admin-edit-'; then
+    echo "PASS [PUT altera e-mail]"
+    PASS=$((PASS+1))
+  else
+    echo "FAIL [PUT altera e-mail] email=$EMAIL_EDITADO"
+    FAIL=$((FAIL+1))
+  fi
   CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -b /tmp/fe_cookies_admin -X DELETE "$WEB/api/usuarios/$USER_ID?clienteId=$CLIENTE_ID")
   check 204 "$CODE" "DELETE /api/usuarios/{id} (admin)"
 else

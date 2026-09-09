@@ -93,7 +93,7 @@ Endpoints (`/api/usuarios`, exigem a política `GerenciaUsuarios` = **Administra
 - `GET /api/usuarios?clienteId=&termo=&skip=&take=` — lista paginada (filtro por nome/e-mail). O Gestor lista apenas o próprio cliente; o Administrador informa `clienteId`.
 - `GET /api/usuarios/{id}` — obtém por id (404 fora do escopo do cliente).
 - `POST /api/usuarios` — cria usuário Gestor/Analista (201). O cliente alvo é o do Gestor; o Administrador informa `clienteId` no corpo.
-- `PUT /api/usuarios/{id}` — atualiza nome, telefone, perfil e status (e-mail e CPF são imutáveis).
+- `PUT /api/usuarios/{id}` — atualiza nome, e-mail, telefone, perfil e status (CPF é imutável).
 - `DELETE /api/usuarios/{id}` — desativação lógica (`Status = Inativo`, 204) preservando o histórico/auditoria.
 
 Regras da documentação implementadas:

@@ -6,11 +6,12 @@ using MediatR;
 
 namespace Aluguel.Application.Usuarios.AtualizarUsuario;
 
-/// <summary>Atualiza dados de um usuário neste cliente. E-mail e CPF são imutáveis.</summary>
+/// <summary>Atualiza dados de um usuário neste cliente. O CPF permanece imutável.</summary>
 public sealed record AtualizarUsuarioCommand(
     Guid Id,
     Guid? ClienteId,
     string Nome,
+    string Email,
     string? Telefone,
     PerfilUsuario Perfil,
     StatusUsuario Status) : IRequest<UsuarioDto?>;
@@ -30,7 +31,8 @@ public sealed class AtualizarUsuarioCommandHandler(
         if (existente is null || !AcessoUsuarios.PodeGerenciar(currentUser, existente, clienteId))
             return null;
 
-        var dados = new AtualizacaoUsuario(request.Nome.Trim(), request.Telefone, request.Perfil, request.Status);
+        var dados = new AtualizacaoUsuario(
+            request.Nome.Trim(), request.Email.Trim(), request.Telefone, request.Perfil, request.Status);
         return await usuarios.AtualizarAsync(request.Id, clienteId, dados, cancellationToken);
     }
 }

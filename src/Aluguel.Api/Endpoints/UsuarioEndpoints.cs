@@ -23,6 +23,7 @@ public sealed record CriarUsuarioRequest(
 
 public sealed record AtualizarUsuarioRequest(
     string Nome,
+    string Email,
     string? Telefone,
     PerfilUsuario Perfil,
     StatusUsuario Status);
@@ -81,7 +82,7 @@ public static class UsuarioEndpoints
             ISender sender, CancellationToken ct) =>
         {
             var dto = await sender.Send(new AtualizarUsuarioCommand(
-                id, clienteId, req.Nome, req.Telefone, req.Perfil, req.Status), ct);
+                id, clienteId, req.Nome, req.Email, req.Telefone, req.Perfil, req.Status), ct);
             return dto is null ? Results.NotFound() : Results.Ok(dto);
         })
         .WithName("AtualizarUsuario");

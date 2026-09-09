@@ -57,6 +57,7 @@ export type NovoUsuarioInput = {
 
 export type AtualizacaoUsuarioInput = {
   nome: string;
+  email: string;
   telefone?: string | null;
   perfil: "Gestor" | "Analista";
   status: "Ativo" | "Inativo" | "Bloqueado";

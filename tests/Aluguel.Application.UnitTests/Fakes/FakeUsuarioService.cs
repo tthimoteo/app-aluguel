@@ -71,6 +71,7 @@ public sealed class FakeUsuarioService : IUsuarioService
         var atualizado = atual with
         {
             Nome = dados.Nome,
+            Email = dados.Email,
             Telefone = dados.Telefone,
             Perfil = dados.Perfil.ToString(),
             Status = dados.Status.ToString(),

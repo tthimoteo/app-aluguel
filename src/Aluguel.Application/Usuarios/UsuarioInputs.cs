@@ -14,9 +14,10 @@ public sealed record NovoUsuario(
     PerfilUsuario Perfil,
     string? Senha);
 
-/// <summary>Dados alteráveis de um usuário (e-mail e CPF são imutáveis).</summary>
+/// <summary>Dados alteráveis de um usuário (o CPF permanece imutável).</summary>
 public sealed record AtualizacaoUsuario(
     string Nome,
+    string Email,
     string? Telefone,
     PerfilUsuario Perfil,
     StatusUsuario Status);

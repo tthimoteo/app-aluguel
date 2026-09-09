@@ -158,6 +158,18 @@ public class UsuarioService(UserManager<AppUser> userManager, AppDbContext db, I
 
         user.Nome = dados.Nome;
         user.Telefone = dados.Telefone;
+
+        var email = dados.Email.Trim();
+        if (!string.Equals(user.Email, email, StringComparison.OrdinalIgnoreCase))
+        {
+            var setEmail = await userManager.SetEmailAsync(user, email);
+            if (!setEmail.Succeeded)
+                throw new InvalidOperationException(DescreverErros(setEmail));
+            var setUserName = await userManager.SetUserNameAsync(user, email);
+            if (!setUserName.Succeeded)
+                throw new InvalidOperationException(DescreverErros(setUserName));
+        }
+
         vinculo.Atualizar(dados.Perfil, dados.Status);
 
         var update = await userManager.UpdateAsync(user);

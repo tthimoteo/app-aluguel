@@ -101,6 +101,7 @@ export function GestaoUsuarios({
     setErro(null);
     const dados: AtualizacaoUsuarioInput = {
       nome: String(form.get("nome") ?? "").trim(),
+      email: String(form.get("email") ?? "").trim(),
       telefone: String(form.get("telefone") ?? "").trim() || null,
       perfil: form.get("perfil") === "Gestor" ? "Gestor" : "Analista",
       status: statusDoForm(form.get("status")),
@@ -337,7 +338,7 @@ export function GestaoUsuarios({
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Editar usuário</DialogTitle>
-              <DialogDescription>E-mail e CPF não podem ser alterados.</DialogDescription>
+              <DialogDescription>O CPF não pode ser alterado.</DialogDescription>
             </DialogHeader>
             <form
               className="flex flex-col gap-4 px-6 py-4"
@@ -469,9 +470,8 @@ function CamposUsuario({
             id="email"
             name="email"
             type="email"
-            required={modo === "criar" && vinculo !== "existente"}
+            required={vinculo !== "existente"}
             defaultValue={existente?.email ?? usuario?.email}
-            disabled={modo === "editar"}
             readOnly={vinculo === "existente"}
             key={`email-${existente?.email ?? usuario?.email ?? "novo"}`}
             className="h-10 rounded-[4px]"

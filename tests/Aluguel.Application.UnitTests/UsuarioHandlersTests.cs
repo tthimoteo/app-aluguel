@@ -68,7 +68,7 @@ public class UsuarioHandlersTests
         var gestor = new FakeCurrentUser(Guid.NewGuid(), ClienteA, ehAdministrador: false);
         var handler = new AtualizarUsuarioCommandHandler(service, gestor, Auth());
 
-        var act = () => handler.Handle(new AtualizarUsuarioCommand(alvo.Id, ClienteB, "Novo", null,
+        var act = () => handler.Handle(new AtualizarUsuarioCommand(alvo.Id, ClienteB, "Novo", alvo.Email, null,
             PerfilUsuario.Analista, StatusUsuario.Ativo), default);
 
         await act.Should().ThrowAsync<InvalidOperationException>();
@@ -85,10 +85,11 @@ public class UsuarioHandlersTests
         var gestor = new FakeCurrentUser(Guid.NewGuid(), ClienteA, ehAdministrador: false);
         var handler = new AtualizarUsuarioCommandHandler(service, gestor, Auth());
 
-        var dto = await handler.Handle(new AtualizarUsuarioCommand(alvo.Id, ClienteA, "Novo Nome", "11333334444",
-            PerfilUsuario.Gestor, StatusUsuario.Ativo), default);
+        var dto = await handler.Handle(new AtualizarUsuarioCommand(alvo.Id, ClienteA, "Novo Nome", "novo@demo.local",
+            "11333334444", PerfilUsuario.Gestor, StatusUsuario.Ativo), default);
 
         dto!.Nome.Should().Be("Novo Nome");
+        dto.Email.Should().Be("novo@demo.local");
         dto.Perfil.Should().Be("Gestor");
     }
 
@@ -102,7 +103,7 @@ public class UsuarioHandlersTests
         var gestor = new FakeCurrentUser(Guid.NewGuid(), ClienteA, ehAdministrador: false);
         var handler = new AtualizarUsuarioCommandHandler(service, gestor, Auth((ClienteB, "Gestor")));
 
-        var dto = await handler.Handle(new AtualizarUsuarioCommand(alvo.Id, ClienteB, "Outro", null,
+        var dto = await handler.Handle(new AtualizarUsuarioCommand(alvo.Id, ClienteB, "Outro", alvo.Email, null,
             PerfilUsuario.Analista, StatusUsuario.Ativo), default);
 
         dto!.Nome.Should().Be("Outro");
@@ -119,7 +120,7 @@ public class UsuarioHandlersTests
         var admin = new FakeCurrentUser(Guid.NewGuid(), clienteId: null, ehAdministrador: true);
         var handler = new AtualizarUsuarioCommandHandler(service, admin, Auth());
 
-        var dto = await handler.Handle(new AtualizarUsuarioCommand(alvo.Id, ClienteB, "Editado", null,
+        var dto = await handler.Handle(new AtualizarUsuarioCommand(alvo.Id, ClienteB, "Editado", alvo.Email, null,
             PerfilUsuario.Analista, StatusUsuario.Inativo), default);
 
         dto!.Nome.Should().Be("Editado");
