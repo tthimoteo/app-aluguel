@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Building2, Check, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,7 +13,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { bff } from "@/lib/api/browser";
 import type { UsuarioAutenticado, VinculoCliente } from "@/lib/api/types";
 import { iniciais } from "@/lib/format";
 
@@ -31,12 +30,6 @@ export function UserMenu({
   async function sair() {
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/login");
-    router.refresh();
-  }
-
-  async function trocarCliente(clienteId: string) {
-    if (clienteId === usuario.clienteId) return;
-    await bff.selecionarCliente(clienteId);
     router.refresh();
   }
 
@@ -72,24 +65,6 @@ export function UserMenu({
             </div>
           </DropdownMenuLabel>
         </DropdownMenuGroup>
-        {clientes.length > 1 ? (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuLabel>Atuar como</DropdownMenuLabel>
-              {clientes.map((c) => (
-                <DropdownMenuItem key={c.clienteId} onClick={() => void trocarCliente(c.clienteId)}>
-                  <Building2 />
-                  <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="truncate">{c.nome}</span>
-                    <span className="text-xs font-normal text-muted-foreground">{c.perfil}</span>
-                  </span>
-                  {c.clienteId === usuario.clienteId ? <Check className="text-primary" /> : null}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuGroup>
-          </>
-        ) : null}
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onClick={() => void sair()}>
           <LogOut />

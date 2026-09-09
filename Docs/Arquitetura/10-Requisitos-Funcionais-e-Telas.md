@@ -80,7 +80,7 @@ Tela mostra, **mês a mês**, o histórico de faturamento (XML e PDF para baixar
 | **Tema** | Todos | Claro/escuro. |
 | **Sair** | Todos | Logout (revoga refresh token). |
 
-Quem tiver vinculação em mais de um cliente escolhe o contexto no menu do usuário (`POST /api/auth/contexto`); o JWT passa a carregar o `cliente_id` e o perfil daquela vinculação.
+Quem tiver vinculação em mais de um cliente escolhe o cliente nas telas de **Imóveis** e **Usuários** (lista para selecionar). O menu do usuário mostra identidade e **Sair**, sem troca de contexto — isso evitava conflito com o seletor da tela. O JWT da sessão permanece o da vinculação do login (`POST /api/auth/contexto` segue na API).
 
 ### Dados para Contabilidade (§13)
 

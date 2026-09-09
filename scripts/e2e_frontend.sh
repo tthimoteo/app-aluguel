@@ -319,6 +319,13 @@ else
   echo "PASS [menu gestor sem inquilinos/contratos]"
   PASS=$((PASS+1))
 fi
+if echo "$BODY" | grep -q "Atuar como"; then
+  echo "FAIL [menu usuario sem Atuar como] ainda tem troca de cliente no menu do usuário"
+  FAIL=$((FAIL+1))
+else
+  echo "PASS [menu usuario sem Atuar como]"
+  PASS=$((PASS+1))
+fi
 
 line "USUÁRIOS E IMÓVEIS (GESTOR)"
 if fetch_html_matching /tmp/fe_cookies "$WEB/usuarios" any \
