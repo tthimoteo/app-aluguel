@@ -10,6 +10,10 @@ Detalha as telas e regras funcionais (§10–§14) e como mapeiam para endpoints
 
 **Botão "Incluir imóvel"** — visível para Gestor conforme quantidade já cadastrada **e** plano contratado (`plano.max_imoveis`). Abre o formulário em `/imoveis/novo` com o **cliente do contexto pré-selecionado** em um dropdown editável (é possível trocar para outro cliente no qual o usuário seja Gestor) e os demais campos do cadastro (§7): nome, tipo, Nr. IPTU, Nr. Matrícula e endereço completo.
 
+**CEP** — no formulário o campo vem **antes** do logradouro. Ao completar 8 dígitos, `GET /api/cep/{cep}` consulta a ViaCEP e preenche logradouro, bairro, cidade e UF (o usuário ainda pode editar).
+
+**Lista e cadastro do imóvel** — cada linha (e o card na home) abre `/imoveis/{id}` com os dados do imóvel. **Inquilino** e **contrato** ficam nesse cadastro, não na listagem nem no menu: um inquilino e um contrato ativo por vez (CASO 3). Ações no cadastro: incluir/editar/remover inquilino; incluir/editar/renovar/encerrar contrato (renovar encerra o ativo e cria o novo).
+
 **Administrador:** a lista da home é de **clientes** (nome/razão social, CPF ou CNPJ, plano, status), não de imóveis. Os cards de indicadores exibem quantidade de **clientes**, imóveis e planos (sem inquilinos nem contratos). Gestor e Analista continuam com a lista de imóveis e os cards de imóveis, inquilinos, contratos e planos.
 
 **Lista de imóveis** (Gestor/Analista), por linha:
@@ -68,7 +72,7 @@ Tela mostra, **mês a mês**, o histórico de faturamento (XML e PDF para baixar
 | Item | Visibilidade | Função |
 |---|---|---|
 | **Usuários** | Administrador e Gestor (escolhem o cliente) | Abre a lista dos clientes aos quais o usuário tem acesso (Gestor: vinculações com perfil Gestor). Ao selecionar um cliente, lista e gerencia os usuários daquele cadastro. CPF identifica a pessoa: o mesmo usuário pode ser vinculado a outro cliente com perfil próprio; não pode repetir o CPF no mesmo cliente. |
-| **Imóveis** | Todos | Se o usuário tem **mais de um** cliente, abre a lista para selecionar; com **um** cliente, vai direto à lista de imóveis. Inquilinos e contratos saem desta tela, não do menu. |
+| **Imóveis** | Todos | Se o usuário tem **mais de um** cliente, abre a lista para selecionar; com **um** cliente, vai direto à lista de imóveis. Clique no imóvel abre o cadastro (`/imoveis/{id}`) com inquilino e contrato. Inquilinos e contratos não aparecem na listagem nem no menu. |
 | **Minha Conta** | Gestor | Dados de cliente/usuário; histórico de cobrança do app; plano atual; **upgrade**. |
 | **Relatório** | Administrador/Gestor/Analista | Extrair histórico de faturamentos, pagamentos, IPTU e demais despesas. |
 | **Dados para Contabilidade** | Gestor | Exportar Contas a Receber e Contas a Pagar em XLSX/CSV. |
