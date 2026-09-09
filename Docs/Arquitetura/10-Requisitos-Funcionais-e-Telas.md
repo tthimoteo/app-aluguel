@@ -67,7 +67,8 @@ Tela mostra, **mês a mês**, o histórico de faturamento (XML e PDF para baixar
 
 | Item | Visibilidade | Função |
 |---|---|---|
-| **Usuários** | Administrador (escolhe o cliente) / Gestor (próprio cliente) | Incluir, editar, remover e consultar detalhes (clique na linha). CPF identifica a pessoa: o mesmo usuário pode ser vinculado a outro cliente com perfil próprio; não pode repetir o CPF no mesmo cliente. |
+| **Usuários** | Administrador e Gestor (escolhem o cliente) | Abre a lista dos clientes aos quais o usuário tem acesso (Gestor: vinculações com perfil Gestor). Ao selecionar um cliente, lista e gerencia os usuários daquele cadastro. CPF identifica a pessoa: o mesmo usuário pode ser vinculado a outro cliente com perfil próprio; não pode repetir o CPF no mesmo cliente. |
+| **Imóveis** | Todos | Se o usuário tem **mais de um** cliente, abre a lista para selecionar; com **um** cliente, vai direto à lista de imóveis. Inquilinos e contratos saem desta tela, não do menu. |
 | **Minha Conta** | Gestor | Dados de cliente/usuário; histórico de cobrança do app; plano atual; **upgrade**. |
 | **Relatório** | Administrador/Gestor/Analista | Extrair histórico de faturamentos, pagamentos, IPTU e demais despesas. |
 | **Dados para Contabilidade** | Gestor | Exportar Contas a Receber e Contas a Pagar em XLSX/CSV. |

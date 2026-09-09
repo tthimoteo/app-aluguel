@@ -20,7 +20,7 @@
 | **Gestor** | Cliente(s) ao qual está vinculado | No contexto atual: editar dados do próprio cliente (inclui mudar de plano); CRUD de usuários do cliente; CRUD de imóveis/inquilinos/contratos; emitir NFS-e; consultar histórico. Menu **Minha Conta**. |
 | **Analista** | Cliente(s) ao qual está vinculado | No contexto atual: consultar imóveis/inquilinos; emitir NFS-e; consultar histórico; **cancelar NFS-e**. |
 
-Regra crítica (§6): **um usuário nunca vê dados de um cliente ao qual não esteja associado**, mesmo sendo `Gestor` — garantido por `tenant_id`/`cliente_id` no token (o `cliente_id` é o da vinculação selecionada) + RLS (doc 06). O mesmo CPF pode ter vinculações em vários clientes, cada uma com seu perfil; `POST /api/auth/contexto` troca o cliente da sessão e reemite o JWT com o perfil correspondente.
+Regra crítica (§6): **um usuário nunca vê dados de um cliente ao qual não esteja associado**, mesmo sendo `Gestor` — garantido por `tenant_id`/`cliente_id` no token (o `cliente_id` é o da vinculação selecionada) + RLS (doc 06). O mesmo CPF pode ter vinculações em vários clientes, cada uma com seu perfil; `POST /api/auth/contexto` troca o cliente da sessão e reemite o JWT com o perfil correspondente. Listagens de usuários, imóveis, inquilinos e contratos também aceitam `clienteId` de **qualquer vinculação ativa** do usuário (não só a do JWT).
 
 `StatusUsuario`: `Ativo`, `Inativo`, `Bloqueado` (bloqueado/inativo não autentica).
 
