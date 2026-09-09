@@ -37,7 +37,20 @@ public class UsuarioService(UserManager<AppUser> userManager, AppDbContext db, I
     public async Task<IReadOnlyList<UsuarioDto>> ListarAsync(Guid clienteId, string? termo,
         int skip, int take, CancellationToken ct = default)
     {
-        var query = ConsultaListagem(clienteId, termo);
+        var query =
+            from v in ConsultaVinculos().AsNoTracking()
+            join u in ConsultaUsuarios().AsNoTracking() on v.UsuarioId equals u.Id
+            where v.ClienteId == clienteId
+            select new { User = u, Vinculo = v };
+
+        if (!string.IsNullOrWhiteSpace(termo))
+        {
+            var padrao = $"%{termo.Trim()}%";
+            query = query.Where(x =>
+                EF.Functions.ILike(x.User.Nome, padrao) ||
+                (x.User.Email != null && EF.Functions.ILike(x.User.Email, padrao)));
+        }
+
         var pares = await query
             .OrderBy(x => x.User.Nome)
             .Skip(skip)
@@ -47,8 +60,28 @@ public class UsuarioService(UserManager<AppUser> userManager, AppDbContext db, I
         return pares.Select(p => p.User.ParaDto(p.Vinculo)).ToList();
     }
 
-    public Task<int> ContarAsync(Guid clienteId, string? termo, CancellationToken ct = default) =>
-        ConsultaListagem(clienteId, termo).CountAsync(ct);
+    public async Task<int> ContarAsync(Guid clienteId, string? termo, CancellationToken ct = default)
+    {
+        var query =
+            from v in ConsultaVinculos()
+            join u in ConsultaUsuarios() on v.UsuarioId equals u.Id
+            where v.ClienteId == clienteId
+            select u.Id;
+
+        if (!string.IsNullOrWhiteSpace(termo))
+        {
+            var padrao = $"%{termo.Trim()}%";
+            query =
+                from v in ConsultaVinculos()
+                join u in ConsultaUsuarios() on v.UsuarioId equals u.Id
+                where v.ClienteId == clienteId
+                      && (EF.Functions.ILike(u.Nome, padrao)
+                          || (u.Email != null && EF.Functions.ILike(u.Email, padrao)))
+                select u.Id;
+        }
+
+        return await query.CountAsync(ct);
+    }
 
     public Task<bool> EmailEmUsoAsync(string email, Guid? ignorarId, CancellationToken ct = default)
     {
@@ -229,25 +262,6 @@ public class UsuarioService(UserManager<AppUser> userManager, AppDbContext db, I
     private IQueryable<UsuarioCliente> ConsultaVinculos() =>
         db.UsuariosClientes.Where(v => TenantId == null || v.TenantId == TenantId);
 
-    private IQueryable<VinculoComUsuario> ConsultaListagem(Guid clienteId, string? termo)
-    {
-        var query =
-            from v in ConsultaVinculos()
-            join u in ConsultaUsuarios() on v.UsuarioId equals u.Id
-            where v.ClienteId == clienteId
-            select new VinculoComUsuario(u, v);
-
-        if (!string.IsNullOrWhiteSpace(termo))
-        {
-            var padrao = $"%{termo.Trim()}%";
-            query = query.Where(x =>
-                EF.Functions.ILike(x.User.Nome, padrao) ||
-                (x.User.Email != null && EF.Functions.ILike(x.User.Email, padrao)));
-        }
-
-        return query;
-    }
-
     private Task<int> ContarAtivosAsync(Guid clienteId, CancellationToken ct) =>
         ConsultaVinculos().CountAsync(v => v.ClienteId == clienteId && v.Status == StatusUsuario.Ativo, ct);
 
@@ -263,6 +277,4 @@ public class UsuarioService(UserManager<AppUser> userManager, AppDbContext db, I
 
     private static string DescreverErros(IdentityResult resultado) =>
         string.Join("; ", resultado.Errors.Select(e => e.Description));
-
-    private readonly record struct VinculoComUsuario(AppUser User, UsuarioCliente Vinculo);
 }

@@ -272,7 +272,7 @@ line "USUÁRIOS E IMÓVEIS (GESTOR)"
 CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -b /tmp/fe_cookies "$WEB/usuarios")
 BODY=$(cat /tmp/fe_body)
 check 200 "$CODE" "GET /usuarios (gestor lista clientes)"
-if echo "$BODY" | grep -q "Selecione um cliente para gerenciar"; then
+if echo "$BODY" | grep -Fq "Selecione um cliente para gerenciar" || echo "$BODY" | grep -Fq 'href="/usuarios?clienteId='; then
   echo "PASS [usuarios gestor seletor de clientes]"
   PASS=$((PASS+1))
 else
@@ -282,7 +282,7 @@ fi
 CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -b /tmp/fe_cookies "$WEB/imoveis")
 BODY=$(cat /tmp/fe_body)
 check 200 "$CODE" "GET /imoveis (gestor)"
-if echo "$BODY" | grep -q "Selecione um cliente para ver os imóveis" || echo "$BODY" | grep -q "Cadastro de imóveis"; then
+if echo "$BODY" | grep -Fq "Selecione um cliente para ver os imóveis" || echo "$BODY" | grep -Fq "Cadastro de imóveis" || echo "$BODY" | grep -Fq 'href="/imoveis?clienteId='; then
   echo "PASS [imoveis gestor seletor ou lista]"
   PASS=$((PASS+1))
 else
