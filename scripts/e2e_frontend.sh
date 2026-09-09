@@ -338,13 +338,30 @@ fi
 
 line "FORMULÁRIO INCLUIR IMÓVEL"
 if fetch_html_matching /tmp/fe_cookies "$WEB/imoveis/novo" all \
-  'name="clienteId"' 'name="nome"' 'name="tipo"' 'name="logradouro"'; then
+  'name="clienteId"' 'name="nome"' 'name="tipo"' 'name="cep"' 'name="logradouro"'; then
   check 200 "$CODE" "GET /imoveis/novo (gestor)"
   echo "PASS [formulario imovel campos]"
   PASS=$((PASS+1))
 else
   check 200 "$CODE" "GET /imoveis/novo (gestor)"
   echo "FAIL [formulario imovel campos] faltam campos do cadastro len=${#BODY}"
+  FAIL=$((FAIL+1))
+fi
+CEP_POS=$(python3 - <<'PY'
+h=open("/tmp/fe_body","rb").read().decode("utf-8","replace")
+print(h.find('name="cep"'))
+PY
+)
+LOG_POS=$(python3 - <<'PY'
+h=open("/tmp/fe_body","rb").read().decode("utf-8","replace")
+print(h.find('name="logradouro"'))
+PY
+)
+if [ "$CEP_POS" -ge 0 ] && [ "$LOG_POS" -gt "$CEP_POS" ]; then
+  echo "PASS [formulario imovel CEP antes do logradouro]"
+  PASS=$((PASS+1))
+else
+  echo "FAIL [formulario imovel CEP antes do logradouro] cep=$CEP_POS logradouro=$LOG_POS"
   FAIL=$((FAIL+1))
 fi
 if grep -aEq 'data-cliente-inicial="[0-9a-fA-F-]{36}"' /tmp/fe_body; then
@@ -354,6 +371,22 @@ else
   echo "FAIL [formulario imovel cliente pre-selecionado] dropdown sem cliente inicial"
   FAIL=$((FAIL+1))
 fi
+
+line "CONSULTA CEP"
+CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' "$WEB/api/cep/01001000")
+BODY=$(cat /tmp/fe_body)
+check 401 "$CODE" "GET /api/cep sem autenticacao"
+CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -b /tmp/fe_cookies "$WEB/api/cep/01001000")
+BODY=$(cat /tmp/fe_body)
+check 200 "$CODE" "GET /api/cep/01001000 (gestor)"
+if echo "$BODY" | grep -q "Praça da Sé" && echo "$BODY" | grep -q '"uf":"SP"'; then
+  echo "PASS [consulta CEP preenche logradouro cidade UF]"
+  PASS=$((PASS+1))
+else
+  echo "FAIL [consulta CEP preenche logradouro cidade UF] body=${BODY:0:240}"
+  FAIL=$((FAIL+1))
+fi
+
 NOME_E2E="E2E Imovel $(date +%s)"
 if [ -n "$CLIENTE_GESTOR" ]; then
   CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -b /tmp/fe_cookies -X POST "$WEB/api/imoveis" \
@@ -372,6 +405,38 @@ if [ -n "$CLIENTE_GESTOR" ]; then
       FAIL=$((FAIL+1))
     fi
     IMV_ID=$(echo "$BODY" | jq -r '.id // empty')
+    if fetch_html_matching /tmp/fe_cookies "$WEB/imoveis?clienteId=$CLIENTE_GESTOR" all \
+      "$NOME_E2E"; then
+      check 200 "$CODE" "GET /imoveis lista do cliente"
+      if grep -aFq "href=\"/imoveis/$IMV_ID\"" /tmp/fe_body; then
+        echo "PASS [lista imoveis link para cadastro]"
+        PASS=$((PASS+1))
+      else
+        echo "FAIL [lista imoveis link para cadastro] sem href do imóvel criado"
+        FAIL=$((FAIL+1))
+      fi
+      if grep -aFq 'href="/inquilinos' /tmp/fe_body || grep -aFq 'href="/contratos' /tmp/fe_body; then
+        echo "FAIL [lista imoveis sem inquilinos/contratos] ainda tem atalhos na listagem"
+        FAIL=$((FAIL+1))
+      else
+        echo "PASS [lista imoveis sem inquilinos/contratos]"
+        PASS=$((PASS+1))
+      fi
+    else
+      check 200 "$CODE" "GET /imoveis lista do cliente"
+      echo "FAIL [lista imoveis link para cadastro] lista sem o imóvel criado"
+      FAIL=$((FAIL+2))
+    fi
+    if [ -n "$IMV_ID" ] && fetch_html_matching /tmp/fe_cookies "$WEB/imoveis/$IMV_ID" all \
+      "$NOME_E2E" "Inquilino" "Contrato"; then
+      check 200 "$CODE" "GET /imoveis/{id} cadastro"
+      echo "PASS [cadastro imovel inquilino e contrato]"
+      PASS=$((PASS+1))
+    else
+      check 200 "$CODE" "GET /imoveis/{id} cadastro"
+      echo "FAIL [cadastro imovel inquilino e contrato] body sem seções len=${#BODY}"
+      FAIL=$((FAIL+1))
+    fi
     TOKEN=$(curl -s -X POST "$API/api/auth/login" -H 'Content-Type: application/json' \
       -d '{"email":"gestor@demo.local","senha":"Gestor@123456"}' | jq -r '.accessToken // empty')
     if [ -n "$IMV_ID" ] && [ -n "$TOKEN" ] && [ "$TOKEN" != "null" ]; then
@@ -379,14 +444,14 @@ if [ -n "$CLIENTE_GESTOR" ]; then
     fi
   elif echo "$BODY" | grep -q "Limite de imóveis"; then
     echo "PASS [POST /api/imoveis limite do plano] http=$CODE"
-    PASS=$((PASS+2))
+    PASS=$((PASS+5))
   else
     echo "FAIL [POST /api/imoveis] esperado=201 obtido=$CODE body=${BODY:0:240}"
-    FAIL=$((FAIL+2))
+    FAIL=$((FAIL+5))
   fi
 else
   echo "FAIL [POST imovel sem clienteId do JWT]"
-  FAIL=$((FAIL+2))
+  FAIL=$((FAIL+5))
 fi
 
 line "LOGIN INVÁLIDO"
