@@ -84,6 +84,7 @@ export const api = {
     apiFetch<Pagina<Usuario>>(
       `/api/usuarios${qs({ termo: opts?.termo, take: opts?.take ?? 20, clienteId: opts?.clienteId })}`,
     ),
-  usuario: (id: string) => apiFetch<Usuario>(`/api/usuarios/${id}`),
+  usuario: (id: string, clienteId?: string) =>
+    apiFetch<Usuario>(`/api/usuarios/${id}${qs({ clienteId })}`),
   cliente: (id: string) => apiFetch<Cliente>(`/api/clientes/${id}`),
 };

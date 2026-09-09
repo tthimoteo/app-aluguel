@@ -1,5 +1,12 @@
 export type PerfilUsuario = "Administrador" | "Gestor" | "Analista";
 
+export type VinculoCliente = {
+  clienteId: string;
+  nome: string;
+  perfil: string;
+  status: string;
+};
+
 export type UsuarioAutenticado = {
   id: string;
   email: string;
@@ -7,6 +14,7 @@ export type UsuarioAutenticado = {
   tenantId: string;
   clienteId: string | null;
   roles: string[];
+  clientes?: VinculoCliente[];
 };
 
 export type TokensAutenticacao = {
@@ -123,4 +131,5 @@ export type AuthMe = {
   tenantId: string | null;
   clienteId: string | null;
   roles: string[];
+  clientes?: VinculoCliente[];
 };

@@ -158,20 +158,34 @@ else
   FAIL=$((FAIL+1))
 fi
 EMAIL_E2E="e2e-admin-$(date +%s)@demo.local"
+CPF_E2E=$(python3 - <<'PY'
+import random
+def dv(nums, q, p0):
+    s = sum(nums[i] * (p0 - i) for i in range(q))
+    r = s % 11
+    return 0 if r < 2 else 11 - r
+while True:
+    n = [random.randint(0, 9) for _ in range(9)]
+    n.append(dv(n, 9, 10)); n.append(dv(n, 10, 11))
+    s = "".join(map(str, n))
+    if len(set(s)) > 1 and s not in {"39053344705", "52998224725", "11144477735"}:
+        print(s); break
+PY
+)
 CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -b /tmp/fe_cookies_admin -X POST "$WEB/api/usuarios" \
   -H 'Content-Type: application/json' \
-  -d "{\"clienteId\":\"$CLIENTE_ID\",\"nome\":\"E2E Admin User\",\"email\":\"$EMAIL_E2E\",\"perfil\":\"Analista\",\"senha\":\"Usuario@123456\"}")
+  -d "{\"clienteId\":\"$CLIENTE_ID\",\"nome\":\"E2E Admin User\",\"email\":\"$EMAIL_E2E\",\"cpf\":\"$CPF_E2E\",\"perfil\":\"Analista\",\"senha\":\"Usuario@123456\"}")
 BODY=$(cat /tmp/fe_body)
 check 201 "$CODE" "POST /api/usuarios (admin)"
 USER_ID=$(echo "$BODY" | jq -r '.id // empty')
 if [ -n "$USER_ID" ] && [ "$USER_ID" != "null" ]; then
-  CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -b /tmp/fe_cookies_admin "$WEB/api/usuarios/$USER_ID")
+  CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -b /tmp/fe_cookies_admin "$WEB/api/usuarios/$USER_ID?clienteId=$CLIENTE_ID")
   check 200 "$CODE" "GET /api/usuarios/{id} (admin)"
-  CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -b /tmp/fe_cookies_admin -X PUT "$WEB/api/usuarios/$USER_ID" \
+  CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -b /tmp/fe_cookies_admin -X PUT "$WEB/api/usuarios/$USER_ID?clienteId=$CLIENTE_ID" \
     -H 'Content-Type: application/json' \
     -d '{"nome":"E2E Admin Editado","telefone":"11988887777","perfil":"Analista","status":"Ativo"}')
   check 200 "$CODE" "PUT /api/usuarios/{id} (admin)"
-  CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -b /tmp/fe_cookies_admin -X DELETE "$WEB/api/usuarios/$USER_ID")
+  CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -b /tmp/fe_cookies_admin -X DELETE "$WEB/api/usuarios/$USER_ID?clienteId=$CLIENTE_ID")
   check 204 "$CODE" "DELETE /api/usuarios/{id} (admin)"
 else
   echo "FAIL [criar usuário sem id] body=${BODY:0:300}"
