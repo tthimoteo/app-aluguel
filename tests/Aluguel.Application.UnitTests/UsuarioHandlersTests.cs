@@ -59,7 +59,7 @@ public class UsuarioHandlersTests
         var gestor = new FakeCurrentUser(Guid.NewGuid(), ClienteA, ehAdministrador: false);
         var handler = new AtualizarUsuarioCommandHandler(service, gestor);
 
-        var dto = await handler.Handle(new AtualizarUsuarioCommand(alvo.Id, "Novo", null,
+        var dto = await handler.Handle(new AtualizarUsuarioCommand(alvo.Id, ClienteB, "Novo", null,
             PerfilUsuario.Analista, StatusUsuario.Ativo), default);
 
         dto.Should().BeNull();
@@ -76,7 +76,7 @@ public class UsuarioHandlersTests
         var gestor = new FakeCurrentUser(Guid.NewGuid(), ClienteA, ehAdministrador: false);
         var handler = new AtualizarUsuarioCommandHandler(service, gestor);
 
-        var dto = await handler.Handle(new AtualizarUsuarioCommand(alvo.Id, "Novo Nome", "11333334444",
+        var dto = await handler.Handle(new AtualizarUsuarioCommand(alvo.Id, ClienteA, "Novo Nome", "11333334444",
             PerfilUsuario.Gestor, StatusUsuario.Ativo), default);
 
         dto!.Nome.Should().Be("Novo Nome");
@@ -93,7 +93,7 @@ public class UsuarioHandlersTests
         var admin = new FakeCurrentUser(Guid.NewGuid(), clienteId: null, ehAdministrador: true);
         var handler = new AtualizarUsuarioCommandHandler(service, admin);
 
-        var dto = await handler.Handle(new AtualizarUsuarioCommand(alvo.Id, "Editado", null,
+        var dto = await handler.Handle(new AtualizarUsuarioCommand(alvo.Id, ClienteB, "Editado", null,
             PerfilUsuario.Analista, StatusUsuario.Inativo), default);
 
         dto!.Nome.Should().Be("Editado");

@@ -9,35 +9,46 @@ using Microsoft.EntityFrameworkCore;
 namespace Aluguel.Infrastructure.Identity;
 
 /// <summary>
-/// Gerencia os usuários do cliente sobre o ASP.NET Identity (senha via PasswordHasher, roles via UserManager).
-/// Todas as leituras são escopadas pelo tenant corrente; o limite de usuários segue o plano do cliente (UC002).
+/// Gerencia os usuários do cliente sobre o ASP.NET Identity.
+/// A identidade (CPF/e-mail/senha) é única no tenant; cada cliente tem uma vinculação com perfil próprio.
 /// </summary>
 public class UsuarioService(UserManager<AppUser> userManager, AppDbContext db, ICurrentTenant tenant)
     : IUsuarioService
 {
     private Guid? TenantId => tenant.TenantId;
 
-    public async Task<UsuarioDto?> ObterPorIdAsync(Guid id, CancellationToken ct = default)
+    public async Task<UsuarioDto?> ObterPorIdAsync(Guid id, Guid? clienteId, CancellationToken ct = default)
     {
-        var user = await ConsultaNoTenant().AsNoTracking().FirstOrDefaultAsync(u => u.Id == id, ct);
-        return user?.ParaDto();
+        var user = await ConsultaUsuarios().AsNoTracking().FirstOrDefaultAsync(u => u.Id == id, ct);
+        if (user is null)
+            return null;
+
+        if (user.Perfil == PerfilUsuario.Administrador && clienteId is null)
+            return user.ParaDtoAdministrador();
+
+        var vinculoQuery = ConsultaVinculos().AsNoTracking().Where(v => v.UsuarioId == id);
+        if (clienteId is { } cid)
+            vinculoQuery = vinculoQuery.Where(v => v.ClienteId == cid);
+
+        var vinculo = await vinculoQuery.FirstOrDefaultAsync(ct);
+        return vinculo is null ? null : user.ParaDto(vinculo);
     }
 
     public async Task<IReadOnlyList<UsuarioDto>> ListarAsync(Guid clienteId, string? termo,
         int skip, int take, CancellationToken ct = default)
     {
-        var itens = await Filtrar(clienteId, termo)
-            .AsNoTracking()
-            .OrderBy(u => u.Nome)
+        var query = ConsultaListagem(clienteId, termo);
+        var pares = await query
+            .OrderBy(x => x.User.Nome)
             .Skip(skip)
             .Take(take)
             .ToListAsync(ct);
 
-        return itens.Select(u => u.ParaDto()).ToList();
+        return pares.Select(p => p.User.ParaDto(p.Vinculo)).ToList();
     }
 
     public Task<int> ContarAsync(Guid clienteId, string? termo, CancellationToken ct = default) =>
-        Filtrar(clienteId, termo).CountAsync(ct);
+        ConsultaListagem(clienteId, termo).CountAsync(ct);
 
     public Task<bool> EmailEmUsoAsync(string email, Guid? ignorarId, CancellationToken ct = default)
     {
@@ -45,8 +56,30 @@ public class UsuarioService(UserManager<AppUser> userManager, AppDbContext db, I
         return db.Users.AnyAsync(u => u.NormalizedEmail == normalizado && (ignorarId == null || u.Id != ignorarId), ct);
     }
 
-    public Task<bool> CpfEmUsoNoClienteAsync(Guid clienteId, string cpf, Guid? ignorarId, CancellationToken ct = default) =>
-        db.Users.AnyAsync(u => u.ClienteId == clienteId && u.Cpf == cpf && (ignorarId == null || u.Id != ignorarId), ct);
+    public async Task<bool> CpfEmUsoNoClienteAsync(Guid clienteId, string cpf, Guid? ignorarId,
+        CancellationToken ct = default)
+    {
+        return await (
+            from v in ConsultaVinculos()
+            join u in ConsultaUsuarios() on v.UsuarioId equals u.Id
+            where v.ClienteId == clienteId && v.Status == StatusUsuario.Ativo
+                  && u.Cpf == cpf && (ignorarId == null || u.Id != ignorarId)
+            select v.Id).AnyAsync(ct);
+    }
+
+    public async Task<UsuarioPorCpfDto?> ObterPorCpfAsync(string cpf, Guid clienteId, CancellationToken ct = default)
+    {
+        var user = await ConsultaUsuarios().AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Cpf == cpf, ct);
+        if (user is null)
+            return null;
+
+        var jaNoCliente = await ConsultaVinculos()
+            .AnyAsync(v => v.UsuarioId == user.Id && v.ClienteId == clienteId && v.Status == StatusUsuario.Ativo, ct);
+
+        return new UsuarioPorCpfDto(user.Id, user.Nome, user.Email ?? string.Empty, user.Telefone, user.Cpf ?? cpf,
+            jaNoCliente);
+    }
 
     public async Task<bool> PodeAdicionarUsuarioAsync(Guid clienteId, CancellationToken ct = default)
     {
@@ -60,9 +93,92 @@ public class UsuarioService(UserManager<AppUser> userManager, AppDbContext db, I
 
     public async Task<UsuarioDto> CriarAsync(NovoUsuario dados, CancellationToken ct = default)
     {
-        // Revalidação defensiva do limite do plano (a validação de entrada roda no pipeline do MediatR).
         if (!await PodeAdicionarUsuarioAsync(dados.ClienteId, ct))
             throw new InvalidOperationException("Limite de usuários do plano atingido.");
+
+        if (string.IsNullOrWhiteSpace(dados.Cpf))
+            throw new InvalidOperationException("CPF é obrigatório.");
+
+        var existente = await ConsultaUsuarios().FirstOrDefaultAsync(u => u.Cpf == dados.Cpf, ct);
+        if (existente is not null)
+            return await VincularExistenteAsync(existente, dados, ct);
+
+        return await CriarIdentidadeAsync(dados, ct);
+    }
+
+    public async Task<UsuarioDto?> AtualizarAsync(Guid id, Guid clienteId, AtualizacaoUsuario dados,
+        CancellationToken ct = default)
+    {
+        var user = await ConsultaUsuarios().FirstOrDefaultAsync(u => u.Id == id, ct);
+        var vinculo = await ConsultaVinculos()
+            .FirstOrDefaultAsync(v => v.UsuarioId == id && v.ClienteId == clienteId, ct);
+        if (user is null || vinculo is null)
+            return null;
+
+        if (dados.Status == StatusUsuario.Ativo && vinculo.Status != StatusUsuario.Ativo)
+        {
+            var plano = await ObterPlanoDoClienteAsync(clienteId, ct);
+            var ativos = await ContarAtivosAsync(clienteId, ct);
+            if (plano is null || !plano.PermiteMaisUsuarios(ativos))
+                throw new InvalidOperationException("Limite de usuários do plano atingido.");
+        }
+
+        user.Nome = dados.Nome;
+        user.Telefone = dados.Telefone;
+        vinculo.Atualizar(dados.Perfil, dados.Status);
+
+        var update = await userManager.UpdateAsync(user);
+        if (!update.Succeeded)
+            throw new InvalidOperationException(DescreverErros(update));
+
+        await SincronizarStatusIdentidadeAsync(user, ct);
+        await db.SaveChangesAsync(ct);
+        return user.ParaDto(vinculo);
+    }
+
+    public async Task<bool> RemoverAsync(Guid id, Guid clienteId, CancellationToken ct = default)
+    {
+        var user = await ConsultaUsuarios().FirstOrDefaultAsync(u => u.Id == id, ct);
+        var vinculo = await ConsultaVinculos()
+            .FirstOrDefaultAsync(v => v.UsuarioId == id && v.ClienteId == clienteId, ct);
+        if (user is null || vinculo is null)
+            return false;
+
+        vinculo.Inativar();
+        await SincronizarStatusIdentidadeAsync(user, ct);
+        await db.SaveChangesAsync(ct);
+        return true;
+    }
+
+    private async Task<UsuarioDto> VincularExistenteAsync(AppUser user, NovoUsuario dados, CancellationToken ct)
+    {
+        var vinculo = await ConsultaVinculos()
+            .FirstOrDefaultAsync(v => v.UsuarioId == user.Id && v.ClienteId == dados.ClienteId, ct);
+        if (vinculo is { Status: StatusUsuario.Ativo })
+            throw new InvalidOperationException("Já existe um usuário com este CPF neste cliente.");
+
+        if (vinculo is null)
+        {
+            vinculo = new UsuarioCliente(dados.TenantId, user.Id, dados.ClienteId, dados.Perfil);
+            db.UsuariosClientes.Add(vinculo);
+        }
+        else
+            vinculo.Atualizar(dados.Perfil, StatusUsuario.Ativo);
+
+        if (user.Status != StatusUsuario.Ativo)
+        {
+            user.Status = StatusUsuario.Ativo;
+            await userManager.UpdateAsync(user);
+        }
+
+        await db.SaveChangesAsync(ct);
+        return user.ParaDto(vinculo);
+    }
+
+    private async Task<UsuarioDto> CriarIdentidadeAsync(NovoUsuario dados, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(dados.Senha))
+            throw new InvalidOperationException("Senha é obrigatória para o primeiro cadastro do usuário.");
 
         var user = new AppUser
         {
@@ -87,79 +203,53 @@ public class UsuarioService(UserManager<AppUser> userManager, AppDbContext db, I
         if (!addRole.Succeeded)
             throw new InvalidOperationException(DescreverErros(addRole));
 
-        return user.ParaDto();
+        var vinculo = new UsuarioCliente(dados.TenantId, user.Id, dados.ClienteId, dados.Perfil);
+        db.UsuariosClientes.Add(vinculo);
+        await db.SaveChangesAsync(ct);
+        return user.ParaDto(vinculo);
     }
 
-    public async Task<UsuarioDto?> AtualizarAsync(Guid id, AtualizacaoUsuario dados, CancellationToken ct = default)
+    private async Task SincronizarStatusIdentidadeAsync(AppUser user, CancellationToken ct)
     {
-        var user = await ConsultaNoTenant().FirstOrDefaultAsync(u => u.Id == id, ct);
-        if (user is null)
-            return null;
+        if (user.Perfil == PerfilUsuario.Administrador)
+            return;
 
-        // Reativar um usuário também respeita o limite do plano.
-        if (dados.Status == StatusUsuario.Ativo && user.Status != StatusUsuario.Ativo && user.ClienteId is { } cid)
-        {
-            var plano = await ObterPlanoDoClienteAsync(cid, ct);
-            var ativos = await ContarAtivosAsync(cid, ct);
-            if (plano is null || !plano.PermiteMaisUsuarios(ativos))
-                throw new InvalidOperationException("Limite de usuários do plano atingido.");
-        }
-
-        var perfilAnterior = user.Perfil;
-
-        user.Nome = dados.Nome;
-        user.Telefone = dados.Telefone;
-        user.Perfil = dados.Perfil;
-        user.Status = dados.Status;
-
-        var update = await userManager.UpdateAsync(user);
-        if (!update.Succeeded)
-            throw new InvalidOperationException(DescreverErros(update));
-
-        if (perfilAnterior != dados.Perfil)
-        {
-            await userManager.RemoveFromRoleAsync(user, perfilAnterior.ToString());
-            await userManager.AddToRoleAsync(user, dados.Perfil.ToString());
-        }
-
-        return user.ParaDto();
+        var temAtivo = await ConsultaVinculos()
+            .AnyAsync(v => v.UsuarioId == user.Id && v.Status == StatusUsuario.Ativo, ct);
+        var desejado = temAtivo ? StatusUsuario.Ativo : StatusUsuario.Inativo;
+        if (user.Status == desejado)
+            return;
+        user.Status = desejado;
+        await userManager.UpdateAsync(user);
     }
 
-    public async Task<bool> RemoverAsync(Guid id, CancellationToken ct = default)
-    {
-        var user = await ConsultaNoTenant().FirstOrDefaultAsync(u => u.Id == id, ct);
-        if (user is null)
-            return false;
-
-        if (user.Status != StatusUsuario.Inativo)
-        {
-            user.Status = StatusUsuario.Inativo;
-            await db.SaveChangesAsync(ct);
-        }
-
-        return true;
-    }
-
-    private IQueryable<AppUser> ConsultaNoTenant() =>
+    private IQueryable<AppUser> ConsultaUsuarios() =>
         db.Users.Where(u => TenantId == null || u.TenantId == TenantId);
 
-    private IQueryable<AppUser> Filtrar(Guid clienteId, string? termo)
+    private IQueryable<UsuarioCliente> ConsultaVinculos() =>
+        db.UsuariosClientes.Where(v => TenantId == null || v.TenantId == TenantId);
+
+    private IQueryable<VinculoComUsuario> ConsultaListagem(Guid clienteId, string? termo)
     {
-        var query = ConsultaNoTenant().Where(u => u.ClienteId == clienteId);
+        var query =
+            from v in ConsultaVinculos()
+            join u in ConsultaUsuarios() on v.UsuarioId equals u.Id
+            where v.ClienteId == clienteId
+            select new VinculoComUsuario(u, v);
 
         if (!string.IsNullOrWhiteSpace(termo))
         {
             var padrao = $"%{termo.Trim()}%";
-            query = query.Where(u =>
-                EF.Functions.ILike(u.Nome, padrao) ||
-                (u.Email != null && EF.Functions.ILike(u.Email, padrao)));
+            query = query.Where(x =>
+                EF.Functions.ILike(x.User.Nome, padrao) ||
+                (x.User.Email != null && EF.Functions.ILike(x.User.Email, padrao)));
         }
 
         return query;
     }
 
     private Task<int> ContarAtivosAsync(Guid clienteId, CancellationToken ct) =>
-        db.Users.CountAsync(u => u.ClienteId == clienteId && u.Status == StatusUsuario.Ativo, ct);
+        ConsultaVinculos().CountAsync(v => v.ClienteId == clienteId && v.Status == StatusUsuario.Ativo, ct);
 
     private async Task<Plano?> ObterPlanoDoClienteAsync(Guid clienteId, CancellationToken ct)
     {
@@ -173,4 +263,6 @@ public class UsuarioService(UserManager<AppUser> userManager, AppDbContext db, I
 
     private static string DescreverErros(IdentityResult resultado) =>
         string.Join("; ", resultado.Errors.Select(e => e.Description));
+
+    private readonly record struct VinculoComUsuario(AppUser User, UsuarioCliente Vinculo);
 }

@@ -6,6 +6,7 @@ namespace Aluguel.Api.Endpoints;
 public record LoginRequest(string Email, string Senha);
 public record RefreshRequest(string RefreshToken);
 public record LogoutRequest(string RefreshToken);
+public record SelecionarClienteRequest(Guid ClienteId, string RefreshToken);
 
 public static class AuthEndpoints
 {
@@ -43,15 +44,38 @@ public static class AuthEndpoints
         })
         .WithName("Logout").RequireAuthorization();
 
-        grupo.MapGet("/me", (ClaimsPrincipal user) => Results.Ok(new
+        grupo.MapPost("/contexto", async (SelecionarClienteRequest req, IAuthService auth, ICurrentUser current,
+            HttpContext http, CancellationToken ct) =>
         {
-            id = user.FindFirstValue("sub") ?? user.FindFirstValue(ClaimTypes.NameIdentifier),
-            email = user.FindFirstValue("email"),
-            nome = user.FindFirstValue("name"),
-            tenantId = user.FindFirstValue("tenant_id"),
-            clienteId = user.FindFirstValue("cliente_id"),
-            roles = user.FindAll("role").Select(c => c.Value).ToArray(),
-        }))
+            if (current.UserId is null)
+                return Results.Unauthorized();
+            if (req.ClienteId == Guid.Empty || string.IsNullOrWhiteSpace(req.RefreshToken))
+                return Results.BadRequest(new { erro = "clienteId e refreshToken são obrigatórios." });
+
+            var r = await auth.SelecionarClienteAsync(current.UserId.Value, req.ClienteId, req.RefreshToken, Ip(http), ct);
+            return r.Sucesso ? Results.Ok(ToResponse(r.Tokens!)) : Results.BadRequest(new { erro = r.Erro });
+        })
+        .WithName("SelecionarCliente").RequireAuthorization();
+
+        grupo.MapGet("/me", async (ClaimsPrincipal user, IAuthService auth, CancellationToken ct) =>
+        {
+            var idRaw = user.FindFirstValue("sub") ?? user.FindFirstValue(ClaimTypes.NameIdentifier);
+            Guid.TryParse(idRaw, out var userId);
+            var clientes = userId == Guid.Empty
+                ? []
+                : await auth.ListarVinculosAsync(userId, ct);
+
+            return Results.Ok(new
+            {
+                id = idRaw,
+                email = user.FindFirstValue("email"),
+                nome = user.FindFirstValue("name"),
+                tenantId = user.FindFirstValue("tenant_id"),
+                clienteId = user.FindFirstValue("cliente_id"),
+                roles = user.FindAll("role").Select(c => c.Value).ToArray(),
+                clientes,
+            });
+        })
         .WithName("Me").RequireAuthorization();
 
         return app;
@@ -71,6 +95,7 @@ public static class AuthEndpoints
             t.Usuario.TenantId,
             t.Usuario.ClienteId,
             t.Usuario.Roles,
+            t.Usuario.Clientes,
         },
     };
 

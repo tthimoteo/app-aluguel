@@ -3,6 +3,7 @@ using Aluguel.Application.Autorizacao;
 using Aluguel.Application.Usuarios.AtualizarUsuario;
 using Aluguel.Application.Usuarios.CriarUsuario;
 using Aluguel.Application.Usuarios.ListarUsuarios;
+using Aluguel.Application.Usuarios.ObterUsuarioPorCpf;
 using Aluguel.Application.Usuarios.ObterUsuarioPorId;
 using Aluguel.Application.Usuarios.RemoverUsuario;
 using Aluguel.Domain.Usuarios;
@@ -17,7 +18,7 @@ public sealed record CriarUsuarioRequest(
     string? Cpf,
     string? Telefone,
     PerfilUsuario Perfil,
-    string Senha);
+    string? Senha);
 
 public sealed record AtualizarUsuarioRequest(
     string Nome,
@@ -29,7 +30,6 @@ public static class UsuarioEndpoints
 {
     public static IEndpointRouteBuilder MapUsuarioEndpoints(this IEndpointRouteBuilder app)
     {
-        // Gestão de usuários do cliente: Administrador (plataforma) ou Gestor (próprio cliente).
         var grupo = app.MapGroup("/api/usuarios")
             .WithTags("Usuários")
             .RequireAuthorization(Politicas.GerenciaUsuarios);
@@ -43,9 +43,21 @@ public static class UsuarioEndpoints
         })
         .WithName("ListarUsuarios");
 
-        grupo.MapGet("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
+        grupo.MapGet("/por-cpf", async (Guid? clienteId, string? cpf, ICurrentUser currentUser,
+            ISender sender, CancellationToken ct) =>
         {
-            var usuario = await sender.Send(new ObterUsuarioPorIdQuery(id), ct);
+            var cid = currentUser.EhAdministrador ? clienteId : currentUser.ClienteId;
+            if (cid is null || string.IsNullOrWhiteSpace(cpf))
+                return Results.BadRequest(new { erro = "clienteId e cpf são obrigatórios." });
+
+            var dto = await sender.Send(new ObterUsuarioPorCpfQuery(cid.Value, cpf), ct);
+            return Results.Ok(dto);
+        })
+        .WithName("ObterUsuarioPorCpf");
+
+        grupo.MapGet("/{id:guid}", async (Guid id, Guid? clienteId, ISender sender, CancellationToken ct) =>
+        {
+            var usuario = await sender.Send(new ObterUsuarioPorIdQuery(id, clienteId), ct);
             return usuario is null ? Results.NotFound() : Results.Ok(usuario);
         })
         .WithName("ObterUsuarioPorId");
@@ -53,7 +65,6 @@ public static class UsuarioEndpoints
         grupo.MapPost("/", async (CriarUsuarioRequest req, ICurrentUser currentUser,
             ISender sender, CancellationToken ct) =>
         {
-            // O Gestor só cria no próprio cliente; o Administrador informa o cliente alvo.
             var clienteId = currentUser.EhAdministrador ? req.ClienteId : currentUser.ClienteId;
             if (clienteId is null)
                 return Results.BadRequest(new { erro = "clienteId é obrigatório para o Administrador." });
@@ -64,17 +75,18 @@ public static class UsuarioEndpoints
         })
         .WithName("CriarUsuario");
 
-        grupo.MapPut("/{id:guid}", async (Guid id, AtualizarUsuarioRequest req, ISender sender, CancellationToken ct) =>
+        grupo.MapPut("/{id:guid}", async (Guid id, Guid? clienteId, AtualizarUsuarioRequest req,
+            ISender sender, CancellationToken ct) =>
         {
             var dto = await sender.Send(new AtualizarUsuarioCommand(
-                id, req.Nome, req.Telefone, req.Perfil, req.Status), ct);
+                id, clienteId, req.Nome, req.Telefone, req.Perfil, req.Status), ct);
             return dto is null ? Results.NotFound() : Results.Ok(dto);
         })
         .WithName("AtualizarUsuario");
 
-        grupo.MapDelete("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
+        grupo.MapDelete("/{id:guid}", async (Guid id, Guid? clienteId, ISender sender, CancellationToken ct) =>
         {
-            var removido = await sender.Send(new RemoverUsuarioCommand(id), ct);
+            var removido = await sender.Send(new RemoverUsuarioCommand(id, clienteId), ct);
             return removido ? Results.NoContent() : Results.NotFound();
         })
         .WithName("RemoverUsuario");
