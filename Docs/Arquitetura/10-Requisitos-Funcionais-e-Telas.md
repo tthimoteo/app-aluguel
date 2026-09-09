@@ -12,7 +12,7 @@ Detalha as telas e regras funcionais (§10–§14) e como mapeiam para endpoints
 
 **CEP** — no formulário o campo vem **antes** do logradouro. Ao completar 8 dígitos, `GET /api/cep/{cep}` consulta a ViaCEP e preenche logradouro, bairro, cidade e UF (o usuário ainda pode editar).
 
-**Lista e cadastro do imóvel** — cada linha (e o card na home) abre `/imoveis/{id}` com os dados do imóvel. **Inquilino** e **contrato** ficam nesse cadastro, não na listagem nem no menu: um inquilino e um contrato ativo por vez (CASO 3). Ações no cadastro: incluir/editar/remover inquilino; incluir/editar/renovar/encerrar contrato (renovar encerra o ativo e cria o novo).
+**Lista e cadastro do imóvel** — cada linha (e o card na home) abre `/imoveis/{id}` com os dados do imóvel. Gestor e Administrador **editam** nome, tipo, IPTU, matrícula, status e endereço no próprio cadastro (`PUT /api/imoveis/{id}`); Analista só consulta. CEP, logradouro, número, bairro, cidade e UF são **obrigatórios** no incluir e no editar (complemento é opcional). **Inquilino** e **contrato** ficam nesse cadastro, não na listagem nem no menu: um inquilino e um contrato ativo por vez (CASO 3). Ações no cadastro: incluir/editar/remover inquilino; incluir/editar/renovar/encerrar contrato (renovar encerra o ativo e cria o novo).
 
 **Administrador:** a lista da home é de **clientes** (nome/razão social, CPF ou CNPJ, plano, status), não de imóveis. Os cards de indicadores exibem quantidade de **clientes**, imóveis e planos (sem inquilinos nem contratos). Gestor e Analista continuam com a lista de imóveis e os cards de imóveis, inquilinos, contratos e planos.
 

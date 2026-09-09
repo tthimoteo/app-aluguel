@@ -77,14 +77,27 @@ export function enderecoParaApi(e: EnderecoFormulario): {
   return Object.values(payload).some(Boolean) ? payload : null;
 }
 
+export function enderecoObrigatorioPreenchido(e: EnderecoFormulario): boolean {
+  return (
+    somenteDigitosCep(e.cep).length === 8 &&
+    e.logradouro.trim().length > 0 &&
+    e.numero.trim().length > 0 &&
+    e.bairro.trim().length > 0 &&
+    e.cidade.trim().length > 0 &&
+    e.uf.trim().length === 2
+  );
+}
+
 export function CamposEndereco({
   value,
   onChange,
   idPrefix,
+  obrigatorio = false,
 }: {
   value: EnderecoFormulario;
   onChange: (proximo: EnderecoFormulario) => void;
   idPrefix?: string;
+  obrigatorio?: boolean;
 }) {
   const autoId = useId();
   const prefixo = idPrefix ?? autoId.replace(/:/g, "");
@@ -151,7 +164,7 @@ export function CamposEndereco({
 
   return (
     <div className="flex flex-col gap-4">
-      <Campo rotulo="CEP" htmlFor={campoId("cep")} classe="w-full sm:max-w-[12rem]">
+      <Campo rotulo="CEP" htmlFor={campoId("cep")} classe="w-full sm:max-w-[12rem]" obrigatorio={obrigatorio}>
         <input
           id={campoId("cep")}
           name="cep"
@@ -159,6 +172,7 @@ export function CamposEndereco({
           placeholder="00000-000"
           maxLength={9}
           value={value.cep}
+          required={obrigatorio}
           onChange={(e) => aoCep(e.target.value)}
           onBlur={() => {
             const d = somenteDigitosCep(valueRef.current.cep);
@@ -184,21 +198,23 @@ export function CamposEndereco({
       </Campo>
 
       <div className="grid gap-4 sm:grid-cols-6">
-        <Campo rotulo="Logradouro" htmlFor={campoId("logradouro")} classe="sm:col-span-4">
+        <Campo rotulo="Logradouro" htmlFor={campoId("logradouro")} classe="sm:col-span-4" obrigatorio={obrigatorio}>
           <input
             id={campoId("logradouro")}
             name="logradouro"
             value={value.logradouro}
+            required={obrigatorio}
             onChange={(e) => onChange({ ...value, logradouro: e.target.value })}
             className={fieldInputClass}
             autoComplete="address-line1"
           />
         </Campo>
-        <Campo rotulo="Número" htmlFor={campoId("numero")} classe="sm:col-span-2">
+        <Campo rotulo="Número" htmlFor={campoId("numero")} classe="sm:col-span-2" obrigatorio={obrigatorio}>
           <input
             id={campoId("numero")}
             name="numero"
             value={value.numero}
+            required={obrigatorio}
             onChange={(e) => onChange({ ...value, numero: e.target.value })}
             className={fieldInputClass}
             autoComplete="address-line2"
@@ -213,30 +229,33 @@ export function CamposEndereco({
             className={fieldInputClass}
           />
         </Campo>
-        <Campo rotulo="Bairro" htmlFor={campoId("bairro")} classe="sm:col-span-3">
+        <Campo rotulo="Bairro" htmlFor={campoId("bairro")} classe="sm:col-span-3" obrigatorio={obrigatorio}>
           <input
             id={campoId("bairro")}
             name="bairro"
             value={value.bairro}
+            required={obrigatorio}
             onChange={(e) => onChange({ ...value, bairro: e.target.value })}
             className={fieldInputClass}
           />
         </Campo>
-        <Campo rotulo="Cidade" htmlFor={campoId("cidade")} classe="sm:col-span-4">
+        <Campo rotulo="Cidade" htmlFor={campoId("cidade")} classe="sm:col-span-4" obrigatorio={obrigatorio}>
           <input
             id={campoId("cidade")}
             name="cidade"
             value={value.cidade}
+            required={obrigatorio}
             onChange={(e) => onChange({ ...value, cidade: e.target.value })}
             className={fieldInputClass}
             autoComplete="address-level2"
           />
         </Campo>
-        <Campo rotulo="UF" htmlFor={campoId("uf")} classe="sm:col-span-2">
+        <Campo rotulo="UF" htmlFor={campoId("uf")} classe="sm:col-span-2" obrigatorio={obrigatorio}>
           <select
             id={campoId("uf")}
             name="uf"
             value={value.uf}
+            required={obrigatorio}
             onChange={(e) => onChange({ ...value, uf: e.target.value })}
             className={selectClass}
           >
@@ -258,16 +277,19 @@ function Campo({
   htmlFor,
   children,
   classe,
+  obrigatorio,
 }: {
   rotulo: string;
   htmlFor: string;
   children: ReactNode;
   classe?: string;
+  obrigatorio?: boolean;
 }) {
   return (
     <div className={cn("flex flex-col gap-1.5", classe)}>
       <Label htmlFor={htmlFor} className="text-[#333] dark:text-foreground">
         {rotulo}
+        {obrigatorio ? <span className="text-primary"> *</span> : null}
       </Label>
       {children}
     </div>

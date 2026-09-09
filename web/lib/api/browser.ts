@@ -81,6 +81,15 @@ export type NovoImovelInput = {
   } | null;
 };
 
+export type AtualizacaoImovelInput = {
+  nome: string;
+  tipo: NovoImovelInput["tipo"];
+  numeroIptu?: string | null;
+  numeroMatricula?: string | null;
+  status: "Ativo" | "Inativo";
+  endereco?: NovoImovelInput["endereco"];
+};
+
 export type NovoInquilinoInput = {
   clienteId: string;
   tipoPessoa: "PF" | "PJ";
@@ -142,6 +151,8 @@ export const bff = {
     ),
   criarImovel: (dados: NovoImovelInput) =>
     bffFetch<Imovel>("/api/imoveis", { method: "POST", body: JSON.stringify(dados) }),
+  atualizarImovel: (id: string, dados: AtualizacaoImovelInput) =>
+    bffFetch<Imovel>(`/api/imoveis/${id}`, { method: "PUT", body: JSON.stringify(dados) }),
   consultarCep: (cep: string) => bffFetch<EnderecoViaCep>(`/api/cep/${encodeURIComponent(cep)}`),
   criarInquilino: (dados: NovoInquilinoInput) =>
     bffFetch<Inquilino>("/api/inquilinos", { method: "POST", body: JSON.stringify(dados) }),

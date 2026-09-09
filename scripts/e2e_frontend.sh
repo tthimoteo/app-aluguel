@@ -364,6 +364,18 @@ else
   echo "FAIL [formulario imovel CEP antes do logradouro] cep=$CEP_POS logradouro=$LOG_POS"
   FAIL=$((FAIL+1))
 fi
+if grep -aEq 'name="cep"[^>]*required' /tmp/fe_body \
+  && grep -aEq 'name="logradouro"[^>]*required' /tmp/fe_body \
+  && grep -aEq 'name="numero"[^>]*required' /tmp/fe_body \
+  && grep -aEq 'name="bairro"[^>]*required' /tmp/fe_body \
+  && grep -aEq 'name="cidade"[^>]*required' /tmp/fe_body \
+  && grep -aEq 'name="uf"[^>]*required' /tmp/fe_body; then
+  echo "PASS [formulario imovel endereco obrigatorio]"
+  PASS=$((PASS+1))
+else
+  echo "FAIL [formulario imovel endereco obrigatorio] CEP/logradouro/número/bairro/cidade/UF sem required"
+  FAIL=$((FAIL+1))
+fi
 if grep -aEq 'data-cliente-inicial="[0-9a-fA-F-]{36}"' /tmp/fe_body; then
   echo "PASS [formulario imovel cliente pre-selecionado]"
   PASS=$((PASS+1))
@@ -432,9 +444,30 @@ if [ -n "$CLIENTE_GESTOR" ]; then
       check 200 "$CODE" "GET /imoveis/{id} cadastro"
       echo "PASS [cadastro imovel inquilino e contrato]"
       PASS=$((PASS+1))
+      if grep -aFq 'name="nome"' /tmp/fe_body && grep -aFq 'name="status"' /tmp/fe_body \
+        && grep -aEq 'name="cep"[^>]*required' /tmp/fe_body; then
+        echo "PASS [cadastro imovel formulario editavel gestor]"
+        PASS=$((PASS+1))
+      else
+        echo "FAIL [cadastro imovel formulario editavel gestor] sem campos editáveis"
+        FAIL=$((FAIL+1))
+      fi
     else
       check 200 "$CODE" "GET /imoveis/{id} cadastro"
       echo "FAIL [cadastro imovel inquilino e contrato] body sem seções len=${#BODY}"
+      FAIL=$((FAIL+1))
+    fi
+    NOME_EDIT="${NOME_E2E} editado"
+    CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -b /tmp/fe_cookies -X PUT "$WEB/api/imoveis/$IMV_ID" \
+      -H 'Content-Type: application/json' \
+      -d "{\"nome\":\"$NOME_EDIT\",\"tipo\":\"Residencial\",\"numeroIptu\":\"IPTU-E2E\",\"status\":\"Ativo\",\"endereco\":{\"logradouro\":\"Praca da Se\",\"numero\":\"100\",\"bairro\":\"Se\",\"cidade\":\"Sao Paulo\",\"uf\":\"SP\",\"cep\":\"01001000\"}}")
+    BODY=$(cat /tmp/fe_body)
+    check 200 "$CODE" "PUT /api/imoveis/{id} via BFF"
+    if echo "$BODY" | grep -q "$NOME_EDIT"; then
+      echo "PASS [PUT imovel nome]"
+      PASS=$((PASS+1))
+    else
+      echo "FAIL [PUT imovel nome] body=${BODY:0:240}"
       FAIL=$((FAIL+1))
     fi
     TOKEN=$(curl -s -X POST "$API/api/auth/login" -H 'Content-Type: application/json' \
@@ -444,14 +477,14 @@ if [ -n "$CLIENTE_GESTOR" ]; then
     fi
   elif echo "$BODY" | grep -q "Limite de imóveis"; then
     echo "PASS [POST /api/imoveis limite do plano] http=$CODE"
-    PASS=$((PASS+5))
+    PASS=$((PASS+8))
   else
     echo "FAIL [POST /api/imoveis] esperado=201 obtido=$CODE body=${BODY:0:240}"
-    FAIL=$((FAIL+5))
+    FAIL=$((FAIL+8))
   fi
 else
   echo "FAIL [POST imovel sem clienteId do JWT]"
-  FAIL=$((FAIL+5))
+  FAIL=$((FAIL+8))
 fi
 
 line "LOGIN INVÁLIDO"

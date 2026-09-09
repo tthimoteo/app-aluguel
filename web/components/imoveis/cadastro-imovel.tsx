@@ -12,6 +12,7 @@ import {
   selectClass,
   type EnderecoFormulario,
 } from "@/components/imoveis/campos-endereco";
+import { FormularioImovel } from "@/components/imoveis/formulario-imovel";
 import { StatusBadge } from "@/components/data/status-badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -227,20 +228,26 @@ export function CadastroImovel({
       </p>
 
       <section className="rounded-lg bg-card p-6 shadow-[0_2px_8px_rgba(0,0,0,0.1)] ring-1 ring-border">
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="text-xl font-semibold">{imovel.nome}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Cadastro do imóvel (UC003).</p>
-          </div>
-          <StatusBadge status={imovel.status} />
-        </div>
-        <dl className="grid gap-4 sm:grid-cols-2">
-          <CampoDetalhe rotulo="Tipo" valor={rotuloTipo(imovel.tipo)} />
-          <CampoDetalhe rotulo="Nr. IPTU" valor={imovel.numeroIptu ?? "—"} />
-          <CampoDetalhe rotulo="Nr. Matrícula" valor={imovel.numeroMatricula ?? "—"} />
-          <CampoDetalhe rotulo="CEP" valor={imovel.endereco.cep ?? "—"} />
-          <CampoDetalhe rotulo="Endereço" valor={formatarEndereco(imovel.endereco)} />
-        </dl>
+        {podeGerenciar ? (
+          <FormularioImovel key={imovel.id} imovel={imovel} embutido />
+        ) : (
+          <>
+            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-xl font-semibold">{imovel.nome}</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Cadastro do imóvel (UC003).</p>
+              </div>
+              <StatusBadge status={imovel.status} />
+            </div>
+            <dl className="grid gap-4 sm:grid-cols-2">
+              <CampoDetalhe rotulo="Tipo" valor={rotuloTipo(imovel.tipo)} />
+              <CampoDetalhe rotulo="Nr. IPTU" valor={imovel.numeroIptu ?? "—"} />
+              <CampoDetalhe rotulo="Nr. Matrícula" valor={imovel.numeroMatricula ?? "—"} />
+              <CampoDetalhe rotulo="CEP" valor={imovel.endereco.cep ?? "—"} />
+              <CampoDetalhe rotulo="Endereço" valor={formatarEndereco(imovel.endereco)} />
+            </dl>
+          </>
+        )}
       </section>
 
       <section className="rounded-lg bg-card p-6 shadow-[0_2px_8px_rgba(0,0,0,0.1)] ring-1 ring-border">
