@@ -1,5 +1,7 @@
+using Aluguel.Application.Abstractions;
 using Aluguel.Application.Imoveis.AtualizarImovel;
 using Aluguel.Application.Imoveis.CriarImovel;
+using Aluguel.Application.Imoveis.ListarImoveis;
 using Aluguel.Application.Imoveis.RemoverImovel;
 using Aluguel.Application.UnitTests.Fakes;
 using Aluguel.Domain.Common;
@@ -103,6 +105,25 @@ public class ImovelTests
         var handler = new RemoverImovelCommandHandler(repo, gestor);
 
         (await handler.Handle(new RemoverImovelCommand(imovel.Id), default)).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Listar_como_gestor_de_cliente_vinculado_filtra_o_solicitado()
+    {
+        var repo = new FakeImovelRepository();
+        repo.Itens.Add(new Imovel(Tenant, ClienteA, "Apto A", TipoImovel.Residencial));
+        repo.Itens.Add(new Imovel(Tenant, ClienteB, "Apto B", TipoImovel.Residencial));
+
+        var auth = new FakeAuthService();
+        auth.Vinculos.Add(new VinculoClienteDto(ClienteB, "Cliente B", "Analista", "Ativo"));
+
+        var gestor = new FakeCurrentUser(Guid.NewGuid(), ClienteA, ehAdministrador: false);
+        var handler = new ListarImoveisQueryHandler(repo, gestor, auth);
+
+        var pagina = await handler.Handle(new ListarImoveisQuery(ClienteId: ClienteB), default);
+
+        pagina.Total.Should().Be(1);
+        pagina.Itens.Should().OnlyContain(i => i.ClienteId == ClienteB);
     }
 
     [Fact]

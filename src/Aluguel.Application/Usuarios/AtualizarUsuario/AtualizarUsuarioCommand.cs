@@ -1,4 +1,5 @@
 using Aluguel.Application.Abstractions;
+using Aluguel.Application.Common.Acesso;
 using Aluguel.Application.Usuarios;
 using Aluguel.Domain.Usuarios;
 using MediatR;
@@ -14,20 +15,22 @@ public sealed record AtualizarUsuarioCommand(
     PerfilUsuario Perfil,
     StatusUsuario Status) : IRequest<UsuarioDto?>;
 
-public sealed class AtualizarUsuarioCommandHandler(IUsuarioService usuarios, ICurrentUser currentUser)
+public sealed class AtualizarUsuarioCommandHandler(
+    IUsuarioService usuarios,
+    ICurrentUser currentUser,
+    IAuthService auth)
     : IRequestHandler<AtualizarUsuarioCommand, UsuarioDto?>
 {
     public async Task<UsuarioDto?> Handle(AtualizarUsuarioCommand request, CancellationToken cancellationToken)
     {
-        var clienteId = currentUser.EhAdministrador ? request.ClienteId : currentUser.ClienteId;
-        if (clienteId is null)
-            return null;
+        var clienteId = await EscopoVinculo.ExigirClienteComAcessoAsync(
+            currentUser, request.ClienteId, auth, cancellationToken, exigirGestor: true);
 
         var existente = await usuarios.ObterPorIdAsync(request.Id, clienteId, cancellationToken);
-        if (existente is null || !AcessoUsuarios.PodeGerenciar(currentUser, existente))
+        if (existente is null || !AcessoUsuarios.PodeGerenciar(currentUser, existente, clienteId))
             return null;
 
         var dados = new AtualizacaoUsuario(request.Nome.Trim(), request.Telefone, request.Perfil, request.Status);
-        return await usuarios.AtualizarAsync(request.Id, clienteId.Value, dados, cancellationToken);
+        return await usuarios.AtualizarAsync(request.Id, clienteId, dados, cancellationToken);
     }
 }

@@ -1,5 +1,6 @@
 using Aluguel.Application.Abstractions;
 using Aluguel.Application.Autorizacao;
+using Aluguel.Application.Common.Acesso;
 using Aluguel.Application.Usuarios.AtualizarUsuario;
 using Aluguel.Application.Usuarios.CriarUsuario;
 using Aluguel.Application.Usuarios.ListarUsuarios;
@@ -44,13 +45,15 @@ public static class UsuarioEndpoints
         .WithName("ListarUsuarios");
 
         grupo.MapGet("/por-cpf", async (Guid? clienteId, string? cpf, ICurrentUser currentUser,
-            ISender sender, CancellationToken ct) =>
+            IAuthService auth, ISender sender, CancellationToken ct) =>
         {
-            var cid = currentUser.EhAdministrador ? clienteId : currentUser.ClienteId;
-            if (cid is null || string.IsNullOrWhiteSpace(cpf))
+            if (string.IsNullOrWhiteSpace(cpf))
                 return Results.BadRequest(new { erro = "clienteId e cpf são obrigatórios." });
 
-            var dto = await sender.Send(new ObterUsuarioPorCpfQuery(cid.Value, cpf), ct);
+            var cid = await EscopoVinculo.ExigirClienteComAcessoAsync(
+                currentUser, clienteId, auth, ct, exigirGestor: true);
+
+            var dto = await sender.Send(new ObterUsuarioPorCpfQuery(cid, cpf), ct);
             return Results.Ok(dto);
         })
         .WithName("ObterUsuarioPorCpf");
@@ -63,14 +66,13 @@ public static class UsuarioEndpoints
         .WithName("ObterUsuarioPorId");
 
         grupo.MapPost("/", async (CriarUsuarioRequest req, ICurrentUser currentUser,
-            ISender sender, CancellationToken ct) =>
+            IAuthService auth, ISender sender, CancellationToken ct) =>
         {
-            var clienteId = currentUser.EhAdministrador ? req.ClienteId : currentUser.ClienteId;
-            if (clienteId is null)
-                return Results.BadRequest(new { erro = "clienteId é obrigatório para o Administrador." });
+            var clienteId = await EscopoVinculo.ExigirClienteComAcessoAsync(
+                currentUser, req.ClienteId, auth, ct, exigirGestor: true);
 
             var dto = await sender.Send(new CriarUsuarioCommand(
-                clienteId.Value, req.Nome, req.Email, req.Cpf, req.Telefone, req.Perfil, req.Senha), ct);
+                clienteId, req.Nome, req.Email, req.Cpf, req.Telefone, req.Perfil, req.Senha), ct);
             return Results.Created($"/api/usuarios/{dto.Id}", dto);
         })
         .WithName("CriarUsuario");

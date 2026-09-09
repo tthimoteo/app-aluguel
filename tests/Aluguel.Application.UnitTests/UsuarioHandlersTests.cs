@@ -1,3 +1,4 @@
+using Aluguel.Application.Abstractions;
 using Aluguel.Application.Usuarios;
 using Aluguel.Application.Usuarios.AtualizarUsuario;
 using Aluguel.Application.Usuarios.CriarUsuario;
@@ -19,6 +20,14 @@ public class UsuarioHandlersTests
 
     private static UsuarioDto Usuario(Guid id, Guid cliente, string status = "Ativo") =>
         new(id, Tenant, cliente, "Nome", "u@demo.local", null, null, "Analista", status, null);
+
+    private static FakeAuthService Auth(params (Guid clienteId, string perfil)[] vinculos)
+    {
+        var auth = new FakeAuthService();
+        foreach (var (clienteId, perfil) in vinculos)
+            auth.Vinculos.Add(new VinculoClienteDto(clienteId, "Cliente", perfil, "Ativo"));
+        return auth;
+    }
 
     [Fact]
     public async Task Criar_define_tenant_do_contexto_e_normaliza_cpf()
@@ -50,19 +59,19 @@ public class UsuarioHandlersTests
     }
 
     [Fact]
-    public async Task Gestor_nao_atualiza_usuario_de_outro_cliente()
+    public async Task Gestor_nao_atualiza_usuario_sem_vinculo()
     {
         var service = new FakeUsuarioService();
         var alvo = Usuario(Guid.NewGuid(), ClienteB);
         service.Itens.Add(alvo);
 
         var gestor = new FakeCurrentUser(Guid.NewGuid(), ClienteA, ehAdministrador: false);
-        var handler = new AtualizarUsuarioCommandHandler(service, gestor);
+        var handler = new AtualizarUsuarioCommandHandler(service, gestor, Auth());
 
-        var dto = await handler.Handle(new AtualizarUsuarioCommand(alvo.Id, ClienteB, "Novo", null,
+        var act = () => handler.Handle(new AtualizarUsuarioCommand(alvo.Id, ClienteB, "Novo", null,
             PerfilUsuario.Analista, StatusUsuario.Ativo), default);
 
-        dto.Should().BeNull();
+        await act.Should().ThrowAsync<InvalidOperationException>();
         service.UltimaAtualizacao.Should().BeNull();
     }
 
@@ -74,13 +83,30 @@ public class UsuarioHandlersTests
         service.Itens.Add(alvo);
 
         var gestor = new FakeCurrentUser(Guid.NewGuid(), ClienteA, ehAdministrador: false);
-        var handler = new AtualizarUsuarioCommandHandler(service, gestor);
+        var handler = new AtualizarUsuarioCommandHandler(service, gestor, Auth());
 
         var dto = await handler.Handle(new AtualizarUsuarioCommand(alvo.Id, ClienteA, "Novo Nome", "11333334444",
             PerfilUsuario.Gestor, StatusUsuario.Ativo), default);
 
         dto!.Nome.Should().Be("Novo Nome");
         dto.Perfil.Should().Be("Gestor");
+    }
+
+    [Fact]
+    public async Task Gestor_atualiza_usuario_de_cliente_vinculado()
+    {
+        var service = new FakeUsuarioService();
+        var alvo = Usuario(Guid.NewGuid(), ClienteB);
+        service.Itens.Add(alvo);
+
+        var gestor = new FakeCurrentUser(Guid.NewGuid(), ClienteA, ehAdministrador: false);
+        var handler = new AtualizarUsuarioCommandHandler(service, gestor, Auth((ClienteB, "Gestor")));
+
+        var dto = await handler.Handle(new AtualizarUsuarioCommand(alvo.Id, ClienteB, "Outro", null,
+            PerfilUsuario.Analista, StatusUsuario.Ativo), default);
+
+        dto!.Nome.Should().Be("Outro");
+        service.UltimoClienteAtualizado.Should().Be(ClienteB);
     }
 
     [Fact]
@@ -91,7 +117,7 @@ public class UsuarioHandlersTests
         service.Itens.Add(alvo);
 
         var admin = new FakeCurrentUser(Guid.NewGuid(), clienteId: null, ehAdministrador: true);
-        var handler = new AtualizarUsuarioCommandHandler(service, admin);
+        var handler = new AtualizarUsuarioCommandHandler(service, admin, Auth());
 
         var dto = await handler.Handle(new AtualizarUsuarioCommand(alvo.Id, ClienteB, "Editado", null,
             PerfilUsuario.Analista, StatusUsuario.Inativo), default);
@@ -108,7 +134,7 @@ public class UsuarioHandlersTests
         service.Itens.Add(eu);
 
         var gestor = new FakeCurrentUser(eu.Id, ClienteA, ehAdministrador: false);
-        var handler = new RemoverUsuarioCommandHandler(service, gestor);
+        var handler = new RemoverUsuarioCommandHandler(service, gestor, Auth());
 
         var act = () => handler.Handle(new RemoverUsuarioCommand(eu.Id), default);
         await act.Should().ThrowAsync<InvalidOperationException>();
@@ -122,7 +148,7 @@ public class UsuarioHandlersTests
         service.Itens.Add(alvo);
 
         var gestor = new FakeCurrentUser(Guid.NewGuid(), ClienteA, ehAdministrador: false);
-        var handler = new RemoverUsuarioCommandHandler(service, gestor);
+        var handler = new RemoverUsuarioCommandHandler(service, gestor, Auth());
 
         (await handler.Handle(new RemoverUsuarioCommand(alvo.Id), default)).Should().BeFalse();
         service.RemoveuVezes.Should().Be(0);
@@ -136,7 +162,7 @@ public class UsuarioHandlersTests
         service.Itens.Add(alvo);
 
         var gestor = new FakeCurrentUser(Guid.NewGuid(), ClienteA, ehAdministrador: false);
-        var handler = new RemoverUsuarioCommandHandler(service, gestor);
+        var handler = new RemoverUsuarioCommandHandler(service, gestor, Auth());
 
         (await handler.Handle(new RemoverUsuarioCommand(alvo.Id), default)).Should().BeTrue();
         service.RemoveuVezes.Should().Be(1);
@@ -150,32 +176,58 @@ public class UsuarioHandlersTests
         service.Itens.Add(alvo);
 
         var gestor = new FakeCurrentUser(Guid.NewGuid(), ClienteA, ehAdministrador: false);
-        var handler = new ObterUsuarioPorIdQueryHandler(service, gestor);
+        var handler = new ObterUsuarioPorIdQueryHandler(service, gestor, Auth());
 
         (await handler.Handle(new ObterUsuarioPorIdQuery(alvo.Id), default)).Should().BeNull();
     }
 
     [Fact]
-    public async Task Listar_como_gestor_usa_o_proprio_cliente()
+    public async Task Listar_como_gestor_sem_clienteId_usa_o_proprio_cliente()
     {
         var service = new FakeUsuarioService();
         service.Itens.Add(Usuario(Guid.NewGuid(), ClienteA));
         service.Itens.Add(Usuario(Guid.NewGuid(), ClienteB));
 
         var gestor = new FakeCurrentUser(Guid.NewGuid(), ClienteA, ehAdministrador: false);
-        var handler = new ListarUsuariosQueryHandler(service, gestor);
+        var handler = new ListarUsuariosQueryHandler(service, gestor, Auth());
+
+        var pagina = await handler.Handle(new ListarUsuariosQuery(), default);
+
+        pagina.Total.Should().Be(1);
+        pagina.Itens.Should().OnlyContain(u => u.ClienteId == ClienteA);
+    }
+
+    [Fact]
+    public async Task Listar_como_gestor_de_cliente_vinculado_usa_o_solicitado()
+    {
+        var service = new FakeUsuarioService();
+        service.Itens.Add(Usuario(Guid.NewGuid(), ClienteA));
+        service.Itens.Add(Usuario(Guid.NewGuid(), ClienteB));
+
+        var gestor = new FakeCurrentUser(Guid.NewGuid(), ClienteA, ehAdministrador: false);
+        var handler = new ListarUsuariosQueryHandler(service, gestor, Auth((ClienteB, "Gestor")));
 
         var pagina = await handler.Handle(new ListarUsuariosQuery(ClienteId: ClienteB), default);
 
-        pagina.Total.Should().Be(1);           // ignora o clienteId informado, usa o do gestor
-        pagina.Itens.Should().OnlyContain(u => u.ClienteId == ClienteA);
+        pagina.Total.Should().Be(1);
+        pagina.Itens.Should().OnlyContain(u => u.ClienteId == ClienteB);
+    }
+
+    [Fact]
+    public async Task Listar_como_gestor_sem_vinculo_lanca()
+    {
+        var gestor = new FakeCurrentUser(Guid.NewGuid(), ClienteA, ehAdministrador: false);
+        var handler = new ListarUsuariosQueryHandler(new FakeUsuarioService(), gestor, Auth());
+
+        var act = () => handler.Handle(new ListarUsuariosQuery(ClienteId: ClienteB), default);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Fact]
     public async Task Listar_como_admin_sem_cliente_lanca()
     {
         var admin = new FakeCurrentUser(Guid.NewGuid(), clienteId: null, ehAdministrador: true);
-        var handler = new ListarUsuariosQueryHandler(new FakeUsuarioService(), admin);
+        var handler = new ListarUsuariosQueryHandler(new FakeUsuarioService(), admin, Auth());
 
         var act = () => handler.Handle(new ListarUsuariosQuery(), default);
         await act.Should().ThrowAsync<InvalidOperationException>();
