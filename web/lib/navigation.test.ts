@@ -6,9 +6,9 @@ describe("itensVisiveis", () => {
     const labels = itensVisiveis(["Analista"]).map((i) => i.label);
     expect(labels).toContain("Início");
     expect(labels).toContain("Imóveis");
-    expect(labels).toContain("Inquilinos");
-    expect(labels).toContain("Contratos");
     expect(labels).toContain("Relatórios");
+    expect(labels).not.toContain("Inquilinos");
+    expect(labels).not.toContain("Contratos");
   });
 
   it("esconde Clientes para Gestor e Analista (menu §13)", () => {
@@ -39,5 +39,7 @@ describe("tituloDaRota", () => {
     expect(tituloDaRota("/")).toBe("Início");
     expect(tituloDaRota("/imoveis")).toBe("Imóveis");
     expect(tituloDaRota("/clientes/abc")).toBe("Clientes");
+    expect(tituloDaRota("/inquilinos")).toBe("Inquilinos");
+    expect(tituloDaRota("/contratos")).toBe("Contratos");
   });
 });

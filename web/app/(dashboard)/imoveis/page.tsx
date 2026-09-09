@@ -1,24 +1,129 @@
+import Link from "next/link";
 import { CardField, DataList, DesktopTable, MobileCard } from "@/components/data/data-list";
 import { EmptyState } from "@/components/data/empty-state";
 import { PageHeader } from "@/components/data/page-header";
 import { SearchForm } from "@/components/data/search-form";
 import { StatusBadge } from "@/components/data/status-badge";
+import { SeletorCliente } from "@/components/clientes/seletor-cliente";
+import { buttonVariants } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { api } from "@/lib/api/server";
+import { ApiError, api } from "@/lib/api/server";
+import { listarClientesAcessiveis } from "@/lib/clientes-acesso.server";
+import { requireSession, temPerfil } from "@/lib/auth/session";
 import { formatarEndereco } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 export default async function ImoveisPage({
   searchParams,
 }: {
-  searchParams: Promise<{ termo?: string }>;
+  searchParams: Promise<{ termo?: string; clienteId?: string }>;
 }) {
-  const { termo } = await searchParams;
-  const pagina = await api.imoveis({ termo, take: 50 });
+  const usuario = await requireSession();
+  const ehAdmin = temPerfil(usuario, "Administrador");
+  const { termo, clienteId } = await searchParams;
+  const clientes = await listarClientesAcessiveis({ termo: clienteId ? undefined : termo });
+
+  if (!clienteId) {
+    if (clientes.length === 1 && !termo) {
+      return <ListaImoveisDoCliente clienteId={clientes[0]!.id} clienteNome={clientes[0]!.nome} termo={termo} mostrarVoltar={false} />;
+    }
+
+    return (
+      <div>
+        <PageHeader
+          titulo="Imóveis"
+          descricao="Selecione um cliente para ver os imóveis cadastrados."
+        />
+        <SearchForm placeholder="Buscar cliente" defaultValue={termo} />
+        <SeletorCliente clientes={clientes} hrefBase="/imoveis" vazio="Nenhum cliente disponível." />
+      </div>
+    );
+  }
+
+  const daLista = clientes.find((c) => c.id === clienteId);
+  const clienteAdmin = !daLista && ehAdmin ? await api.cliente(clienteId).catch(() => null) : null;
+  const clienteNome = daLista?.nome ?? clienteAdmin?.nomeExibicao;
+  if (!clienteNome) {
+    return (
+      <div>
+        <PageHeader titulo="Imóveis" descricao="Cliente não encontrado ou sem acesso." />
+        <SeletorCliente clientes={clientes} hrefBase="/imoveis" />
+      </div>
+    );
+  }
+
+  return (
+    <ListaImoveisDoCliente
+      clienteId={clienteId}
+      clienteNome={clienteNome}
+      termo={termo}
+      mostrarVoltar={clientes.length > 1}
+    />
+  );
+}
+
+async function ListaImoveisDoCliente({
+  clienteId,
+  clienteNome,
+  termo,
+  mostrarVoltar,
+}: {
+  clienteId: string;
+  clienteNome: string;
+  termo?: string;
+  mostrarVoltar: boolean;
+}) {
+  let pagina;
+  try {
+    pagina = await api.imoveis({ termo, take: 50, clienteId });
+  } catch (e) {
+    if (e instanceof ApiError) {
+      return (
+        <div>
+          {mostrarVoltar ? (
+            <p className="mb-3">
+              <Link href="/imoveis" className="text-sm font-medium text-primary hover:text-primary/80">
+                ← Clientes
+              </Link>
+            </p>
+          ) : null}
+          <PageHeader titulo="Imóveis" descricao={e.message} />
+        </div>
+      );
+    }
+    throw e;
+  }
 
   return (
     <div>
-      <PageHeader titulo="Imóveis" descricao="Cadastro de imóveis do cliente (UC003)." />
-      <SearchForm placeholder="Nome, matrícula ou cidade" defaultValue={termo} />
+      {mostrarVoltar ? (
+        <p className="mb-3">
+          <Link href="/imoveis" className="text-sm font-medium text-primary hover:text-primary/80">
+            ← Clientes
+          </Link>
+        </p>
+      ) : null}
+      <PageHeader
+        titulo="Imóveis"
+        descricao={`Cadastro de imóveis de ${clienteNome} (UC003).`}
+        acao={
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href={`/inquilinos?clienteId=${clienteId}`}
+              className={cn(buttonVariants({ variant: "outline" }), "h-9 rounded-[4px] px-4")}
+            >
+              Inquilinos
+            </Link>
+            <Link
+              href={`/contratos?clienteId=${clienteId}`}
+              className={cn(buttonVariants({ variant: "outline" }), "h-9 rounded-[4px] px-4")}
+            >
+              Contratos
+            </Link>
+          </div>
+        }
+      />
+      <SearchForm placeholder="Nome, matrícula ou cidade" defaultValue={termo} hidden={{ clienteId }} />
       {pagina.itens.length === 0 ? (
         <EmptyState />
       ) : (

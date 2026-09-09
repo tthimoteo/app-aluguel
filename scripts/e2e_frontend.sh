@@ -83,6 +83,13 @@ else
   echo "FAIL [menu admin tem relatorios] Relatórios ausente do menu lateral"
   FAIL=$((FAIL+1))
 fi
+if echo "$BODY" | grep -q 'href="/inquilinos"' || echo "$BODY" | grep -q 'href="/contratos"'; then
+  echo "FAIL [menu admin sem inquilinos/contratos] ainda renderiza itens no menu"
+  FAIL=$((FAIL+1))
+else
+  echo "PASS [menu admin sem inquilinos/contratos]"
+  PASS=$((PASS+1))
+fi
 
 CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -b /tmp/fe_cookies_admin "$WEB/relatorios")
 BODY=$(cat /tmp/fe_body)
@@ -251,6 +258,35 @@ if echo "$BODY" | grep -q 'href="/relatorios"'; then
   PASS=$((PASS+1))
 else
   echo "FAIL [menu gestor tem relatorios] Relatórios ausente do menu lateral"
+  FAIL=$((FAIL+1))
+fi
+if echo "$BODY" | grep -q 'href="/inquilinos"' || echo "$BODY" | grep -q 'href="/contratos"'; then
+  echo "FAIL [menu gestor sem inquilinos/contratos] ainda renderiza itens no menu"
+  FAIL=$((FAIL+1))
+else
+  echo "PASS [menu gestor sem inquilinos/contratos]"
+  PASS=$((PASS+1))
+fi
+
+line "USUÁRIOS E IMÓVEIS (GESTOR)"
+CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -b /tmp/fe_cookies "$WEB/usuarios")
+BODY=$(cat /tmp/fe_body)
+check 200 "$CODE" "GET /usuarios (gestor lista clientes)"
+if echo "$BODY" | grep -q "Selecione um cliente para gerenciar"; then
+  echo "PASS [usuarios gestor seletor de clientes]"
+  PASS=$((PASS+1))
+else
+  echo "FAIL [usuarios gestor seletor de clientes] body sem seletor"
+  FAIL=$((FAIL+1))
+fi
+CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -b /tmp/fe_cookies "$WEB/imoveis")
+BODY=$(cat /tmp/fe_body)
+check 200 "$CODE" "GET /imoveis (gestor)"
+if echo "$BODY" | grep -q "Selecione um cliente para ver os imóveis" || echo "$BODY" | grep -q "Cadastro de imóveis"; then
+  echo "PASS [imoveis gestor seletor ou lista]"
+  PASS=$((PASS+1))
+else
+  echo "FAIL [imoveis gestor seletor ou lista] body inesperado"
   FAIL=$((FAIL+1))
 fi
 
