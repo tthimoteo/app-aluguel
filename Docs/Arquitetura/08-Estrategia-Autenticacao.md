@@ -17,16 +17,16 @@
 | Perfil | Escopo | Permissões |
 |---|---|---|
 | **Administrador** | Plataforma (Lucrare) | Tudo; gestão de clientes/usuários/imóveis/inquilinos; emissão/cancelamento de NFS-e; registrar pagamento. Remoção só se não houver dependentes. Menu **Clientes**. |
-| **Gestor** | Um cliente | Editar dados do próprio cliente (inclui mudar de plano); CRUD de usuários do cliente; CRUD de imóveis/inquilinos/contratos; emitir NFS-e; consultar histórico. Menu **Minha Conta**. |
-| **Analista** | Um cliente | Consultar imóveis/inquilinos; emitir NFS-e; consultar histórico; **cancelar NFS-e**. |
+| **Gestor** | Cliente(s) ao qual está vinculado | No contexto atual: editar dados do próprio cliente (inclui mudar de plano); CRUD de usuários do cliente; CRUD de imóveis/inquilinos/contratos; emitir NFS-e; consultar histórico. Menu **Minha Conta**. |
+| **Analista** | Cliente(s) ao qual está vinculado | No contexto atual: consultar imóveis/inquilinos; emitir NFS-e; consultar histórico; **cancelar NFS-e**. |
 
-Regra crítica (§6): **um usuário nunca vê dados de outro cliente**, mesmo sendo `Gestor` — garantido por `tenant_id`/`cliente_id` no token + RLS (doc 06).
+Regra crítica (§6): **um usuário nunca vê dados de um cliente ao qual não esteja associado**, mesmo sendo `Gestor` — garantido por `tenant_id`/`cliente_id` no token (o `cliente_id` é o da vinculação selecionada) + RLS (doc 06). O mesmo CPF pode ter vinculações em vários clientes, cada uma com seu perfil; `POST /api/auth/contexto` troca o cliente da sessão e reemite o JWT com o perfil correspondente.
 
 `StatusUsuario`: `Ativo`, `Inativo`, `Bloqueado` (bloqueado/inativo não autentica).
 
 ## 3. Claims do JWT (multi-tenant)
 
-O *token service* emite claims a partir de `AppUser`:
+O *token service* emite claims a partir da **vinculação selecionada** (`UsuarioCliente`) — não das roles globais do Identity, para o mesmo usuário poder ser Gestor em um cliente e Analista em outro:
 
 ```json
 {
@@ -115,7 +115,7 @@ sequenceDiagram
     FE->>API: POST /auth/refresh (quando expira)
 ```
 
-- **Provisionamento (§6)**: ao criar `Cliente` PF, o primeiro `AppUser` coincide com o cliente e recebe `Gestor`. `Gestor` cria demais usuários conforme `plano.max_usuarios`.
+- **Provisionamento (§6)**: ao criar `Cliente` PF, o primeiro `AppUser` coincide com o cliente e recebe `Gestor` na vinculação. `Gestor` cria demais usuários conforme `plano.max_usuarios`. CPF obrigatório; se o CPF já existir no tenant, o cadastro **vincula** a identidade ao novo cliente (sem nova senha).
 - **Refresh tokens** persistidos/rotacionados (revogáveis); *logout* revoga o refresh.
 - **Frontend (Next.js):** o App Router atua como BFF — `POST /api/auth/login` (Next) chama a API, grava `access`/`refresh` em cookies **httpOnly** e as Server Components enviam `Authorization: Bearer`. O middleware renova o access via `POST /api/auth/refresh` quando só o refresh está presente. A API aceita CORS das origens em `Cors:Origins` (dev: `localhost:3000`).
 

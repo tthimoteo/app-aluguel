@@ -98,19 +98,34 @@ CREATE UNIQUE INDEX ux_cliente_cnpj ON app.cliente(tenant_id, cnpj) WHERE cnpj I
 O **ASP.NET Core Identity** cria `identity.asp_net_users`, `asp_net_roles`, `asp_net_user_roles`, `asp_net_user_claims`, `asp_net_user_tokens` (para JWT/refresh/MFA). A entidade **`AppUser : IdentityUser<Guid>`** é estendida com colunas de negócio (o "Usuário do cliente" da §6). A **senha** é o `password_hash` do Identity — **nunca** em texto puro.
 
 ```sql
--- Colunas de negócio adicionadas a identity.asp_net_users (AppUser):
+-- Identidade (e-mail/senha/CPF) única no tenant. Perfil e status por cliente: app.usuario_cliente.
+-- Colunas de negócio em identity.asp_net_users (AppUser):
 --   tenant_id  uuid NOT NULL
---   cliente_id uuid NOT NULL REFERENCES app.cliente(id)
+--   cliente_id uuid NULL          -- último/contexto (JWT); canônico é usuario_cliente
 --   nome       varchar(150) NOT NULL
 --   cpf        varchar(11)  NULL
 --   telefone   varchar(20)  NULL
---   perfil     varchar(20)  NOT NULL CHECK (perfil IN ('Gestor','Analista','AdminSistema'))
+--   perfil     varchar(20)  NOT NULL CHECK (perfil IN ('Gestor','Analista','Administrador'))
 --   status     varchar(20)  NOT NULL DEFAULT 'Ativo' CHECK (status IN ('Ativo','Inativo','Bloqueado'))
 --   ultimo_login timestamptz NULL
 
--- CASO 1: CPF único por cliente
-CREATE UNIQUE INDEX ux_usuario_cpf ON identity.asp_net_users(cliente_id, cpf) WHERE cpf IS NOT NULL;
-CREATE INDEX ix_usuario_cliente ON identity.asp_net_users(cliente_id);
+CREATE UNIQUE INDEX ux_usuario_cpf_tenant ON identity.asp_net_users(tenant_id, cpf) WHERE cpf IS NOT NULL;
+
+CREATE TABLE app.usuario_cliente (
+    id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id  uuid NOT NULL REFERENCES app.tenant(id),
+    usuario_id uuid NOT NULL REFERENCES identity.asp_net_users(id),
+    cliente_id uuid NOT NULL REFERENCES app.cliente(id),
+    perfil     varchar(20) NOT NULL CHECK (perfil IN ('Gestor','Analista')),
+    status     varchar(20) NOT NULL DEFAULT 'Ativo'
+               CHECK (status IN ('Ativo','Inativo','Bloqueado')),
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    UNIQUE (cliente_id, usuario_id)
+);
+-- CASO 1: o mesmo CPF não se cadastra duas vezes no mesmo cliente
+-- (CPF único na identidade + unique (cliente_id, usuario_id)).
+CREATE INDEX ix_usuario_cliente_usuario ON app.usuario_cliente(usuario_id);
 ```
 
 > Para PF, o primeiro usuário coincide com o cliente e recebe perfil `Gestor` (§6). `AdminSistema` = usuário administrador do app (Lucrare) — ver [08](08-Estrategia-Autenticacao.md).
@@ -408,7 +423,7 @@ CREATE POLICY tenant_isolation_cliente ON app.cliente
 
 | Regra | Onde é garantida |
 |---|---|
-| CASO 1 — CPF único por cliente | `ux_usuario_cpf` |
+| CASO 1 — CPF único por cliente | `ux_usuario_cpf_tenant` + `usuario_cliente(cliente_id, usuario_id)` |
 | CASO 2 — downgrade x imóveis | validação de aplicação (doc 06) |
 | CASO 3 — 1 contrato ativo por imóvel | `ux_contrato_imovel_ativo` |
 | CASO 4 — plano sem NFS-e | `plano.permite_nfse` + policy |

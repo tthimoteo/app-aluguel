@@ -138,7 +138,7 @@ Aplicação no monorepo (`web/`, deploy na Vercel), App Router, identidade **Luc
 web/
 ├── app/
 │   ├── login/                     # autenticação (card centralizado)
-│   ├── api/auth/                  # BFF: login, logout, refresh
+│   ├── api/auth/                  # BFF: login, logout, refresh, troca de cliente
 │   ├── api/usuarios/              # BFF: incluir, editar, remover (Administrador)
 │   └── (dashboard)/               # layout: menu lateral + header navy
 │       ├── page.tsx               # Home: indicadores + lista (clientes p/ Admin, imóveis p/ demais)

@@ -79,7 +79,7 @@ CREATE POLICY tenant_isolation_cliente ON app.cliente
     WITH CHECK  (tenant_id = current_setting('app.tenant_id', true)::uuid);
 ```
 
-Repetir para: `usuario`, `assinatura`, `pagamento_plano`, `auditoria_assinatura`, `imovel`, `inquilino`, `contrato`, `recebimento`, `certificado_digital`, `nota_fiscal_servico`, `documento_fiscal`.
+Repetir para: `usuario_cliente`, `assinatura`, `pagamento_plano`, `auditoria_assinatura`, `imovel`, `inquilino`, `contrato`, `recebimento`, `certificado_digital`, `nota_fiscal_servico`, `documento_fiscal`.
 
 > `current_setting('app.tenant_id', true)` retorna `NULL` quando não definido → nenhuma linha é retornada (falha segura). Um *role* de migração/serviço com `BYPASSRLS` é usado apenas para manutenção controlada.
 
@@ -117,7 +117,7 @@ if (assinatura.Status == StatusAssinatura.Suspensa && !RotaLiberadaNaSuspensao(p
 
 | Critério | Garantia |
 |---|---|
-| CASO 1 — CPF único por cliente | índice `ux_usuario_cpf` + validação |
+| CASO 1 — CPF único por cliente | `ux_usuario_cpf_tenant` + unique `(cliente_id, usuario_id)` + validação |
 | CASO 2 — downgrade x utilização | validação de aplicação (acima) |
 | CASO 3 — 1 contrato ativo por imóvel | índice `ux_contrato_imovel_ativo` |
 | CASO 4 — plano sem NFS-e | `plano.permite_nfse` + policy |

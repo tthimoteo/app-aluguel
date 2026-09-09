@@ -67,13 +67,15 @@ Tela mostra, **mês a mês**, o histórico de faturamento (XML e PDF para baixar
 
 | Item | Visibilidade | Função |
 |---|---|---|
-| **Usuários** | Administrador (escolhe o cliente) / Gestor (próprio cliente) | Incluir, editar, remover e consultar detalhes (clique na linha). |
+| **Usuários** | Administrador (escolhe o cliente) / Gestor (próprio cliente) | Incluir, editar, remover e consultar detalhes (clique na linha). CPF identifica a pessoa: o mesmo usuário pode ser vinculado a outro cliente com perfil próprio; não pode repetir o CPF no mesmo cliente. |
 | **Minha Conta** | Gestor | Dados de cliente/usuário; histórico de cobrança do app; plano atual; **upgrade**. |
 | **Relatório** | Administrador/Gestor/Analista | Extrair histórico de faturamentos, pagamentos, IPTU e demais despesas. |
 | **Dados para Contabilidade** | Gestor | Exportar Contas a Receber e Contas a Pagar em XLSX/CSV. |
 | **Auditoria** | AdminSistema/Gestor | Consultar logs de alterações. |
 | **Tema** | Todos | Claro/escuro. |
 | **Sair** | Todos | Logout (revoga refresh token). |
+
+Quem tiver vinculação em mais de um cliente escolhe o contexto no menu do usuário (`POST /api/auth/contexto`); o JWT passa a carregar o `cliente_id` e o perfil daquela vinculação.
 
 ### Dados para Contabilidade (§13)
 
@@ -105,6 +107,7 @@ Toda alteração gera log (`audit_log`): usuário, data, hora, ação, IP, valor
 
 - Remoção de cadastro só se **não houver dependentes** (§4).
 - Cliente PF: primeiro usuário = cliente, perfil **Gestor** (§6).
+- CPF do usuário é a chave da pessoa: único no tenant; único por cliente na vinculação (CASO 1); o mesmo CPF pode atuar em vários clientes com perfil por vinculação (CASO 1b).
 - Imóvel tem **1 inquilino por vez** (1 contrato ativo) — §8/§9, CASO 3.
 - Emissão de NFS-e só com plano compatível e assinatura ativa — CASO 4/5.
 - 1 faturamento não-cancelado por competência — CASO 6/7/8.
