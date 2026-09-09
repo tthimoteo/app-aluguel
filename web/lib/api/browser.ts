@@ -1,4 +1,5 @@
-import type { Imovel, Usuario } from "@/lib/api/types";
+import type { Contrato, Imovel, Inquilino, Usuario } from "@/lib/api/types";
+import type { EnderecoViaCep } from "@/lib/cep";
 import { mensagemApiErro } from "@/lib/api/erro";
 
 export class BffError extends Error {
@@ -80,6 +81,46 @@ export type NovoImovelInput = {
   } | null;
 };
 
+export type NovoInquilinoInput = {
+  clienteId: string;
+  tipoPessoa: "PF" | "PJ";
+  nome: string;
+  documento: string;
+  inscricaoMunicipal?: string | null;
+  telefone?: string | null;
+  email?: string | null;
+  endereco?: NovoImovelInput["endereco"];
+};
+
+export type AtualizacaoInquilinoInput = {
+  nome: string;
+  inscricaoMunicipal?: string | null;
+  telefone?: string | null;
+  email?: string | null;
+  status: "Ativo" | "Inativo";
+  endereco?: NovoImovelInput["endereco"];
+};
+
+export type NovoContratoInput = {
+  imovelId: string;
+  inquilinoId: string;
+  numeroContrato: string;
+  dataInicio: string;
+  dataFimPrevista?: string | null;
+  diaVencimento: number;
+  valorAluguel: number;
+  jurosAtrasoPct?: number | null;
+  multaAtrasoPct?: number | null;
+};
+
+export type AtualizacaoContratoInput = {
+  dataFimPrevista?: string | null;
+  diaVencimento: number;
+  valorAluguel: number;
+  jurosAtrasoPct?: number | null;
+  multaAtrasoPct?: number | null;
+};
+
 export const bff = {
   usuario: (id: string, clienteId?: string) =>
     bffFetch<Usuario>(`/api/usuarios/${id}${clienteId ? `?clienteId=${encodeURIComponent(clienteId)}` : ""}`),
@@ -101,6 +142,19 @@ export const bff = {
     ),
   criarImovel: (dados: NovoImovelInput) =>
     bffFetch<Imovel>("/api/imoveis", { method: "POST", body: JSON.stringify(dados) }),
+  consultarCep: (cep: string) => bffFetch<EnderecoViaCep>(`/api/cep/${encodeURIComponent(cep)}`),
+  criarInquilino: (dados: NovoInquilinoInput) =>
+    bffFetch<Inquilino>("/api/inquilinos", { method: "POST", body: JSON.stringify(dados) }),
+  atualizarInquilino: (id: string, dados: AtualizacaoInquilinoInput) =>
+    bffFetch<Inquilino>(`/api/inquilinos/${id}`, { method: "PUT", body: JSON.stringify(dados) }),
+  removerInquilino: (id: string) =>
+    bffFetch<void>(`/api/inquilinos/${id}`, { method: "DELETE" }),
+  criarContrato: (dados: NovoContratoInput) =>
+    bffFetch<Contrato>("/api/contratos", { method: "POST", body: JSON.stringify(dados) }),
+  atualizarContrato: (id: string, dados: AtualizacaoContratoInput) =>
+    bffFetch<Contrato>(`/api/contratos/${id}`, { method: "PUT", body: JSON.stringify(dados) }),
+  encerrarContrato: (id: string) =>
+    bffFetch<Contrato>(`/api/contratos/${id}/encerrar`, { method: "POST" }),
   selecionarCliente: (clienteId: string) =>
     bffFetch<{ usuario: unknown }>("/api/auth/contexto", {
       method: "POST",

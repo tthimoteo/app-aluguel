@@ -1,6 +1,7 @@
 using Aluguel.Application.Abstractions;
 using Aluguel.Application.Autorizacao;
 using Aluguel.Application.Clientes;
+using Aluguel.Application.Common.Acesso;
 using Aluguel.Application.Inquilinos.AtualizarInquilino;
 using Aluguel.Application.Inquilinos.CriarInquilino;
 using Aluguel.Application.Inquilinos.ListarInquilinos;
@@ -58,14 +59,13 @@ public static class InquilinoEndpoints
         .WithName("ObterInquilinoPorId");
 
         grupo.MapPost("/", async (CriarInquilinoRequest req, ICurrentUser currentUser,
-            ISender sender, CancellationToken ct) =>
+            IAuthService auth, ISender sender, CancellationToken ct) =>
         {
-            var clienteId = currentUser.EhAdministrador ? req.ClienteId : currentUser.ClienteId;
-            if (clienteId is null)
-                return Results.BadRequest(new { erro = "clienteId é obrigatório para o Administrador." });
+            var clienteId = await EscopoVinculo.ExigirClienteComAcessoAsync(
+                currentUser, req.ClienteId, auth, ct, exigirGestor: true);
 
             var dto = await sender.Send(new CriarInquilinoCommand(
-                clienteId.Value, req.TipoPessoa, req.Nome, req.Documento,
+                clienteId, req.TipoPessoa, req.Nome, req.Documento,
                 req.InscricaoMunicipal, req.Telefone, req.Email, req.Endereco), ct);
             return Results.Created($"/api/inquilinos/{dto.Id}", dto);
         })

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { CamposEndereco, enderecoParaApi, enderecoVazio, selectClass, type EnderecoFormulario } from "@/components/imoveis/campos-endereco";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,14 +20,6 @@ const TIPOS: { valor: NovoImovelInput["tipo"]; rotulo: string }[] = [
   { valor: "Outro", rotulo: "Outro" },
 ];
 
-const UFS = [
-  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG",
-  "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO",
-] as const;
-
-const selectClass =
-  "h-10 w-full rounded-[4px] border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/20 dark:bg-input/30";
-
 export function FormularioImovel({
   clientes,
   clienteInicial,
@@ -39,6 +32,7 @@ export function FormularioImovel({
   const [erro, setErro] = useState<string | null>(null);
   const [filtroCliente, setFiltroCliente] = useState("");
   const [clienteId, setClienteId] = useState(clienteInicial);
+  const [endereco, setEndereco] = useState<EnderecoFormulario>(enderecoVazio);
 
   const opcoesCliente = useMemo(() => {
     const filtrados = filtrarClientesAcessiveis(clientes, filtroCliente);
@@ -56,24 +50,13 @@ export function FormularioImovel({
       ? (tipoBruto as NovoImovelInput["tipo"])
       : "Residencial";
 
-    const endereco = {
-      logradouro: textoOuNulo(form.get("logradouro")),
-      numero: textoOuNulo(form.get("numero")),
-      complemento: textoOuNulo(form.get("complemento")),
-      bairro: textoOuNulo(form.get("bairro")),
-      cidade: textoOuNulo(form.get("cidade")),
-      uf: textoOuNulo(form.get("uf"))?.toUpperCase() ?? null,
-      cep: somenteDigitos(form.get("cep")),
-    };
-    const temEndereco = Object.values(endereco).some(Boolean);
-
     const dados: NovoImovelInput = {
       clienteId: String(form.get("clienteId") ?? clienteId),
       nome: String(form.get("nome") ?? "").trim(),
       tipo,
       numeroIptu: textoOuNulo(form.get("numeroIptu")),
       numeroMatricula: textoOuNulo(form.get("numeroMatricula")),
-      endereco: temEndereco ? endereco : null,
+      endereco: enderecoParaApi(endereco),
     };
 
     setPending(true);
@@ -149,36 +132,7 @@ export function FormularioImovel({
       </div>
 
       <h3 className="mt-6 mb-3 text-sm font-semibold">Endereço</h3>
-      <div className="grid gap-4 sm:grid-cols-6">
-        <Campo rotulo="Logradouro" htmlFor="logradouro" classe="sm:col-span-4">
-          <Input id="logradouro" name="logradouro" className="h-10 rounded-[4px]" />
-        </Campo>
-        <Campo rotulo="Número" htmlFor="numero" classe="sm:col-span-2">
-          <Input id="numero" name="numero" className="h-10 rounded-[4px]" />
-        </Campo>
-        <Campo rotulo="Complemento" htmlFor="complemento" classe="sm:col-span-3">
-          <Input id="complemento" name="complemento" className="h-10 rounded-[4px]" />
-        </Campo>
-        <Campo rotulo="Bairro" htmlFor="bairro" classe="sm:col-span-3">
-          <Input id="bairro" name="bairro" className="h-10 rounded-[4px]" />
-        </Campo>
-        <Campo rotulo="Cidade" htmlFor="cidade" classe="sm:col-span-3">
-          <Input id="cidade" name="cidade" className="h-10 rounded-[4px]" />
-        </Campo>
-        <Campo rotulo="UF" htmlFor="uf" classe="sm:col-span-1">
-          <select id="uf" name="uf" defaultValue="" className={selectClass}>
-            <option value="">—</option>
-            {UFS.map((uf) => (
-              <option key={uf} value={uf}>
-                {uf}
-              </option>
-            ))}
-          </select>
-        </Campo>
-        <Campo rotulo="CEP" htmlFor="cep" classe="sm:col-span-2">
-          <Input id="cep" name="cep" inputMode="numeric" placeholder="00000-000" maxLength={9} className="h-10 rounded-[4px]" />
-        </Campo>
-      </div>
+      <CamposEndereco value={endereco} onChange={setEndereco} />
 
       {erro ? (
         <p className="mt-4 rounded-[4px] bg-[#f8d7da] px-3 py-2 text-sm text-[#721c24]" role="alert">
@@ -225,9 +179,4 @@ function Campo({
 function textoOuNulo(valor: FormDataEntryValue | null): string | null {
   const s = String(valor ?? "").trim();
   return s.length ? s : null;
-}
-
-function somenteDigitos(valor: FormDataEntryValue | null): string | null {
-  const d = String(valor ?? "").replace(/\D/g, "");
-  return d.length ? d : null;
 }

@@ -40,6 +40,9 @@ const TITULOS_FORA_DO_MENU: Record<string, string> = {
 
 export function tituloDaRota(pathname: string): string {
   if (pathname === "/") return "Início";
+  if (/^\/imoveis\/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(\?.*)?$/.test(pathname)) {
+    return "Imóvel";
+  }
   const candidatos: { href: string; label: string }[] = [
     ...Object.entries(TITULOS_FORA_DO_MENU).map(([href, label]) => ({ href, label })),
     ...NAV_ITEMS.filter((i) => i.href !== "/").map((i) => ({ href: i.href, label: i.label })),

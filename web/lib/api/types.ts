@@ -91,6 +91,7 @@ export type Inquilino = {
   documento: string;
   telefone: string | null;
   email: string | null;
+  inscricaoMunicipal: string | null;
   status: string;
   endereco: Endereco;
 };

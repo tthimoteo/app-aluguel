@@ -124,30 +124,16 @@ async function ListaImoveisDoCliente({
       ) : null}
       <PageHeader
         titulo="Imóveis"
-        descricao={`Cadastro de imóveis de ${clienteNome} (UC003).`}
+        descricao={`Cadastro de imóveis de ${clienteNome} (UC003). Clique no imóvel para ver os dados, o inquilino e o contrato.`}
         acao={
-          <div className="flex flex-wrap gap-2">
-            {podeIncluir ? (
-              <Link
-                href={`/imoveis/novo?clienteId=${clienteId}`}
-                className={cn(buttonVariants(), "h-9 rounded-[4px] px-4")}
-              >
-                Incluir imóvel
-              </Link>
-            ) : null}
+          podeIncluir ? (
             <Link
-              href={`/inquilinos?clienteId=${clienteId}`}
-              className={cn(buttonVariants({ variant: "outline" }), "h-9 rounded-[4px] px-4")}
+              href={`/imoveis/novo?clienteId=${clienteId}`}
+              className={cn(buttonVariants(), "h-9 rounded-[4px] px-4")}
             >
-              Inquilinos
+              Incluir imóvel
             </Link>
-            <Link
-              href={`/contratos?clienteId=${clienteId}`}
-              className={cn(buttonVariants({ variant: "outline" }), "h-9 rounded-[4px] px-4")}
-            >
-              Contratos
-            </Link>
-          </div>
+          ) : null
         }
       />
       <SearchForm placeholder="Nome, matrícula ou cidade" defaultValue={termo} hidden={{ clienteId }} />
@@ -169,8 +155,15 @@ async function ListaImoveisDoCliente({
                 </TableHeader>
                 <TableBody>
                   {pagina.itens.map((i) => (
-                    <TableRow key={i.id}>
-                      <TableCell className="font-medium">{i.nome}</TableCell>
+                    <TableRow key={i.id} className="relative cursor-pointer">
+                      <TableCell className="font-medium">
+                        <Link
+                          href={`/imoveis/${i.id}`}
+                          className="text-primary after:absolute after:inset-0 hover:underline"
+                        >
+                          {i.nome}
+                        </Link>
+                      </TableCell>
                       <TableCell>{i.tipo}</TableCell>
                       <TableCell>{formatarEndereco(i.endereco)}</TableCell>
                       <TableCell>{i.numeroIptu ?? "—"}</TableCell>
@@ -184,15 +177,17 @@ async function ListaImoveisDoCliente({
             </DesktopTable>
           }
           mobile={pagina.itens.map((i) => (
-            <MobileCard key={i.id}>
-              <p className="mb-2 font-semibold">{i.nome}</p>
-              <CardField label="Tipo">{i.tipo}</CardField>
-              <CardField label="Endereço">{formatarEndereco(i.endereco)}</CardField>
-              <CardField label="IPTU">{i.numeroIptu ?? "—"}</CardField>
-              <CardField label="Status">
-                <StatusBadge status={i.status} />
-              </CardField>
-            </MobileCard>
+            <Link key={i.id} href={`/imoveis/${i.id}`} className="block">
+              <MobileCard>
+                <p className="mb-2 font-semibold text-primary">{i.nome}</p>
+                <CardField label="Tipo">{i.tipo}</CardField>
+                <CardField label="Endereço">{formatarEndereco(i.endereco)}</CardField>
+                <CardField label="IPTU">{i.numeroIptu ?? "—"}</CardField>
+                <CardField label="Status">
+                  <StatusBadge status={i.status} />
+                </CardField>
+              </MobileCard>
+            </Link>
           ))}
         />
       )}
