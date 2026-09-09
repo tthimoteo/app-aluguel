@@ -11,6 +11,12 @@ check() {
   else echo "FAIL [$3] esperado=$1 obtido=$2 body=${BODY:0:200}"; FAIL=$((FAIL+1)); fi
 }
 
+# React pode emitir required="" antes de name="…"; o atributo precisa estar na mesma tag.
+campo_required() {
+  local nome="$1"
+  grep -aEq "required[^>]*name=\"${nome}\"|name=\"${nome}\"[^>]*required" /tmp/fe_body
+}
+
 # Next.js às vezes devolve HTML incompleto em GETs seguidos; tenta de novo até achar um padrão.
 # Grep no arquivo (não via echo) para não corromper HTML com NUL / escapes.
 fetch_html_matching() {
@@ -364,12 +370,8 @@ else
   echo "FAIL [formulario imovel CEP antes do logradouro] cep=$CEP_POS logradouro=$LOG_POS"
   FAIL=$((FAIL+1))
 fi
-if grep -aEq 'name="cep"[^>]*required' /tmp/fe_body \
-  && grep -aEq 'name="logradouro"[^>]*required' /tmp/fe_body \
-  && grep -aEq 'name="numero"[^>]*required' /tmp/fe_body \
-  && grep -aEq 'name="bairro"[^>]*required' /tmp/fe_body \
-  && grep -aEq 'name="cidade"[^>]*required' /tmp/fe_body \
-  && grep -aEq 'name="uf"[^>]*required' /tmp/fe_body; then
+if campo_required cep && campo_required logradouro && campo_required numero \
+  && campo_required bairro && campo_required cidade && campo_required uf; then
   echo "PASS [formulario imovel endereco obrigatorio]"
   PASS=$((PASS+1))
 else
@@ -445,7 +447,7 @@ if [ -n "$CLIENTE_GESTOR" ]; then
       echo "PASS [cadastro imovel inquilino e contrato]"
       PASS=$((PASS+1))
       if grep -aFq 'name="nome"' /tmp/fe_body && grep -aFq 'name="status"' /tmp/fe_body \
-        && grep -aEq 'name="cep"[^>]*required' /tmp/fe_body; then
+        && campo_required cep; then
         echo "PASS [cadastro imovel formulario editavel gestor]"
         PASS=$((PASS+1))
       else
