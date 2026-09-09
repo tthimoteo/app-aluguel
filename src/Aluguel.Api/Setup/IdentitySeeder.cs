@@ -89,8 +89,12 @@ public static class IdentitySeeder
         }
         else if (cpf is not null && user.Cpf != cpf)
         {
-            user.Cpf = cpf;
-            await userManager.UpdateAsync(user);
+            var cpfEmUso = await db.Users.AnyAsync(u => u.Cpf == cpf && u.Id != user.Id);
+            if (!cpfEmUso)
+            {
+                user.Cpf = cpf;
+                await userManager.UpdateAsync(user);
+            }
         }
 
         if (clienteId is { } cid && perfil is PerfilUsuario.Gestor or PerfilUsuario.Analista)
