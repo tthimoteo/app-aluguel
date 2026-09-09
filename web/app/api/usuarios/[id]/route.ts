@@ -1,17 +1,22 @@
 import { proxyToApi } from "@/lib/api/proxy";
 
-export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+function comCliente(id: string, request: Request) {
+  const clienteId = new URL(request.url).searchParams.get("clienteId");
+  return `/api/usuarios/${id}${clienteId ? `?clienteId=${encodeURIComponent(clienteId)}` : ""}`;
+}
+
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return proxyToApi(`/api/usuarios/${id}`);
+  return proxyToApi(comCliente(id, request));
 }
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const body = await request.text();
-  return proxyToApi(`/api/usuarios/${id}`, { method: "PUT", body });
+  return proxyToApi(comCliente(id, request), { method: "PUT", body });
 }
 
-export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return proxyToApi(`/api/usuarios/${id}`, { method: "DELETE" });
+  return proxyToApi(comCliente(id, request), { method: "DELETE" });
 }

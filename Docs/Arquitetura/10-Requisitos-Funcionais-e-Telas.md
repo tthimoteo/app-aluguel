@@ -8,7 +8,11 @@ Detalha as telas e regras funcionais (§10–§14) e como mapeiam para endpoints
 
 **Indicadores (cards + Recharts):** faturamento, inadimplência, quantidade de imóveis, quantidade de notas emitidas.
 
-**Botão "Incluir imóvel"** — visível conforme quantidade já cadastrada **e** plano contratado (`plano.max_imoveis`).
+**Botão "Incluir imóvel"** — visível para Gestor conforme quantidade já cadastrada **e** plano contratado (`plano.max_imoveis`). Abre o formulário em `/imoveis/novo` com o **cliente do contexto pré-selecionado** em um dropdown editável (é possível trocar para outro cliente no qual o usuário seja Gestor) e os demais campos do cadastro (§7): nome, tipo, Nr. IPTU, Nr. Matrícula e endereço completo.
+
+**CEP** — no formulário o campo vem **antes** do logradouro. Ao completar 8 dígitos, `GET /api/cep/{cep}` consulta a ViaCEP e preenche logradouro, bairro, cidade e UF (o usuário ainda pode editar).
+
+**Lista e cadastro do imóvel** — cada linha (e o card na home) abre `/imoveis/{id}` com os dados do imóvel. Gestor e Administrador **editam** nome, tipo, IPTU, matrícula, status e endereço no próprio cadastro (`PUT /api/imoveis/{id}`); Analista só consulta. CEP, logradouro, número, bairro, cidade e UF são **obrigatórios** no incluir e no editar (complemento é opcional). **Inquilino** e **contrato** ficam nesse cadastro, não na listagem nem no menu: um inquilino e um contrato ativo por vez (CASO 3). Ações no cadastro: incluir/editar/remover inquilino; incluir/editar/renovar/encerrar contrato (renovar encerra o ativo e cria o novo).
 
 **Administrador:** a lista da home é de **clientes** (nome/razão social, CPF ou CNPJ, plano, status), não de imóveis. Os cards de indicadores exibem quantidade de **clientes**, imóveis e planos (sem inquilinos nem contratos). Gestor e Analista continuam com a lista de imóveis e os cards de imóveis, inquilinos, contratos e planos.
 
@@ -67,13 +71,16 @@ Tela mostra, **mês a mês**, o histórico de faturamento (XML e PDF para baixar
 
 | Item | Visibilidade | Função |
 |---|---|---|
-| **Usuários** | Administrador (escolhe o cliente) / Gestor (próprio cliente) | Incluir, editar, remover e consultar detalhes (clique na linha). |
+| **Usuários** | Administrador e Gestor (escolhem o cliente) | Abre a lista dos clientes aos quais o usuário tem acesso (Gestor: vinculações com perfil Gestor). Ao selecionar um cliente, lista e gerencia os usuários daquele cadastro. CPF identifica a pessoa: o mesmo usuário pode ser vinculado a outro cliente com perfil próprio; não pode repetir o CPF no mesmo cliente. |
+| **Imóveis** | Todos | Se o usuário tem **mais de um** cliente, abre a lista para selecionar; com **um** cliente, vai direto à lista de imóveis. Clique no imóvel abre o cadastro (`/imoveis/{id}`) com inquilino e contrato. Inquilinos e contratos não aparecem na listagem nem no menu. |
 | **Minha Conta** | Gestor | Dados de cliente/usuário; histórico de cobrança do app; plano atual; **upgrade**. |
 | **Relatório** | Administrador/Gestor/Analista | Extrair histórico de faturamentos, pagamentos, IPTU e demais despesas. |
 | **Dados para Contabilidade** | Gestor | Exportar Contas a Receber e Contas a Pagar em XLSX/CSV. |
 | **Auditoria** | AdminSistema/Gestor | Consultar logs de alterações. |
 | **Tema** | Todos | Claro/escuro. |
 | **Sair** | Todos | Logout (revoga refresh token). |
+
+Quem tiver vinculação em mais de um cliente escolhe o cliente nas telas de **Imóveis** e **Usuários** (lista para selecionar). O menu do usuário mostra identidade e **Sair**, sem troca de contexto — isso evitava conflito com o seletor da tela. O JWT da sessão permanece o da vinculação do login (`POST /api/auth/contexto` segue na API).
 
 ### Dados para Contabilidade (§13)
 
@@ -105,6 +112,7 @@ Toda alteração gera log (`audit_log`): usuário, data, hora, ação, IP, valor
 
 - Remoção de cadastro só se **não houver dependentes** (§4).
 - Cliente PF: primeiro usuário = cliente, perfil **Gestor** (§6).
+- CPF do usuário é a chave da pessoa: único no tenant; único por cliente na vinculação (CASO 1); o mesmo CPF pode atuar em vários clientes com perfil por vinculação (CASO 1b).
 - Imóvel tem **1 inquilino por vez** (1 contrato ativo) — §8/§9, CASO 3.
 - Emissão de NFS-e só com plano compatível e assinatura ativa — CASO 4/5.
 - 1 faturamento não-cancelado por competência — CASO 6/7/8.

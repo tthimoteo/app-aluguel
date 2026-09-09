@@ -138,12 +138,13 @@ Aplicação no monorepo (`web/`, deploy na Vercel), App Router, identidade **Luc
 web/
 ├── app/
 │   ├── login/                     # autenticação (card centralizado)
-│   ├── api/auth/                  # BFF: login, logout, refresh
+│   ├── api/auth/                  # BFF: login, logout, refresh, troca de cliente
 │   ├── api/usuarios/              # BFF: incluir, editar, remover (Administrador)
 │   └── (dashboard)/               # layout: menu lateral + header navy
 │       ├── page.tsx               # Home: indicadores + lista (clientes p/ Admin, imóveis p/ demais)
 │       ├── clientes/              # Administrador
-│       ├── imoveis|inquilinos|contratos
+│       ├── imoveis/               # seletor de cliente (se >1) + lista; inquilinos/contratos a partir daqui
+│       ├── inquilinos|contratos   # acessados pela página de imóveis (fora do menu)
 │       ├── usuarios/              # Administrador / Gestor
 │       ├── minha-conta/           # Gestor
 │       ├── relatorios/            # Administrador / Gestor / Analista
@@ -158,7 +159,7 @@ web/
 ├── lib/
 │   ├── api/                       # client REST (fetch + JWT)
 │   ├── auth/                      # cookies, JWT payload, sessão
-│   └── navigation.ts              # menu §13 por perfil
+│   └── navigation.ts              # menu §13 por perfil (sem Inquilinos/Contratos)
 ├── app/globals.css                # tokens Lucrare + tema claro/escuro
 └── middleware.ts                  # guarda de sessão + refresh
 ```

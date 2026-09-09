@@ -41,6 +41,14 @@ Quando eu tentar cadastrar um usuário com o mesmo CPF nesse cliente
 Então o sistema deve apresentar erro informando que o CPF já está cadastrado nesse cliente
 ```
 
+### CASO 1b — Mesmo CPF em clientes distintos
+```gherkin
+Dado que já existe um usuário com um CPF no cliente A
+Quando eu cadastrar o mesmo CPF no cliente B
+Então o sistema vincula a mesma identidade ao cliente B com o perfil informado
+E o usuário atua em cada cliente conforme o perfil da vinculação
+```
+
 ### CASO 2 — Downgrade com imóveis excedentes
 ```gherkin
 Dado um cliente com plano que permite 10 imóveis e 10 imóveis cadastrados
@@ -96,7 +104,8 @@ Então o sistema deve impedir e apresentar mensagem de erro
 
 | Critério | Camada | Mecanismo |
 |---|---|---|
-| CASO 1 | Banco + App | `ux_usuario_cpf` + validação FluentValidation |
+| CASO 1 | Banco + App | `ux_usuario_cpf_tenant` + unique `(cliente_id, usuario_id)` + FluentValidation |
+| CASO 1b | App | `UsuarioService` vincula identidade existente; JWT pelo perfil da vinculação |
 | CASO 2 | App | validação de limites no `DowngradeCommand` |
 | CASO 3 | Banco + App | `ux_contrato_imovel_ativo` + validação |
 | CASO 4 | App/Auth | policy `PlanoComNfse` (`plano.permite_nfse`) |

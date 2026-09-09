@@ -16,11 +16,11 @@ public class AppUserConfiguration : IEntityTypeConfiguration<AppUser>
         b.Property(x => x.Telefone).HasMaxLength(20);
         b.Property(x => x.Perfil).HasConversion<string>().HasMaxLength(20).IsRequired();
         b.Property(x => x.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
-        // Usuário pertence a um cliente (§6)
+        // ClienteId/Perfil em AppUser são o último contexto (JWT); a vinculação canônica é app.usuario_cliente.
         b.HasOne<Aluguel.Domain.Clientes.Cliente>().WithMany().HasForeignKey(x => x.ClienteId)
             .OnDelete(DeleteBehavior.Restrict);
-        // CASO 1: CPF único por cliente
-        b.HasIndex(x => new { x.ClienteId, x.Cpf }).IsUnique().HasFilter("cpf IS NOT NULL");
+        // Identidade única por CPF no tenant — o mesmo CPF pode atuar em vários clientes via usuario_cliente.
+        b.HasIndex(x => new { x.TenantId, x.Cpf }).IsUnique().HasFilter("cpf IS NOT NULL");
     }
 }
 
@@ -66,6 +66,7 @@ public class RefreshTokenConfiguration : IEntityTypeConfiguration<RefreshToken>
         b.Property(x => x.ReplacedByTokenHash).HasMaxLength(64);
         b.HasIndex(x => x.TokenHash).IsUnique();
         b.HasIndex(x => x.UserId);
+        b.Property(x => x.ClienteId);
         b.HasOne<AppUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
     }
 }

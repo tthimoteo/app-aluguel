@@ -39,8 +39,11 @@ public class AuthService(
         user.UltimoLogin = DateTimeOffset.UtcNow;
         await userManager.UpdateAsync(user);
 
-        var roles = await userManager.GetRolesAsync(user);
-        var tokens = await EmitirTokensAsync(user, roles, ip, revogar: null, ct);
+        var contexto = await ResolverContextoAsync(user, clienteIdPreferido: null, ct);
+        if (!contexto.Ok)
+            return ResultadoAuth.Falha(contexto.Mensagem!);
+
+        var tokens = await EmitirTokensAsync(user, contexto.ClienteId, contexto.Roles, ip, revogar: null, ct);
         return ResultadoAuth.Ok(tokens);
     }
 
@@ -55,8 +58,11 @@ public class AuthService(
         if (user is null || user.Status != StatusUsuario.Ativo)
             return ResultadoAuth.Falha("Usuário inválido para renovação.");
 
-        var roles = await userManager.GetRolesAsync(user);
-        var tokens = await EmitirTokensAsync(user, roles, ip, revogar: atual, ct);
+        var contexto = await ResolverContextoAsync(user, atual.ClienteId, ct);
+        if (!contexto.Ok)
+            return ResultadoAuth.Falha(contexto.Mensagem!);
+
+        var tokens = await EmitirTokensAsync(user, contexto.ClienteId, contexto.Roles, ip, revogar: atual, ct);
         return ResultadoAuth.Ok(tokens);
     }
 
@@ -71,10 +77,72 @@ public class AuthService(
         }
     }
 
-    private async Task<TokensAutenticacao> EmitirTokensAsync(
-        AppUser user, IList<string> roles, string? ip, RefreshToken? revogar, CancellationToken ct)
+    public async Task<ResultadoAuth> SelecionarClienteAsync(Guid userId, Guid clienteId, string refreshToken,
+        string? ip, CancellationToken ct = default)
     {
-        var access = jwt.CreateAccessToken(user.Id, user.Email!, user.Nome, user.TenantId, user.ClienteId, [.. roles]);
+        var hash = Hash(refreshToken);
+        var atual = await db.RefreshTokens.FirstOrDefaultAsync(x => x.TokenHash == hash, ct);
+        if (atual is null || !atual.Ativo || atual.UserId != userId)
+            return ResultadoAuth.Falha("Refresh token inválido ou expirado.");
+
+        var user = await userManager.FindByIdAsync(userId.ToString());
+        if (user is null || user.Status != StatusUsuario.Ativo)
+            return ResultadoAuth.Falha("Usuário inválido.");
+
+        var contexto = await ResolverContextoAsync(user, clienteId, ct);
+        if (!contexto.Ok)
+            return ResultadoAuth.Falha(contexto.Mensagem!);
+
+        var tokens = await EmitirTokensAsync(user, contexto.ClienteId, contexto.Roles, ip, revogar: atual, ct);
+        return ResultadoAuth.Ok(tokens);
+    }
+
+    public async Task<IReadOnlyList<VinculoClienteDto>> ListarVinculosAsync(Guid userId, CancellationToken ct = default)
+    {
+        var vinculos = await (
+            from v in db.UsuariosClientes.AsNoTracking()
+            join c in db.Clientes.AsNoTracking() on v.ClienteId equals c.Id
+            where v.UsuarioId == userId && v.Status == StatusUsuario.Ativo
+            orderby c.Nome, c.RazaoSocial
+            select new { v.ClienteId, c.Nome, c.RazaoSocial, Perfil = v.Perfil, v.Status }
+        ).ToListAsync(ct);
+
+        return vinculos
+            .Select(x => new VinculoClienteDto(
+                x.ClienteId,
+                string.IsNullOrWhiteSpace(x.Nome) ? x.RazaoSocial ?? "" : x.Nome!,
+                x.Perfil.ToString(),
+                x.Status.ToString()))
+            .ToList();
+    }
+
+    private async Task<ContextoAuth> ResolverContextoAsync(AppUser user, Guid? clienteIdPreferido, CancellationToken ct)
+    {
+        if (user.Perfil == PerfilUsuario.Administrador || await userManager.IsInRoleAsync(user, "Administrador"))
+            return ContextoAuth.Admin();
+
+        var vinculos = await db.UsuariosClientes.AsNoTracking()
+            .Where(v => v.UsuarioId == user.Id && v.Status == StatusUsuario.Ativo)
+            .ToListAsync(ct);
+
+        if (vinculos.Count == 0)
+            return ContextoAuth.Falha("Usuário sem cliente ativo.");
+
+        var escolhido = clienteIdPreferido is { } cid
+            ? vinculos.FirstOrDefault(v => v.ClienteId == cid)
+            : vinculos.FirstOrDefault(v => v.ClienteId == user.ClienteId) ?? vinculos[0];
+
+        if (escolhido is null)
+            return ContextoAuth.Falha("Você não está vinculado a este cliente.");
+
+        return ContextoAuth.Cliente(escolhido.ClienteId, escolhido.Perfil.ToString());
+    }
+
+    private async Task<TokensAutenticacao> EmitirTokensAsync(
+        AppUser user, Guid? clienteId, IReadOnlyList<string> roles, string? ip, RefreshToken? revogar,
+        CancellationToken ct)
+    {
+        var access = jwt.CreateAccessToken(user.Id, user.Email!, user.Nome, user.TenantId, clienteId, roles);
 
         var (refreshRaw, refreshHash) = GerarRefreshToken();
         var refreshExpira = DateTimeOffset.UtcNow.AddDays(_options.RefreshTokenDays);
@@ -82,6 +150,7 @@ public class AuthService(
         db.RefreshTokens.Add(new RefreshToken
         {
             UserId = user.Id,
+            ClienteId = clienteId,
             TokenHash = refreshHash,
             ExpiresAt = refreshExpira,
             CreatedByIp = ip,
@@ -96,7 +165,8 @@ public class AuthService(
 
         await db.SaveChangesAsync(ct);
 
-        var usuario = new UsuarioAutenticado(user.Id, user.Email!, user.Nome, user.TenantId, user.ClienteId, [.. roles]);
+        var clientes = await ListarVinculosAsync(user.Id, ct);
+        var usuario = new UsuarioAutenticado(user.Id, user.Email!, user.Nome, user.TenantId, clienteId, roles, clientes);
         return new TokensAutenticacao(access.Token, access.ExpiresAtUtc, refreshRaw, refreshExpira, usuario);
     }
 
@@ -115,4 +185,11 @@ public class AuthService(
 
     private static string Base64UrlEncode(byte[] bytes) =>
         Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+
+    private readonly record struct ContextoAuth(bool Ok, string? Mensagem, Guid? ClienteId, IReadOnlyList<string> Roles)
+    {
+        public static ContextoAuth Admin() => new(true, null, null, ["Administrador"]);
+        public static ContextoAuth Cliente(Guid clienteId, string perfil) => new(true, null, clienteId, [perfil]);
+        public static ContextoAuth Falha(string mensagem) => new(false, mensagem, null, []);
+    }
 }

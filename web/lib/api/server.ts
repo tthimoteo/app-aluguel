@@ -74,16 +74,25 @@ export const api = {
   planos: () => apiFetch<Plano[]>("/api/planos"),
   clientes: (opts?: { termo?: string; take?: number }) =>
     apiFetch<Pagina<Cliente>>(`/api/clientes${qs({ termo: opts?.termo, take: opts?.take ?? 20 })}`),
-  imoveis: (opts?: { termo?: string; take?: number }) =>
-    apiFetch<Pagina<Imovel>>(`/api/imoveis${qs({ termo: opts?.termo, take: opts?.take ?? 20 })}`),
-  inquilinos: (opts?: { termo?: string; take?: number }) =>
-    apiFetch<Pagina<Inquilino>>(`/api/inquilinos${qs({ termo: opts?.termo, take: opts?.take ?? 20 })}`),
-  contratos: (opts?: { take?: number }) =>
-    apiFetch<Pagina<Contrato>>(`/api/contratos${qs({ take: opts?.take ?? 20 })}`),
+  imoveis: (opts?: { termo?: string; take?: number; clienteId?: string }) =>
+    apiFetch<Pagina<Imovel>>(
+      `/api/imoveis${qs({ termo: opts?.termo, take: opts?.take ?? 20, clienteId: opts?.clienteId })}`,
+    ),
+  inquilinos: (opts?: { termo?: string; take?: number; clienteId?: string }) =>
+    apiFetch<Pagina<Inquilino>>(
+      `/api/inquilinos${qs({ termo: opts?.termo, take: opts?.take ?? 20, clienteId: opts?.clienteId })}`,
+    ),
+  inquilino: (id: string) => apiFetch<Inquilino>(`/api/inquilinos/${id}`),
+  imovel: (id: string) => apiFetch<Imovel>(`/api/imoveis/${id}`),
+  contratos: (opts?: { take?: number; clienteId?: string; imovelId?: string }) =>
+    apiFetch<Pagina<Contrato>>(
+      `/api/contratos${qs({ take: opts?.take ?? 20, clienteId: opts?.clienteId, imovelId: opts?.imovelId })}`,
+    ),
   usuarios: (opts?: { termo?: string; take?: number; clienteId?: string }) =>
     apiFetch<Pagina<Usuario>>(
       `/api/usuarios${qs({ termo: opts?.termo, take: opts?.take ?? 20, clienteId: opts?.clienteId })}`,
     ),
-  usuario: (id: string) => apiFetch<Usuario>(`/api/usuarios/${id}`),
+  usuario: (id: string, clienteId?: string) =>
+    apiFetch<Usuario>(`/api/usuarios/${id}${qs({ clienteId })}`),
   cliente: (id: string) => apiFetch<Cliente>(`/api/clientes/${id}`),
 };

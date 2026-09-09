@@ -21,7 +21,8 @@ erDiagram
     PLANO  ||--o{ CLIENTE : "plano atual"
     PLANO  ||--o{ ASSINATURA : referencia
 
-    CLIENTE ||--o{ USUARIO : "tem (N)"
+    CLIENTE ||--o{ USUARIO_CLIENTE : "vincula (N)"
+    USUARIO ||--o{ USUARIO_CLIENTE : "atua em (N)"
     CLIENTE ||--o{ IMOVEL : "cadastra (N)"
     CLIENTE ||--o{ INQUILINO : "cadastra"
     CLIENTE ||--o| CERTIFICADO_DIGITAL : "certificado (1 ativo)"
@@ -68,12 +69,17 @@ erDiagram
     USUARIO {
         uuid id PK
         uuid tenant_id FK
+        varchar nome
+        varchar cpf UK
+        citext email
+        varchar status
+    }
+    USUARIO_CLIENTE {
+        uuid id PK
+        uuid usuario_id FK
         uuid cliente_id FK
         varchar perfil
         varchar status
-        varchar nome
-        varchar cpf
-        citext email
     }
     ASSINATURA {
         uuid id PK
@@ -198,19 +204,19 @@ erDiagram
     }
     OUTBOX_MESSAGE { uuid id PK  varchar tipo  jsonb conteudo  timestamptz processado_em }
     INBOX_MESSAGE  { uuid id PK  varchar origem  varchar chave_externa  timestamptz processado_em }
-    ASP_NET_USERS  { uuid id PK  citext email  text password_hash  uuid tenant_id  uuid cliente_id  varchar perfil }
+    ASP_NET_USERS  { uuid id PK  citext email  text password_hash  uuid tenant_id  varchar cpf }
     ASP_NET_ROLES  { uuid id PK  varchar name }
     ASP_NET_USER_ROLES { uuid user_id PK  uuid role_id PK }
 ```
 
-> `USUARIO` (domínio) = `ASP_NET_USERS` estendido (`AppUser : IdentityUser<Guid>`), mantido no schema `identity` (doc 03/08).
+> `USUARIO` (domínio) = `ASP_NET_USERS` estendido (`AppUser : IdentityUser<Guid>`), mantido no schema `identity`. A atuação em cada cliente é `app.usuario_cliente` (perfil e status por vinculação).
 
 ## 4. Cardinalidades e regras
 
 | Relacionamento | Cardinalidade | Regra |
 |---|---|---|
 | `cliente` → `imovel` | 1 : N | Limitado por `plano.max_imoveis` (CASO 2). |
-| `cliente` → `usuario` | 1 : N | Limitado por `plano.max_usuarios`; CPF único por cliente (CASO 1). |
+| `cliente` → `usuario_cliente` → `usuario` | N : N | CPF identifica a pessoa (único no tenant). Um CPF não se repete no mesmo cliente (CASO 1); o mesmo CPF pode atuar em vários clientes, cada um com seu perfil. `plano.max_usuarios` conta vinculações ativas. |
 | `cliente` → `certificado_digital` | 1 : 0..1 ativo | Obrigatório para emitir NFS-e. |
 | `imovel` → `contrato` | 1 : N (1 ativo) | Só 1 contrato `Ativo` por imóvel ⇒ 1 inquilino por vez (CASO 3). |
 | `contrato` → `nota_fiscal_servico` | 1 : N | 1 faturamento não-cancelado por competência (CASO 6/7/8). |

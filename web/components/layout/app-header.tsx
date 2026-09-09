@@ -4,16 +4,18 @@ import { usePathname } from "next/navigation";
 import { MobileSidebar } from "@/components/layout/mobile-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenu } from "@/components/layout/user-menu";
-import type { UsuarioAutenticado } from "@/lib/api/types";
+import type { UsuarioAutenticado, VinculoCliente } from "@/lib/api/types";
 import type { NavItem } from "@/lib/navigation";
 import { tituloDaRota } from "@/lib/navigation";
 
 export function AppHeader({
   usuario,
   itens,
+  clientes = [],
 }: {
   usuario: UsuarioAutenticado;
   itens: NavItem[];
+  clientes?: VinculoCliente[];
 }) {
   const pathname = usePathname();
   const titulo = tituloDaRota(pathname);
@@ -26,7 +28,7 @@ export function AppHeader({
       </div>
       <div className="flex items-center gap-1">
         <ThemeToggle />
-        <UserMenu usuario={usuario} />
+        <UserMenu usuario={usuario} clientes={clientes} />
       </div>
     </header>
   );

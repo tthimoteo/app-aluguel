@@ -154,9 +154,11 @@ Após o cadastro do cliente, é necessário cadastrar o usuário que fará uso d
 
 Um usuário associado a um cliente **não pode, de forma alguma, visualizar dados de outro cliente** ao qual não esteja associado, mesmo com perfil "Gestor".
 
+A chave de comparação da pessoa é o **CPF**: o mesmo usuário pode ser cadastrado em **mais de um cliente**, atuando em cada um conforme o **perfil daquela vinculação**. O mesmo CPF **não** pode ser cadastrado mais de uma vez no mesmo cliente.
+
 O usuário "Gestor" poderá cadastrar outros usuários conforme a permissão do plano — com perfil "Gestor" ou "Analista".
 
-**Campos**: Id, ClienteId, Perfil, Nome, Senha, CPF, E-mail, Telefone, Perfil (Gestor ou Analista), Status (Ativo; Inativo; Bloqueado).
+**Campos**: Id, ClienteId (vinculação), Perfil (por cliente), Nome, Senha, CPF, E-mail, Telefone, Status (Ativo; Inativo; Bloqueado).
 
 **Perfil "Gestor"** permite:
 - Editar as próprias informações como cliente, inclusive mudar de plano;
@@ -309,7 +311,7 @@ AuditLog
 
 ## 18. Critérios de aceite (BDD)
 
-- **CASO 1** — Dado que já existe usuário com CPF em um cliente, quando tentar cadastrar usuário com o mesmo CPF, o sistema deve apresentar erro informando que o CPF já está cadastrado nesse cliente.
+- **CASO 1** — Dado que já existe usuário com CPF em um cliente, quando tentar cadastrar o mesmo CPF **nesse cliente**, o sistema deve apresentar erro informando que o CPF já está cadastrado nesse cliente. O mesmo CPF **pode** ser vinculado a outro cliente; nesse caso o usuário atua conforme o perfil de cada vinculação.
 - **CASO 2** — Dado plano que permite 10 imóveis com 10 imóveis cadastrados, quando optar por downgrade, o sistema deve alertar que é preciso inativar imóveis para se enquadrar no novo plano.
 - **CASO 3** — Dado contrato ativo para um inquilino em um imóvel, quando tentar cadastrar novo inquilino para o mesmo imóvel, o sistema deve impedir e alertar que é preciso inativar o contrato atual antes.
 - **CASO 4** — Dado cliente com plano Básico, quando tentar emitir NFS-e, o sistema deve impedir e informar que o plano não suporta emissão fiscal.

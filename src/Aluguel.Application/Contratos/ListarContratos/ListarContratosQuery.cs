@@ -15,12 +15,16 @@ public sealed record ListarContratosQuery(
     int Skip = 0,
     int Take = 20) : IRequest<PaginaDto<ContratoDto>>;
 
-public sealed class ListarContratosQueryHandler(IContratoRepository repositorio, ICurrentUser currentUser)
+public sealed class ListarContratosQueryHandler(
+    IContratoRepository repositorio,
+    ICurrentUser currentUser,
+    IAuthService auth)
     : IRequestHandler<ListarContratosQuery, PaginaDto<ContratoDto>>
 {
     public async Task<PaginaDto<ContratoDto>> Handle(ListarContratosQuery request, CancellationToken cancellationToken)
     {
-        var clienteId = EscopoCliente.Resolver(currentUser, request.ClienteId);
+        var clienteId = await EscopoVinculo.ResolverListagemAsync(
+            currentUser, request.ClienteId, auth, cancellationToken);
 
         var skip = Math.Max(0, request.Skip);
         var take = Math.Clamp(request.Take, 1, 100);

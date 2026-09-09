@@ -65,7 +65,7 @@ export function GestaoUsuarios({
     setErro(null);
     setPainel({ tipo: "detalhe", usuario });
     void bff
-      .usuario(usuario.id)
+      .usuario(usuario.id, clienteId)
       .then((atual) => setPainel((atualPainel) => (atualPainel?.tipo === "detalhe" ? { tipo: "detalhe", usuario: atual } : atualPainel)))
       .catch(() => undefined);
   }
@@ -85,7 +85,7 @@ export function GestaoUsuarios({
       cpf: String(form.get("cpf") ?? "").trim() || null,
       telefone: String(form.get("telefone") ?? "").trim() || null,
       perfil: form.get("perfil") === "Gestor" ? "Gestor" : "Analista",
-      senha: String(form.get("senha") ?? ""),
+      senha: String(form.get("senha") ?? "") || null,
     };
     try {
       await bff.criarUsuario(dados);
@@ -101,12 +101,13 @@ export function GestaoUsuarios({
     setErro(null);
     const dados: AtualizacaoUsuarioInput = {
       nome: String(form.get("nome") ?? "").trim(),
+      email: String(form.get("email") ?? "").trim(),
       telefone: String(form.get("telefone") ?? "").trim() || null,
       perfil: form.get("perfil") === "Gestor" ? "Gestor" : "Analista",
       status: statusDoForm(form.get("status")),
     };
     try {
-      const atualizado = await bff.atualizarUsuario(usuario.id, dados);
+      const atualizado = await bff.atualizarUsuario(usuario.id, dados, clienteId);
       toast.success("Usuário atualizado.");
       setPainel({ tipo: "detalhe", usuario: atualizado });
       recarregar();
@@ -118,7 +119,7 @@ export function GestaoUsuarios({
   async function onRemover(usuario: Usuario) {
     setErro(null);
     try {
-      await bff.removerUsuario(usuario.id);
+      await bff.removerUsuario(usuario.id, clienteId);
       toast.success("Usuário removido.");
       fechar();
       recarregar();
@@ -273,7 +274,7 @@ export function GestaoUsuarios({
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Incluir usuário</DialogTitle>
-              <DialogDescription>Cria um Gestor ou Analista para este cliente.</DialogDescription>
+              <DialogDescription>Cria ou vincula um Gestor ou Analista neste cliente. O CPF identifica a pessoa.</DialogDescription>
             </DialogHeader>
             <form
               className="flex flex-col gap-4 px-6 py-4"
@@ -282,7 +283,7 @@ export function GestaoUsuarios({
                 void onCriar(new FormData(ev.currentTarget));
               }}
             >
-              <CamposUsuario modo="criar" />
+              <CamposUsuario modo="criar" clienteId={clienteId} />
               <AlertaErro mensagem={erro} />
               <DialogFooter className="border-0 px-0 pb-0">
                 <Button type="button" variant="secondary" className="h-9 rounded-[4px] bg-[#95A5A6] text-white hover:bg-[#7F8C8D]" onClick={fechar}>
@@ -337,7 +338,7 @@ export function GestaoUsuarios({
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Editar usuário</DialogTitle>
-              <DialogDescription>E-mail e CPF não podem ser alterados.</DialogDescription>
+              <DialogDescription>O CPF não pode ser alterado.</DialogDescription>
             </DialogHeader>
             <form
               className="flex flex-col gap-4 px-6 py-4"
@@ -365,8 +366,8 @@ export function GestaoUsuarios({
             <DialogHeader>
               <DialogTitle>Remover usuário</DialogTitle>
               <DialogDescription>
-                {painel.usuario.nome} será desativado (não poderá mais entrar). Essa ação respeita o soft
-                delete do cadastro.
+                {painel.usuario.nome} será desativado neste cliente (não poderá mais atuar aqui). A identidade
+                permanece se ele estiver em outros clientes.
               </DialogDescription>
             </DialogHeader>
             <div className="px-6 py-2">
@@ -397,21 +398,82 @@ function statusDoForm(valor: FormDataEntryValue | null): AtualizacaoUsuarioInput
   return "Ativo";
 }
 
-function CamposUsuario({ modo, usuario }: { modo: "criar" | "editar"; usuario?: Usuario }) {
+function CamposUsuario({
+  modo,
+  usuario,
+  clienteId,
+}: {
+  modo: "criar" | "editar";
+  usuario?: Usuario;
+  clienteId?: string;
+}) {
+  const [vinculo, setVinculo] = useState<"novo" | "existente" | "duplicado" | null>(null);
+  const [existente, setExistente] = useState<{ nome: string; email: string; telefone: string | null } | null>(null);
+
+  async function consultarCpf(valor: string) {
+    if (modo !== "criar" || !clienteId) return;
+    const cpf = valor.replace(/\D/g, "");
+    if (cpf.length !== 11) {
+      setVinculo(null);
+      setExistente(null);
+      return;
+    }
+    try {
+      const achado = await bff.usuarioPorCpf(clienteId, cpf);
+      if (!achado) {
+        setVinculo("novo");
+        setExistente(null);
+        return;
+      }
+      if (achado.jaNoCliente) {
+        setVinculo("duplicado");
+        setExistente(null);
+        return;
+      }
+      setVinculo("existente");
+      setExistente({ nome: achado.nome, email: achado.email, telefone: achado.telefone });
+    } catch {
+      setVinculo(null);
+      setExistente(null);
+    }
+  }
+
+  const identidadeBloqueada = modo === "editar" || vinculo === "existente";
+
   return (
     <>
+      {vinculo === "existente" ? (
+        <p className="rounded-[4px] bg-[#d1ecf1] px-3 py-2 text-sm text-[#0c5460]">
+          Este CPF já possui cadastro. Vamos vinculá-lo a este cliente com o perfil escolhido — a senha e o e-mail
+          atuais são mantidos.
+        </p>
+      ) : null}
+      {vinculo === "duplicado" ? (
+        <p className="rounded-[4px] bg-[#f8d7da] px-3 py-2 text-sm text-[#721c24]" role="alert">
+          Já existe um usuário com este CPF neste cliente.
+        </p>
+      ) : null}
       <div className="grid gap-4 sm:grid-cols-2">
         <Campo rotulo="Nome" htmlFor="nome">
-          <Input id="nome" name="nome" required defaultValue={usuario?.nome} className="h-10 rounded-[4px]" />
+          <Input
+            id="nome"
+            name="nome"
+            required
+            defaultValue={existente?.nome ?? usuario?.nome}
+            readOnly={vinculo === "existente"}
+            key={`nome-${existente?.nome ?? usuario?.nome ?? "novo"}`}
+            className="h-10 rounded-[4px]"
+          />
         </Campo>
         <Campo rotulo="E-mail" htmlFor="email">
           <Input
             id="email"
             name="email"
             type="email"
-            required={modo === "criar"}
-            defaultValue={usuario?.email}
-            disabled={modo === "editar"}
+            required={vinculo !== "existente"}
+            defaultValue={existente?.email ?? usuario?.email}
+            readOnly={vinculo === "existente"}
+            key={`email-${existente?.email ?? usuario?.email ?? "novo"}`}
             className="h-10 rounded-[4px]"
           />
         </Campo>
@@ -419,14 +481,23 @@ function CamposUsuario({ modo, usuario }: { modo: "criar" | "editar"; usuario?: 
           <Input
             id="cpf"
             name="cpf"
+            required={modo === "criar"}
             defaultValue={usuario?.cpf ?? ""}
             disabled={modo === "editar"}
+            onBlur={(ev) => void consultarCpf(ev.target.value)}
             className="h-10 rounded-[4px]"
-            placeholder="Opcional"
+            placeholder="Obrigatório"
           />
         </Campo>
         <Campo rotulo="Telefone" htmlFor="telefone">
-          <Input id="telefone" name="telefone" defaultValue={usuario?.telefone ?? ""} className="h-10 rounded-[4px]" />
+          <Input
+            id="telefone"
+            name="telefone"
+            defaultValue={existente?.telefone ?? usuario?.telefone ?? ""}
+            readOnly={identidadeBloqueada && modo === "criar"}
+            key={`tel-${existente?.telefone ?? usuario?.telefone ?? "novo"}`}
+            className="h-10 rounded-[4px]"
+          />
         </Campo>
         <Campo rotulo="Perfil" htmlFor="perfil">
           <select id="perfil" name="perfil" defaultValue={usuario?.perfil === "Gestor" ? "Gestor" : "Analista"} className={selectClass}>
@@ -447,6 +518,10 @@ function CamposUsuario({ modo, usuario }: { modo: "criar" | "editar"; usuario?: 
               ))}
             </select>
           </Campo>
+        ) : vinculo === "existente" ? (
+          <p className="text-sm text-muted-foreground sm:col-span-1">
+            Senha não é solicitada: o usuário já entra com o e-mail e a senha atuais.
+          </p>
         ) : (
           <Campo rotulo="Senha" htmlFor="senha">
             <Input id="senha" name="senha" type="password" required minLength={10} autoComplete="new-password" className="h-10 rounded-[4px]" />

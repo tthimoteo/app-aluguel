@@ -9,15 +9,18 @@ public sealed class FakeUsuarioService : IUsuarioService
     public List<UsuarioDto> Itens { get; } = [];
     public HashSet<string> EmailsEmUso { get; } = new(StringComparer.OrdinalIgnoreCase);
     public HashSet<(Guid Cliente, string Cpf)> CpfsEmUso { get; } = [];
+    public Dictionary<string, UsuarioPorCpfDto> PorCpf { get; } = new(StringComparer.Ordinal);
     public bool PodeAdicionar { get; set; } = true;
 
     public int CriouVezes { get; private set; }
     public NovoUsuario? UltimoCriado { get; private set; }
     public int RemoveuVezes { get; private set; }
     public AtualizacaoUsuario? UltimaAtualizacao { get; private set; }
+    public Guid? UltimoClienteAtualizado { get; private set; }
+    public Guid? UltimoClienteRemovido { get; private set; }
 
-    public Task<UsuarioDto?> ObterPorIdAsync(Guid id, CancellationToken ct = default) =>
-        Task.FromResult(Itens.FirstOrDefault(u => u.Id == id));
+    public Task<UsuarioDto?> ObterPorIdAsync(Guid id, Guid? clienteId, CancellationToken ct = default) =>
+        Task.FromResult(Itens.FirstOrDefault(u => u.Id == id && (clienteId is null || u.ClienteId == clienteId)));
 
     public Task<IReadOnlyList<UsuarioDto>> ListarAsync(Guid clienteId, string? termo,
         int skip, int take, CancellationToken ct = default) =>
@@ -33,6 +36,16 @@ public sealed class FakeUsuarioService : IUsuarioService
     public Task<bool> CpfEmUsoNoClienteAsync(Guid clienteId, string cpf, Guid? ignorarId, CancellationToken ct = default) =>
         Task.FromResult(CpfsEmUso.Contains((clienteId, cpf)));
 
+    public Task<UsuarioPorCpfDto?> ObterPorCpfAsync(string cpf, Guid clienteId, CancellationToken ct = default)
+    {
+        if (PorCpf.TryGetValue(cpf, out var dto))
+            return Task.FromResult<UsuarioPorCpfDto?>(dto);
+        if (CpfsEmUso.Contains((clienteId, cpf)))
+            return Task.FromResult<UsuarioPorCpfDto?>(
+                new UsuarioPorCpfDto(Guid.NewGuid(), "Existente", "existente@demo.local", null, cpf, true));
+        return Task.FromResult<UsuarioPorCpfDto?>(null);
+    }
+
     public Task<bool> PodeAdicionarUsuarioAsync(Guid clienteId, CancellationToken ct = default) =>
         Task.FromResult(PodeAdicionar);
 
@@ -46,17 +59,19 @@ public sealed class FakeUsuarioService : IUsuarioService
         return Task.FromResult(dto);
     }
 
-    public Task<UsuarioDto?> AtualizarAsync(Guid id, AtualizacaoUsuario dados, CancellationToken ct = default)
+    public Task<UsuarioDto?> AtualizarAsync(Guid id, Guid clienteId, AtualizacaoUsuario dados, CancellationToken ct = default)
     {
-        var indice = Itens.FindIndex(u => u.Id == id);
+        var indice = Itens.FindIndex(u => u.Id == id && u.ClienteId == clienteId);
         if (indice < 0)
             return Task.FromResult<UsuarioDto?>(null);
 
         UltimaAtualizacao = dados;
+        UltimoClienteAtualizado = clienteId;
         var atual = Itens[indice];
         var atualizado = atual with
         {
             Nome = dados.Nome,
+            Email = dados.Email,
             Telefone = dados.Telefone,
             Perfil = dados.Perfil.ToString(),
             Status = dados.Status.ToString(),
@@ -65,10 +80,11 @@ public sealed class FakeUsuarioService : IUsuarioService
         return Task.FromResult<UsuarioDto?>(atualizado);
     }
 
-    public Task<bool> RemoverAsync(Guid id, CancellationToken ct = default)
+    public Task<bool> RemoverAsync(Guid id, Guid clienteId, CancellationToken ct = default)
     {
         RemoveuVezes++;
-        return Task.FromResult(Itens.Any(u => u.Id == id));
+        UltimoClienteRemovido = clienteId;
+        return Task.FromResult(Itens.Any(u => u.Id == id && u.ClienteId == clienteId));
     }
 }
 

@@ -10,6 +10,7 @@ using Aluguel.Domain.Fiscal;
 using Aluguel.Domain.Imoveis;
 using Aluguel.Domain.Inquilinos;
 using Aluguel.Domain.Tenancy;
+using Aluguel.Domain.Usuarios;
 using Aluguel.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -40,6 +41,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentTenant
     public DbSet<Despesa> Despesas => Set<Despesa>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<Identity.RefreshToken> RefreshTokens => Set<Identity.RefreshToken>();
+    public DbSet<UsuarioCliente> UsuariosClientes => Set<UsuarioCliente>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

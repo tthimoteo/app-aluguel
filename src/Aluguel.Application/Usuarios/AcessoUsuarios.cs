@@ -3,11 +3,11 @@ using Aluguel.Application.Abstractions;
 namespace Aluguel.Application.Usuarios;
 
 /// <summary>
-/// Regra de escopo de acesso aos usuários: o Administrador da plataforma gerencia qualquer cliente;
-/// o Gestor gerencia apenas usuários do seu próprio cliente — um usuário nunca vê dados de outro cliente (§6).
+/// Regra de escopo de acesso aos usuários: o Administrador gerencia qualquer cliente; o Gestor gerencia
+/// usuários dos clientes aos quais está vinculado como Gestor — nunca vê dados de cliente sem vínculo (§6).
 /// </summary>
 internal static class AcessoUsuarios
 {
-    public static bool PodeGerenciar(ICurrentUser atual, UsuarioDto alvo) =>
-        atual.EhAdministrador || (atual.ClienteId is { } cid && alvo.ClienteId == cid);
+    public static bool PodeGerenciar(ICurrentUser atual, UsuarioDto alvo, Guid clienteEscopo) =>
+        atual.EhAdministrador || alvo.ClienteId == clienteEscopo;
 }
