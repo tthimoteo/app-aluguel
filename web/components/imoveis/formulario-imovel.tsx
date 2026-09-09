@@ -32,7 +32,7 @@ export function FormularioImovel({
   const [erro, setErro] = useState<string | null>(null);
   const [filtroCliente, setFiltroCliente] = useState("");
   const [clienteId, setClienteId] = useState(clienteInicial);
-  const [endereco, setEndereco] = useState<EnderecoFormulario>(enderecoVazio);
+  const [endereco, setEndereco] = useState<EnderecoFormulario>(() => enderecoVazio());
 
   const opcoesCliente = useMemo(() => {
     const filtrados = filtrarClientesAcessiveis(clientes, filtroCliente);
@@ -132,7 +132,7 @@ export function FormularioImovel({
       </div>
 
       <h3 className="mt-6 mb-3 text-sm font-semibold">Endereço</h3>
-      <CamposEndereco value={endereco} onChange={setEndereco} />
+      <CamposEndereco idPrefix="imovel" value={endereco} onChange={setEndereco} />
 
       {erro ? (
         <p className="mt-4 rounded-[4px] bg-[#f8d7da] px-3 py-2 text-sm text-[#721c24]" role="alert">

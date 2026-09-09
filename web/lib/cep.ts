@@ -33,3 +33,27 @@ export function parseRespostaCep(body: unknown): EnderecoViaCep | null {
     complemento: String(o.complemento ?? "").trim(),
   };
 }
+
+/** Consulta a ViaCEP (browser ou servidor). Aborta com AbortError se `signal` for cancelado. */
+export async function buscarEnderecoPorCep(cep: string, signal?: AbortSignal): Promise<EnderecoViaCep> {
+  const d = somenteDigitosCep(cep);
+  if (d.length !== 8) {
+    throw new Error("CEP deve conter 8 dígitos.");
+  }
+  let res: Response;
+  try {
+    res = await fetch(`https://viacep.com.br/ws/${d}/json/`, { cache: "no-store", signal });
+  } catch (e) {
+    if (e instanceof DOMException && e.name === "AbortError") throw e;
+    throw new Error("Não foi possível consultar o CEP. Tente de novo.");
+  }
+  if (!res.ok) {
+    throw new Error("Não foi possível consultar o CEP. Tente de novo.");
+  }
+  const body: unknown = await res.json();
+  const endereco = parseRespostaCep(body);
+  if (!endereco) {
+    throw new Error("CEP não encontrado.");
+  }
+  return endereco;
+}

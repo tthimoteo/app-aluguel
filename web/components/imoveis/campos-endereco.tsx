@@ -1,10 +1,8 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
-import { Input } from "@/components/ui/input";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Label } from "@/components/ui/label";
-import { bff, BffError } from "@/lib/api/browser";
-import { formatarCep, somenteDigitosCep } from "@/lib/cep";
+import { buscarEnderecoPorCep, formatarCep, somenteDigitosCep } from "@/lib/cep";
 import { cn } from "@/lib/utils";
 
 export const UFS = [
@@ -14,6 +12,9 @@ export const UFS = [
 
 export const selectClass =
   "h-10 w-full rounded-[4px] border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/20 dark:bg-input/30";
+
+const fieldInputClass =
+  "h-10 w-full min-w-0 rounded-[4px] border border-input bg-transparent px-3 py-2 text-base outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/20 md:text-sm";
 
 export type EnderecoFormulario = {
   cep: string;
@@ -79,57 +80,96 @@ export function enderecoParaApi(e: EnderecoFormulario): {
 export function CamposEndereco({
   value,
   onChange,
+  idPrefix,
 }: {
   value: EnderecoFormulario;
   onChange: (proximo: EnderecoFormulario) => void;
+  idPrefix?: string;
 }) {
+  const autoId = useId();
+  const prefixo = idPrefix ?? autoId.replace(/:/g, "");
+  const campoId = (nome: string) => `${prefixo}-${nome}`;
   const [consultando, setConsultando] = useState(false);
   const [erroCep, setErroCep] = useState<string | null>(null);
+  const pedido = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const valueRef = useRef(value);
+  valueRef.current = value;
 
-  async function consultar(digitos: string, atual: EnderecoFormulario) {
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  async function consultar(digitos: string) {
     if (digitos.length !== 8) return;
+    abortRef.current?.abort();
+    const ac = new AbortController();
+    abortRef.current = ac;
+    const seq = ++pedido.current;
     setConsultando(true);
     setErroCep(null);
     try {
-      const end = await bff.consultarCep(digitos);
+      const end = await buscarEnderecoPorCep(digitos, ac.signal);
+      if (seq !== pedido.current) return;
+      const atual = valueRef.current;
       onChange({
         ...atual,
         cep: formatarCep(end.cep || digitos),
-        logradouro: end.logradouro,
-        bairro: end.bairro,
+        logradouro: end.logradouro || atual.logradouro,
+        bairro: end.bairro || atual.bairro,
         cidade: end.cidade,
         uf: end.uf,
       });
     } catch (e) {
-      setErroCep(e instanceof BffError || e instanceof Error ? e.message : "CEP não encontrado.");
+      if (ac.signal.aborted) return;
+      if (seq !== pedido.current) return;
+      setErroCep(e instanceof Error ? e.message : "CEP não encontrado.");
     } finally {
-      setConsultando(false);
+      if (seq === pedido.current) setConsultando(false);
     }
   }
 
   function aoCep(bruto: string) {
-    const mascarado = formatarCep(bruto);
+    const mascarado = formatarCep(String(bruto ?? ""));
     const digitos = somenteDigitosCep(mascarado);
-    const proximo = { ...value, cep: mascarado };
-    onChange(proximo);
-    if (digitos.length === 8) void consultar(digitos, proximo);
-    else setErroCep(null);
+    onChange({ ...value, cep: mascarado });
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (digitos.length !== 8) {
+      abortRef.current?.abort();
+      setConsultando(false);
+      setErroCep(null);
+      return;
+    }
+    timerRef.current = setTimeout(() => {
+      void consultar(digitos);
+    }, 280);
   }
 
   return (
-    <div className="grid gap-4 sm:grid-cols-6">
-      <Campo rotulo="CEP" htmlFor="cep" classe="sm:col-span-2">
-        <Input
-          id="cep"
+    <div className="flex flex-col gap-4">
+      <Campo rotulo="CEP" htmlFor={campoId("cep")} classe="w-full sm:max-w-[12rem]">
+        <input
+          id={campoId("cep")}
           name="cep"
           inputMode="numeric"
           placeholder="00000-000"
           maxLength={9}
           value={value.cep}
           onChange={(e) => aoCep(e.target.value)}
-          onBlur={() => void consultar(somenteDigitosCep(value.cep), value)}
-          className="h-10 rounded-[4px]"
+          onBlur={() => {
+            const d = somenteDigitosCep(valueRef.current.cep);
+            if (d.length === 8) void consultar(d);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") e.preventDefault();
+          }}
+          className={fieldInputClass}
           autoComplete="postal-code"
+          data-campo="cep"
         />
         {consultando ? <p className="mt-1 text-xs text-muted-foreground">Consultando CEP…</p> : null}
         {erroCep ? (
@@ -137,72 +177,78 @@ export function CamposEndereco({
             {erroCep}
           </p>
         ) : (
-          <p className="mt-1 text-xs text-muted-foreground">Preencha o CEP para buscar o endereço.</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Informe o CEP para preencher logradouro, bairro, cidade e UF.
+          </p>
         )}
       </Campo>
-      <div className="hidden sm:block sm:col-span-4" />
 
-      <Campo rotulo="Logradouro" htmlFor="logradouro" classe="sm:col-span-4">
-        <Input
-          id="logradouro"
-          name="logradouro"
-          value={value.logradouro}
-          onChange={(e) => onChange({ ...value, logradouro: e.target.value })}
-          className="h-10 rounded-[4px]"
-        />
-      </Campo>
-      <Campo rotulo="Número" htmlFor="numero" classe="sm:col-span-2">
-        <Input
-          id="numero"
-          name="numero"
-          value={value.numero}
-          onChange={(e) => onChange({ ...value, numero: e.target.value })}
-          className="h-10 rounded-[4px]"
-        />
-      </Campo>
-      <Campo rotulo="Complemento" htmlFor="complemento" classe="sm:col-span-3">
-        <Input
-          id="complemento"
-          name="complemento"
-          value={value.complemento}
-          onChange={(e) => onChange({ ...value, complemento: e.target.value })}
-          className="h-10 rounded-[4px]"
-        />
-      </Campo>
-      <Campo rotulo="Bairro" htmlFor="bairro" classe="sm:col-span-3">
-        <Input
-          id="bairro"
-          name="bairro"
-          value={value.bairro}
-          onChange={(e) => onChange({ ...value, bairro: e.target.value })}
-          className="h-10 rounded-[4px]"
-        />
-      </Campo>
-      <Campo rotulo="Cidade" htmlFor="cidade" classe="sm:col-span-3">
-        <Input
-          id="cidade"
-          name="cidade"
-          value={value.cidade}
-          onChange={(e) => onChange({ ...value, cidade: e.target.value })}
-          className="h-10 rounded-[4px]"
-        />
-      </Campo>
-      <Campo rotulo="UF" htmlFor="uf" classe="sm:col-span-1">
-        <select
-          id="uf"
-          name="uf"
-          value={value.uf}
-          onChange={(e) => onChange({ ...value, uf: e.target.value })}
-          className={selectClass}
-        >
-          <option value="">—</option>
-          {UFS.map((uf) => (
-            <option key={uf} value={uf}>
-              {uf}
-            </option>
-          ))}
-        </select>
-      </Campo>
+      <div className="grid gap-4 sm:grid-cols-6">
+        <Campo rotulo="Logradouro" htmlFor={campoId("logradouro")} classe="sm:col-span-4">
+          <input
+            id={campoId("logradouro")}
+            name="logradouro"
+            value={value.logradouro}
+            onChange={(e) => onChange({ ...value, logradouro: e.target.value })}
+            className={fieldInputClass}
+            autoComplete="address-line1"
+          />
+        </Campo>
+        <Campo rotulo="Número" htmlFor={campoId("numero")} classe="sm:col-span-2">
+          <input
+            id={campoId("numero")}
+            name="numero"
+            value={value.numero}
+            onChange={(e) => onChange({ ...value, numero: e.target.value })}
+            className={fieldInputClass}
+            autoComplete="address-line2"
+          />
+        </Campo>
+        <Campo rotulo="Complemento" htmlFor={campoId("complemento")} classe="sm:col-span-3">
+          <input
+            id={campoId("complemento")}
+            name="complemento"
+            value={value.complemento}
+            onChange={(e) => onChange({ ...value, complemento: e.target.value })}
+            className={fieldInputClass}
+          />
+        </Campo>
+        <Campo rotulo="Bairro" htmlFor={campoId("bairro")} classe="sm:col-span-3">
+          <input
+            id={campoId("bairro")}
+            name="bairro"
+            value={value.bairro}
+            onChange={(e) => onChange({ ...value, bairro: e.target.value })}
+            className={fieldInputClass}
+          />
+        </Campo>
+        <Campo rotulo="Cidade" htmlFor={campoId("cidade")} classe="sm:col-span-4">
+          <input
+            id={campoId("cidade")}
+            name="cidade"
+            value={value.cidade}
+            onChange={(e) => onChange({ ...value, cidade: e.target.value })}
+            className={fieldInputClass}
+            autoComplete="address-level2"
+          />
+        </Campo>
+        <Campo rotulo="UF" htmlFor={campoId("uf")} classe="sm:col-span-2">
+          <select
+            id={campoId("uf")}
+            name="uf"
+            value={value.uf}
+            onChange={(e) => onChange({ ...value, uf: e.target.value })}
+            className={selectClass}
+          >
+            <option value="">—</option>
+            {UFS.map((uf) => (
+              <option key={uf} value={uf}>
+                {uf}
+              </option>
+            ))}
+          </select>
+        </Campo>
+      </div>
     </div>
   );
 }

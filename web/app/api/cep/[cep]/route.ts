@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAccessTokenFromJar } from "@/lib/auth/cookies";
-import { parseRespostaCep, somenteDigitosCep } from "@/lib/cep";
+import { buscarEnderecoPorCep } from "@/lib/cep";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ cep: string }> }) {
   const token = await getAccessTokenFromJar();
@@ -9,21 +9,17 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cep
   }
 
   const { cep: bruto } = await params;
-  const cep = somenteDigitosCep(bruto);
-  if (cep.length !== 8) {
-    return NextResponse.json({ erro: "CEP deve conter 8 dígitos." }, { status: 400 });
+  try {
+    const endereco = await buscarEnderecoPorCep(bruto);
+    return NextResponse.json(endereco);
+  } catch (e) {
+    const mensagem = e instanceof Error ? e.message : "Não foi possível consultar o CEP.";
+    if (mensagem.includes("8 dígitos")) {
+      return NextResponse.json({ erro: mensagem }, { status: 400 });
+    }
+    if (mensagem === "CEP não encontrado.") {
+      return NextResponse.json({ erro: mensagem }, { status: 404 });
+    }
+    return NextResponse.json({ erro: mensagem }, { status: 502 });
   }
-
-  const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`, { cache: "no-store" });
-  if (!res.ok) {
-    return NextResponse.json({ erro: "Não foi possível consultar o CEP." }, { status: 502 });
-  }
-
-  const body: unknown = await res.json();
-  const endereco = parseRespostaCep(body);
-  if (!endereco) {
-    return NextResponse.json({ erro: "CEP não encontrado." }, { status: 404 });
-  }
-
-  return NextResponse.json(endereco);
 }

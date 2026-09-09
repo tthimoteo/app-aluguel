@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { formatarCep, parseRespostaCep, somenteDigitosCep } from "./cep";
+import { describe, expect, it, vi, afterEach } from "vitest";
+import { buscarEnderecoPorCep, formatarCep, parseRespostaCep, somenteDigitosCep } from "./cep";
 
 describe("formatarCep", () => {
   it("mascara com hífen após 5 dígitos", () => {
@@ -35,5 +35,45 @@ describe("parseRespostaCep", () => {
 
   it("retorna nulo quando o CEP não existe", () => {
     expect(parseRespostaCep({ erro: true })).toBeNull();
+    expect(parseRespostaCep({ erro: "true" })).toBeNull();
+  });
+});
+
+describe("buscarEnderecoPorCep", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("lê logradouro, bairro, cidade e UF da ViaCEP", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          cep: "01310-100",
+          logradouro: "Avenida Paulista",
+          bairro: "Bela Vista",
+          localidade: "São Paulo",
+          uf: "SP",
+        }),
+      }),
+    );
+    await expect(buscarEnderecoPorCep("01310-100")).resolves.toMatchObject({
+      logradouro: "Avenida Paulista",
+      bairro: "Bela Vista",
+      cidade: "São Paulo",
+      uf: "SP",
+    });
+  });
+
+  it("rejeita CEP inexistente", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ erro: true }),
+      }),
+    );
+    await expect(buscarEnderecoPorCep("00000000")).rejects.toThrow("CEP não encontrado.");
   });
 });

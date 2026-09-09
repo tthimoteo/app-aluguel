@@ -238,8 +238,8 @@ export function CadastroImovel({
           <CampoDetalhe rotulo="Tipo" valor={rotuloTipo(imovel.tipo)} />
           <CampoDetalhe rotulo="Nr. IPTU" valor={imovel.numeroIptu ?? "—"} />
           <CampoDetalhe rotulo="Nr. Matrícula" valor={imovel.numeroMatricula ?? "—"} />
-          <CampoDetalhe rotulo="Endereço" valor={formatarEndereco(imovel.endereco)} />
           <CampoDetalhe rotulo="CEP" valor={imovel.endereco.cep ?? "—"} />
+          <CampoDetalhe rotulo="Endereço" valor={formatarEndereco(imovel.endereco)} />
         </dl>
       </section>
 
@@ -437,7 +437,7 @@ export function CadastroImovel({
                 ) : null}
                 <div className="sm:col-span-2">
                   <p className="mb-2 text-sm font-medium">Endereço</p>
-                  <CamposEndereco value={enderecoInq} onChange={setEnderecoInq} />
+                  <CamposEndereco idPrefix="inquilino" value={enderecoInq} onChange={setEnderecoInq} />
                 </div>
               </div>
               <AlertaErro mensagem={erro} />
