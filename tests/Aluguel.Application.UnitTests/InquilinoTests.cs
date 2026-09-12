@@ -52,13 +52,56 @@ public class InquilinoTests
     public async Task Criar_normaliza_documento_e_define_tenant()
     {
         var repo = new FakeInquilinoRepository();
-        var handler = new CriarInquilinoCommandHandler(repo, new FakeCurrentTenant(Tenant));
+        var handler = new CriarInquilinoCommandHandler(repo, new FakeImovelRepository(), new FakeCurrentTenant(Tenant));
 
         var dto = await handler.Handle(Comando(), default);
 
         dto.TenantId.Should().Be(Tenant);
         dto.ClienteId.Should().Be(ClienteA);
         dto.Documento.Should().Be("39053344705");
+        dto.ImovelId.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Criar_com_imovel_persiste_vinculo()
+    {
+        var imovelId = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+        var imoveis = new FakeImovelRepository();
+        imoveis.Itens.Add(new Aluguel.Domain.Imoveis.Imovel(
+            Tenant, ClienteA, "Casa", Aluguel.Domain.Imoveis.TipoImovel.Residencial));
+        // força o Id conhecido via reflexão não é ideal; usa o Id gerado
+        var imovel = imoveis.Itens[0];
+        imovelId = imovel.Id;
+
+        var repo = new FakeInquilinoRepository();
+        var handler = new CriarInquilinoCommandHandler(repo, imoveis, new FakeCurrentTenant(Tenant));
+
+        var dto = await handler.Handle(
+            new CriarInquilinoCommand(ClienteA, TipoPessoa.PF, "Maria", "390.533.447-05", null, null, null, null, imovelId),
+            default);
+
+        dto.ImovelId.Should().Be(imovelId);
+        repo.Itens.Should().ContainSingle(i => i.ImovelId == imovelId);
+    }
+
+    [Fact]
+    public async Task Criar_com_imovel_ja_vinculado_lanca()
+    {
+        var imoveis = new FakeImovelRepository();
+        imoveis.Itens.Add(new Aluguel.Domain.Imoveis.Imovel(
+            Tenant, ClienteA, "Casa", Aluguel.Domain.Imoveis.TipoImovel.Residencial));
+        var imovelId = imoveis.Itens[0].Id;
+
+        var repo = new FakeInquilinoRepository();
+        repo.Itens.Add(new Inquilino(Tenant, ClienteA, TipoPessoa.PF, "João", "39053344705", imovelId: imovelId));
+
+        var handler = new CriarInquilinoCommandHandler(repo, imoveis, new FakeCurrentTenant(Tenant));
+
+        await handler.Invoking(h => h.Handle(
+                new CriarInquilinoCommand(ClienteA, TipoPessoa.PF, "Maria", "390.533.447-05", null, null, null, null, imovelId),
+                default))
+            .Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*já possui inquilino*");
     }
 
     [Fact]

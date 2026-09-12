@@ -7,12 +7,13 @@ using MediatR;
 
 namespace Aluguel.Application.Inquilinos.ListarInquilinos;
 
-/// <summary>Lista inquilinos com filtros (termo/tipo pessoa/status) e paginação, escopados ao cliente do usuário.</summary>
+/// <summary>Lista inquilinos com filtros (termo/tipo pessoa/status/imóvel) e paginação, escopados ao cliente do usuário.</summary>
 public sealed record ListarInquilinosQuery(
     Guid? ClienteId = null,
     string? Termo = null,
     TipoPessoa? TipoPessoa = null,
     StatusAtivoInativo? Status = null,
+    Guid? ImovelId = null,
     int Skip = 0,
     int Take = 20) : IRequest<PaginaDto<InquilinoDto>>;
 
@@ -30,8 +31,10 @@ public sealed class ListarInquilinosQueryHandler(
         var skip = Math.Max(0, request.Skip);
         var take = Math.Clamp(request.Take, 1, 100);
 
-        var total = await repositorio.ContarAsync(clienteId, request.Termo, request.TipoPessoa, request.Status, cancellationToken);
-        var itens = await repositorio.ListarAsync(clienteId, request.Termo, request.TipoPessoa, request.Status, skip, take, cancellationToken);
+        var total = await repositorio.ContarAsync(
+            clienteId, request.Termo, request.TipoPessoa, request.Status, request.ImovelId, cancellationToken);
+        var itens = await repositorio.ListarAsync(
+            clienteId, request.Termo, request.TipoPessoa, request.Status, request.ImovelId, skip, take, cancellationToken);
 
         return new PaginaDto<InquilinoDto>(itens.Select(i => i.ParaDto()).ToList(), total, skip, take);
     }

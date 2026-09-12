@@ -83,6 +83,7 @@ export function CadastroImovel({
     setErro(null);
     const dados: NovoInquilinoInput = {
       clienteId: imovel.clienteId,
+      imovelId: imovel.id,
       tipoPessoa: form.get("tipoPessoa") === "PJ" ? "PJ" : "PF",
       nome: String(form.get("nome") ?? "").trim(),
       documento: String(form.get("documento") ?? "").trim(),
@@ -94,9 +95,11 @@ export function CadastroImovel({
     setPending(true);
     try {
       const criado = await bff.criarInquilino(dados);
+      setInquilinoLocal(criado);
       toast.success("Inquilino incluído.");
       fechar();
-      router.push(`/imoveis/${imovel.id}?inquilinoId=${criado.id}`);
+      router.replace(`/imoveis/${imovel.id}`);
+      recarregar();
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Não foi possível incluir o inquilino.");
     } finally {

@@ -23,22 +23,29 @@ export default async function ImovelPage({
     throw e;
   }
 
-  const [contratos, inquilinosPagina] = await Promise.all([
+  const [contratos, vinculadosPagina, inquilinosCliente] = await Promise.all([
     api.contratos({ imovelId: id, take: 50 }),
+    api.inquilinos({ clienteId: imovel.clienteId, imovelId: id, take: 20 }),
     api.inquilinos({ clienteId: imovel.clienteId, take: 100 }),
   ]);
 
   const contratoAtivo = contratos.itens.find((c) => c.status === "Ativo") ?? null;
   const ultimoContrato = [...contratos.itens].sort((a, b) => b.dataInicio.localeCompare(a.dataInicio))[0];
-  const alvoId = contratoAtivo?.inquilinoId ?? inquilinoId ?? ultimoContrato?.inquilinoId;
+  const peloImovel =
+    vinculadosPagina.itens.find((i) => i.status === "Ativo") ?? vinculadosPagina.itens[0] ?? null;
+  const alvoId = contratoAtivo?.inquilinoId ?? peloImovel?.id ?? inquilinoId ?? ultimoContrato?.inquilinoId;
 
   let inquilino: Inquilino | null = null;
   if (alvoId) {
-    try {
-      const candidato = await api.inquilino(alvoId);
-      if (candidato.clienteId === imovel.clienteId) inquilino = candidato;
-    } catch (e) {
-      if (!(e instanceof ApiError && e.status === 404)) throw e;
+    if (peloImovel?.id === alvoId) {
+      inquilino = peloImovel;
+    } else {
+      try {
+        const candidato = await api.inquilino(alvoId);
+        if (candidato.clienteId === imovel.clienteId) inquilino = candidato;
+      } catch (e) {
+        if (!(e instanceof ApiError && e.status === 404)) throw e;
+      }
     }
   }
 
@@ -47,7 +54,7 @@ export default async function ImovelPage({
       imovel={imovel}
       inquilino={inquilino}
       contratoAtivo={contratoAtivo}
-      inquilinosCliente={inquilinosPagina.itens}
+      inquilinosCliente={inquilinosCliente.itens}
       podeGerenciar={temPerfil(usuario, "Administrador", "Gestor")}
     />
   );

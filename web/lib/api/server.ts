@@ -78,9 +78,9 @@ export const api = {
     apiFetch<Pagina<Imovel>>(
       `/api/imoveis${qs({ termo: opts?.termo, take: opts?.take ?? 20, clienteId: opts?.clienteId })}`,
     ),
-  inquilinos: (opts?: { termo?: string; take?: number; clienteId?: string }) =>
+  inquilinos: (opts?: { termo?: string; take?: number; clienteId?: string; imovelId?: string }) =>
     apiFetch<Pagina<Inquilino>>(
-      `/api/inquilinos${qs({ termo: opts?.termo, take: opts?.take ?? 20, clienteId: opts?.clienteId })}`,
+      `/api/inquilinos${qs({ termo: opts?.termo, take: opts?.take ?? 20, clienteId: opts?.clienteId, imovelId: opts?.imovelId })}`,
     ),
   inquilino: (id: string) => apiFetch<Inquilino>(`/api/inquilinos/${id}`),
   imovel: (id: string) => apiFetch<Imovel>(`/api/imoveis/${id}`),

@@ -479,21 +479,46 @@ if [ -n "$CLIENTE_GESTOR" ]; then
       echo "FAIL [PUT imovel nome] body=${BODY:0:240}"
       FAIL=$((FAIL+1))
     fi
+    NOME_INQ="Inquilino E2E $(date +%s)"
+    CODE=$(curl -s -o /tmp/fe_body -w '%{http_code}' -b /tmp/fe_cookies -X POST "$WEB/api/inquilinos" \
+      -H 'Content-Type: application/json' \
+      -d "{\"clienteId\":\"$CLIENTE_GESTOR\",\"imovelId\":\"$IMV_ID\",\"tipoPessoa\":\"PF\",\"nome\":\"$NOME_INQ\",\"documento\":\"390.533.447-05\"}")
+    BODY=$(cat /tmp/fe_body)
+    check 201 "$CODE" "POST /api/inquilinos com imovelId via BFF"
+    INQ_ID=$(echo "$BODY" | jq -r '.id // empty')
+    if echo "$BODY" | grep -q "$NOME_INQ" && echo "$BODY" | grep -q "$IMV_ID"; then
+      echo "PASS [POST inquilino vincula imovelId]"
+      PASS=$((PASS+1))
+    else
+      echo "FAIL [POST inquilino vincula imovelId] body=${BODY:0:240}"
+      FAIL=$((FAIL+1))
+    fi
+    if [ -n "$IMV_ID" ] && fetch_html_matching /tmp/fe_cookies "$WEB/imoveis/$IMV_ID" all \
+      "$NOME_INQ"; then
+      check 200 "$CODE" "GET /imoveis/{id} com inquilino"
+      echo "PASS [cadastro imovel exibe inquilino vinculado]"
+      PASS=$((PASS+1))
+    else
+      check 200 "$CODE" "GET /imoveis/{id} com inquilino"
+      echo "FAIL [cadastro imovel exibe inquilino vinculado] body sem nome do inquilino"
+      FAIL=$((FAIL+1))
+    fi
     TOKEN=$(curl -s -X POST "$API/api/auth/login" -H 'Content-Type: application/json' \
       -d '{"email":"gestor@demo.local","senha":"Gestor@123456"}' | jq -r '.accessToken // empty')
-    if [ -n "$IMV_ID" ] && [ -n "$TOKEN" ] && [ "$TOKEN" != "null" ]; then
-      curl -s -o /dev/null -X DELETE "$API/api/imoveis/$IMV_ID" -H "Authorization: Bearer $TOKEN"
+    if [ -n "$TOKEN" ] && [ "$TOKEN" != "null" ]; then
+      [ -n "$INQ_ID" ] && curl -s -o /dev/null -X DELETE "$API/api/inquilinos/$INQ_ID" -H "Authorization: Bearer $TOKEN"
+      [ -n "$IMV_ID" ] && curl -s -o /dev/null -X DELETE "$API/api/imoveis/$IMV_ID" -H "Authorization: Bearer $TOKEN"
     fi
   elif echo "$BODY" | grep -q "Limite de imóveis"; then
     echo "PASS [POST /api/imoveis limite do plano] http=$CODE"
-    PASS=$((PASS+8))
+    PASS=$((PASS+11))
   else
     echo "FAIL [POST /api/imoveis] esperado=201 obtido=$CODE body=${BODY:0:240}"
-    FAIL=$((FAIL+8))
+    FAIL=$((FAIL+11))
   fi
 else
   echo "FAIL [POST imovel sem clienteId do JWT]"
-  FAIL=$((FAIL+8))
+  FAIL=$((FAIL+11))
 fi
 
 line "LOGIN INVÁLIDO"

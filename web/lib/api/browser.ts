@@ -92,6 +92,7 @@ export type AtualizacaoImovelInput = {
 
 export type NovoInquilinoInput = {
   clienteId: string;
+  imovelId?: string | null;
   tipoPessoa: "PF" | "PJ";
   nome: string;
   documento: string;

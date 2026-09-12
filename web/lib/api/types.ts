@@ -86,6 +86,7 @@ export type Inquilino = {
   id: string;
   tenantId: string;
   clienteId: string;
+  imovelId: string | null;
   tipoPessoa: string;
   nome: string;
   documento: string;

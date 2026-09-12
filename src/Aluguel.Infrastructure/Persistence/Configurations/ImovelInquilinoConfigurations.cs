@@ -56,5 +56,11 @@ public class InquilinoConfiguration : IEntityTypeConfiguration<Inquilino>
 
         b.HasOne<Cliente>().WithMany().HasForeignKey(x => x.ClienteId).OnDelete(DeleteBehavior.Restrict);
         b.HasIndex(x => x.ClienteId);
+        b.HasOne<Imovel>().WithMany().HasForeignKey(x => x.ImovelId).OnDelete(DeleteBehavior.Restrict);
+        // Um inquilino ativo por imóvel (§7 / CASO 3). Soft-deleted e inativos ficam de fora.
+        b.HasIndex(x => x.ImovelId)
+            .IsUnique()
+            .HasFilter("imovel_id IS NOT NULL AND deleted_at IS NULL AND status = 'Ativo'")
+            .HasDatabaseName("ix_inquilino_imovel_id_ativo");
     }
 }
