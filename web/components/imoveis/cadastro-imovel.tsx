@@ -34,7 +34,7 @@ import {
   type NovoInquilinoInput,
 } from "@/lib/api/browser";
 import type { Contrato, Imovel, Inquilino } from "@/lib/api/types";
-import { formatarCpfCnpj, formatarData, formatarEndereco, formatarMoeda } from "@/lib/format";
+import { formatarCpfCnpj, formatarData, formatarEndereco, formatarMoeda, mascaraCpfCnpj, mascaraTelefone } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 type Painel =
@@ -64,11 +64,15 @@ export function CadastroImovel({
   const [pending, setPending] = useState(false);
   const [enderecoInq, setEnderecoInq] = useState<EnderecoFormulario>(enderecoVazio());
   const [inquilinoLocal, setInquilinoLocal] = useState<Inquilino | null>(null);
+  const [documentoMascarado, setDocumentoMascarado] = useState("");
+  const [telefoneMascarado, setTelefoneMascarado] = useState("");
   const inquilino = inquilinoProp ?? inquilinoLocal;
 
   function fechar() {
     setPainel(null);
     setErro(null);
+    setDocumentoMascarado("");
+    setTelefoneMascarado("");
   }
 
   function recarregar() {
@@ -90,11 +94,9 @@ export function CadastroImovel({
     setPending(true);
     try {
       const criado = await bff.criarInquilino(dados);
-      setInquilinoLocal(criado);
       toast.success("Inquilino incluído.");
       fechar();
-      router.replace(`/imoveis/${imovel.id}?inquilinoId=${criado.id}`);
-      recarregar();
+      router.push(`/imoveis/${imovel.id}?inquilinoId=${criado.id}`);
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Não foi possível incluir o inquilino.");
     } finally {
@@ -266,6 +268,8 @@ export function CadastroImovel({
                     onClick={() => {
                       setErro(null);
                       setEnderecoInq(enderecoDeApi(inquilino.endereco));
+                      setDocumentoMascarado("");
+                      setTelefoneMascarado(inquilino.telefone || "");
                       setPainel({ tipo: "inquilino-editar" });
                     }}
                   >
@@ -292,6 +296,8 @@ export function CadastroImovel({
                   onClick={() => {
                     setErro(null);
                     setEnderecoInq(enderecoVazio());
+                    setDocumentoMascarado("");
+                    setTelefoneMascarado("");
                     setPainel({ tipo: "inquilino-criar" });
                   }}
                 >
@@ -401,8 +407,8 @@ export function CadastroImovel({
               }}
             >
               <DialogHeader className="border-0 px-0 pt-0">
-                <DialogTitle>{painel.tipo === "inquilino-criar" ? "Incluir inquilino" : "Editar inquilino"}</DialogTitle>
-                <DialogDescription>Destinatário da NFS-e deste imóvel.</DialogDescription>
+                <DialogTitle className="pl-4">{painel.tipo === "inquilino-criar" ? "Incluir inquilino" : "Editar inquilino"}</DialogTitle>
+                <DialogDescription className="pl-4">Destinatário da NFS-e deste imóvel.</DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 px-6 py-2 sm:grid-cols-2">
                 {painel.tipo === "inquilino-criar" ? (
@@ -420,7 +426,14 @@ export function CadastroImovel({
                 </Campo>
                 {painel.tipo === "inquilino-criar" ? (
                   <Campo rotulo="CPF ou CNPJ" htmlFor="documento">
-                    <Input id="documento" name="documento" required className="h-10 rounded-[4px]" />
+                    <Input 
+                      id="documento" 
+                      name="documento" 
+                      required 
+                      value={documentoMascarado}
+                      onChange={(e) => setDocumentoMascarado(mascaraCpfCnpj(e.target.value))}
+                      className="h-10 rounded-[4px]" 
+                    />
                   </Campo>
                 ) : (
                   <CampoDetalhe rotulo="Documento" valor={formatarCpfCnpj(inquilino?.documento)} />
@@ -429,7 +442,13 @@ export function CadastroImovel({
                   <Input id="emailInq" name="email" type="email" defaultValue={inquilino?.email ?? ""} className="h-10 rounded-[4px]" />
                 </Campo>
                 <Campo rotulo="Telefone" htmlFor="telefoneInq">
-                  <Input id="telefoneInq" name="telefone" defaultValue={inquilino?.telefone ?? ""} className="h-10 rounded-[4px]" />
+                  <Input 
+                    id="telefoneInq" 
+                    name="telefone" 
+                    value={telefoneMascarado}
+                    onChange={(e) => setTelefoneMascarado(mascaraTelefone(e.target.value))}
+                    className="h-10 rounded-[4px]" 
+                  />
                 </Campo>
                 <Campo rotulo="Inscrição municipal" htmlFor="inscricaoMunicipal">
                   <Input id="inscricaoMunicipal" name="inscricaoMunicipal" defaultValue={inquilino?.inscricaoMunicipal ?? ""} className="h-10 rounded-[4px]" />
@@ -463,8 +482,8 @@ export function CadastroImovel({
         {painel?.tipo === "inquilino-remover" ? (
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Remover inquilino</DialogTitle>
-              <DialogDescription>{inquilino?.nome} será desativado neste cadastro.</DialogDescription>
+              <DialogTitle className="pl-4">Remover inquilino</DialogTitle>
+              <DialogDescription className="pl-4">{inquilino?.nome} será desativado neste cadastro.</DialogDescription>
             </DialogHeader>
             <AlertaErro mensagem={erro} />
             <DialogFooter>
@@ -490,10 +509,10 @@ export function CadastroImovel({
               }}
             >
               <DialogHeader className="border-0 px-0 pt-0">
-                <DialogTitle>
+                <DialogTitle className="pl-4">
                   {painel.tipo === "contrato-editar" ? "Editar contrato" : painel.tipo === "contrato-renovar" ? "Renovar contrato" : "Incluir contrato"}
                 </DialogTitle>
-                <DialogDescription>
+                <DialogDescription className="pl-4">
                   {painel.tipo === "contrato-renovar"
                     ? "O contrato atual será encerrado e um novo será cadastrado."
                     : "Um imóvel admite apenas um contrato ativo."}
@@ -551,8 +570,8 @@ export function CadastroImovel({
         {painel?.tipo === "contrato-encerrar" ? (
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Encerrar contrato</DialogTitle>
-              <DialogDescription>
+              <DialogTitle className="pl-4">Encerrar contrato</DialogTitle>
+              <DialogDescription className="pl-4">
                 {contratoAtivo?.numeroContrato} deixa de vigorar e o imóvel pode receber um novo contrato.
               </DialogDescription>
             </DialogHeader>

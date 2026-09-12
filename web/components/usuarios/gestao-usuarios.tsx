@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition, type ReactNode } from "react";
+import { useState, useTransition, useEffect, type ReactNode } from "react";
 import { toast } from "sonner";
 import { CardField, DataList, DesktopTable, MobileCard } from "@/components/data/data-list";
 import { EmptyState } from "@/components/data/empty-state";
@@ -23,7 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { bff, type AtualizacaoUsuarioInput, type NovoUsuarioInput } from "@/lib/api/browser";
 import type { Usuario } from "@/lib/api/types";
-import { formatarCpfCnpj, formatarData, formatarDataHora } from "@/lib/format";
+import { formatarCpfCnpj, formatarData, formatarDataHora, mascaraCpfCnpj, mascaraTelefone } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 type Painel =
@@ -273,8 +273,8 @@ export function GestaoUsuarios({
         {painel?.tipo === "criar" ? (
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Incluir usuário</DialogTitle>
-              <DialogDescription>Cria ou vincula um Gestor ou Analista neste cliente. O CPF identifica a pessoa.</DialogDescription>
+              <DialogTitle className="pl-4">Incluir usuário</DialogTitle>
+              <DialogDescription className="pl-4">Cria ou vincula um Gestor ou Analista neste cliente. O CPF identifica a pessoa.</DialogDescription>
             </DialogHeader>
             <form
               className="flex flex-col gap-4 px-6 py-4"
@@ -300,8 +300,8 @@ export function GestaoUsuarios({
         {painel?.tipo === "detalhe" ? (
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{painel.usuario.nome}</DialogTitle>
-              <DialogDescription>Detalhes do usuário do cliente.</DialogDescription>
+              <DialogTitle className="pl-4">{painel.usuario.nome}</DialogTitle>
+              <DialogDescription className="pl-4">Detalhes do usuário do cliente.</DialogDescription>
             </DialogHeader>
             <dl className="grid gap-3 px-6 py-4 sm:grid-cols-2">
               <CampoDetalhe rotulo="Nome" valor={painel.usuario.nome} />
@@ -337,8 +337,8 @@ export function GestaoUsuarios({
         {painel?.tipo === "editar" ? (
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Editar usuário</DialogTitle>
-              <DialogDescription>O CPF não pode ser alterado.</DialogDescription>
+              <DialogTitle className="pl-4">Editar usuário</DialogTitle>
+              <DialogDescription className="pl-4">O CPF não pode ser alterado.</DialogDescription>
             </DialogHeader>
             <form
               className="flex flex-col gap-4 px-6 py-4"
@@ -364,8 +364,8 @@ export function GestaoUsuarios({
         {painel?.tipo === "excluir" ? (
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Remover usuário</DialogTitle>
-              <DialogDescription>
+              <DialogTitle className="pl-4">Remover usuário</DialogTitle>
+              <DialogDescription className="pl-4">
                 {painel.usuario.nome} será desativado neste cliente (não poderá mais atuar aqui). A identidade
                 permanece se ele estiver em outros clientes.
               </DialogDescription>
@@ -409,6 +409,15 @@ function CamposUsuario({
 }) {
   const [vinculo, setVinculo] = useState<"novo" | "existente" | "duplicado" | null>(null);
   const [existente, setExistente] = useState<{ nome: string; email: string; telefone: string | null } | null>(null);
+  const [cpfMascarado, setCpfMascarado] = useState(usuario?.cpf ?? "");
+  const [telefoneMascarado, setTelefoneMascarado] = useState(usuario?.telefone ?? "");
+
+  // Atualizar telefone quando existente muda (após consultarCpf)
+  useEffect(() => {
+    if (existente?.telefone) {
+      setTelefoneMascarado(existente.telefone);
+    }
+  }, [existente]);
 
   async function consultarCpf(valor: string) {
     if (modo !== "criar" || !clienteId) return;
@@ -482,7 +491,8 @@ function CamposUsuario({
             id="cpf"
             name="cpf"
             required={modo === "criar"}
-            defaultValue={usuario?.cpf ?? ""}
+            value={cpfMascarado}
+            onChange={(e) => setCpfMascarado(mascaraCpfCnpj(e.target.value))}
             disabled={modo === "editar"}
             onBlur={(ev) => void consultarCpf(ev.target.value)}
             className="h-10 rounded-[4px]"
@@ -493,9 +503,9 @@ function CamposUsuario({
           <Input
             id="telefone"
             name="telefone"
-            defaultValue={existente?.telefone ?? usuario?.telefone ?? ""}
+            value={telefoneMascarado}
+            onChange={(e) => setTelefoneMascarado(mascaraTelefone(e.target.value))}
             readOnly={identidadeBloqueada && modo === "criar"}
-            key={`tel-${existente?.telefone ?? usuario?.telefone ?? "novo"}`}
             className="h-10 rounded-[4px]"
           />
         </Campo>
