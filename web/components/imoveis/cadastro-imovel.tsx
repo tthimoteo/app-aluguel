@@ -604,7 +604,10 @@ export function CadastroImovel({
                     inputMode="numeric"
                     required
                     value={valorAluguelMascarado}
-                    onChange={(e) => setValorAluguelMascarado(mascaraMoeda(e.target.value))}
+                    onChange={(e) => {
+                      setErro(null);
+                      setValorAluguelMascarado(mascaraMoeda(e.target.value));
+                    }}
                     placeholder="R$ 0,00"
                     className="h-10 rounded-[4px]"
                   />
@@ -615,7 +618,10 @@ export function CadastroImovel({
                     name="jurosAtrasoPct"
                     inputMode="decimal"
                     value={jurosMascarado}
-                    onChange={(e) => setJurosMascarado(mascaraPercentual(e.target.value))}
+                    onChange={(e) => {
+                      setErro(null);
+                      setJurosMascarado(mascaraPercentual(e.target.value));
+                    }}
                     placeholder="Ex.: 2,00"
                     className="h-10 rounded-[4px]"
                   />
@@ -626,7 +632,10 @@ export function CadastroImovel({
                     name="multaAtrasoPct"
                     inputMode="decimal"
                     value={multaMascarada}
-                    onChange={(e) => setMultaMascarada(mascaraPercentual(e.target.value))}
+                    onChange={(e) => {
+                      setErro(null);
+                      setMultaMascarada(mascaraPercentual(e.target.value));
+                    }}
                     placeholder="Ex.: 10,00"
                     className="h-10 rounded-[4px]"
                   />
