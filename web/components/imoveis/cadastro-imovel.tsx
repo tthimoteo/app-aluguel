@@ -476,7 +476,7 @@ export function CadastroImovel({
                     rel="noopener noreferrer"
                     className="font-medium text-[#DB6838] underline-offset-2 hover:underline"
                   >
-                    {nomeArquivoAnexo(contratoAtivo.anexoPath)}
+                    Baixar PDF — {contratoAtivo.numeroContrato}
                   </a>
                 ) : (
                   "—"
