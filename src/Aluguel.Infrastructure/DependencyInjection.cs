@@ -2,6 +2,7 @@ using Aluguel.Application.Abstractions;
 using Aluguel.Infrastructure.Identity;
 using Aluguel.Infrastructure.Persistence;
 using Aluguel.Infrastructure.Persistence.Repositories;
+using Aluguel.Infrastructure.Storage;
 using Aluguel.Infrastructure.Tenancy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -40,6 +41,8 @@ public static class DependencyInjection
         services.AddScoped<IImovelRepository, ImovelRepository>();
         services.AddScoped<IInquilinoRepository, InquilinoRepository>();
         services.AddScoped<IContratoRepository, ContratoRepository>();
+
+        services.AddSingleton<IFileStorage, LocalFileStorage>();
 
         return services;
     }

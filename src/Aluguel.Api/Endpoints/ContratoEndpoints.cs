@@ -1,5 +1,7 @@
 using Aluguel.Application.Autorizacao;
+using Aluguel.Application.Contratos.AnexarDocumentoContrato;
 using Aluguel.Application.Contratos.AtualizarContrato;
+using Aluguel.Application.Contratos.BaixarAnexoContrato;
 using Aluguel.Application.Contratos.CancelarContrato;
 using Aluguel.Application.Contratos.CriarContrato;
 using Aluguel.Application.Contratos.EncerrarContrato;
@@ -74,6 +76,53 @@ public static class ContratoEndpoints
         })
         .WithName("AtualizarContrato")
         .RequireAuthorization(Politicas.GerenciaCadastros);
+
+        grupo.MapPost("/{id:guid}/anexo", async (Guid id, HttpRequest http, ISender sender, CancellationToken ct) =>
+        {
+            if (!http.HasFormContentType)
+                return Results.BadRequest(new { erro = "Envie o arquivo em multipart/form-data (campo 'arquivo')." });
+
+            var form = await http.ReadFormAsync(ct);
+            var arquivo = form.Files.GetFile("arquivo") ?? form.Files.FirstOrDefault();
+            if (arquivo is null || arquivo.Length == 0)
+                return Results.BadRequest(new { erro = "Selecione o PDF do contrato." });
+
+            await using var stream = arquivo.OpenReadStream();
+            try
+            {
+                var dto = await sender.Send(new AnexarDocumentoContratoCommand(
+                    id, stream, arquivo.FileName, arquivo.ContentType ?? "application/pdf"), ct);
+                return dto is null ? Results.NotFound() : Results.Ok(dto);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new { erro = ex.Message });
+            }
+        })
+        .WithName("AnexarDocumentoContrato")
+        .DisableAntiforgery()
+        .RequireAuthorization(Politicas.GerenciaCadastros);
+
+        grupo.MapGet("/{id:guid}/anexo", async (Guid id, ISender sender, CancellationToken ct) =>
+        {
+            try
+            {
+                var arquivo = await sender.Send(new BaixarAnexoContratoQuery(id), ct);
+                if (arquivo is null)
+                    return Results.NotFound(new { erro = "Anexo do contrato não encontrado." });
+
+                return Results.File(
+                    arquivo.Conteudo,
+                    arquivo.ContentType,
+                    fileDownloadName: arquivo.NomeArquivo,
+                    enableRangeProcessing: false);
+            }
+            catch (FileNotFoundException)
+            {
+                return Results.NotFound(new { erro = "Arquivo do anexo não está disponível no storage." });
+            }
+        })
+        .WithName("BaixarAnexoContrato");
 
         grupo.MapPost("/{id:guid}/encerrar", async (Guid id, ISender sender, CancellationToken ct) =>
         {

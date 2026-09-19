@@ -34,7 +34,21 @@ import {
   type NovoInquilinoInput,
 } from "@/lib/api/browser";
 import type { Contrato, Imovel, Inquilino } from "@/lib/api/types";
-import { formatarCpfCnpj, formatarData, formatarEndereco, formatarMoeda, mascaraCpfCnpj, mascaraTelefone } from "@/lib/format";
+import {
+  formatarCpfCnpj,
+  formatarData,
+  formatarEndereco,
+  formatarMoeda,
+  mascaraCpfCnpj,
+  mascaraMoeda,
+  mascaraPercentual,
+  mascaraTelefone,
+  moedaParaInput,
+  parseMoeda,
+  parsePercentual,
+  percentualParaInput,
+  percentualValido,
+} from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 type Painel =
@@ -66,6 +80,10 @@ export function CadastroImovel({
   const [inquilinoLocal, setInquilinoLocal] = useState<Inquilino | null>(null);
   const [documentoMascarado, setDocumentoMascarado] = useState("");
   const [telefoneMascarado, setTelefoneMascarado] = useState("");
+  const [valorAluguelMascarado, setValorAluguelMascarado] = useState("");
+  const [jurosMascarado, setJurosMascarado] = useState("");
+  const [multaMascarada, setMultaMascarada] = useState("");
+  const [anexoArquivo, setAnexoArquivo] = useState<File | null>(null);
   const inquilino = inquilinoProp ?? inquilinoLocal;
 
   function fechar() {
@@ -73,6 +91,54 @@ export function CadastroImovel({
     setErro(null);
     setDocumentoMascarado("");
     setTelefoneMascarado("");
+    setValorAluguelMascarado("");
+    setJurosMascarado("");
+    setMultaMascarada("");
+    setAnexoArquivo(null);
+  }
+
+  function abrirPainelContrato(tipo: "contrato-criar" | "contrato-renovar" | "contrato-editar") {
+    setErro(null);
+    setValorAluguelMascarado(moedaParaInput(contratoAtivo?.valorAluguel));
+    setJurosMascarado(percentualParaInput(contratoAtivo?.jurosAtrasoPct));
+    setMultaMascarada(percentualParaInput(contratoAtivo?.multaAtrasoPct));
+    setAnexoArquivo(null);
+    setPainel({ tipo });
+  }
+
+  function validarAnexoSelecionado(arquivo: File | null): boolean {
+    if (!arquivo) return true;
+    const nome = arquivo.name.toLowerCase();
+    if (!nome.endsWith(".pdf")) {
+      setErro("Anexe o contrato em PDF (.pdf).");
+      return false;
+    }
+    if (arquivo.size > 10 * 1024 * 1024) {
+      setErro("O anexo do contrato deve ter no máximo 10 MB.");
+      return false;
+    }
+    return true;
+  }
+
+  function validarCamposContrato(): { valorAluguel: number; jurosAtrasoPct: number | null; multaAtrasoPct: number | null } | null {
+    const valorAluguel = parseMoeda(valorAluguelMascarado);
+    if (!Number.isFinite(valorAluguel) || valorAluguel <= 0) {
+      setErro("Informe um valor do aluguel válido maior que zero.");
+      return null;
+    }
+    if (!percentualValido(jurosMascarado)) {
+      setErro("Juros atraso deve ser numérico, maior que zero e com no máximo 2 casas decimais.");
+      return null;
+    }
+    if (!percentualValido(multaMascarada)) {
+      setErro("Multa atraso deve ser numérica, maior que zero e com no máximo 2 casas decimais.");
+      return null;
+    }
+    return {
+      valorAluguel,
+      jurosAtrasoPct: parsePercentual(jurosMascarado),
+      multaAtrasoPct: parsePercentual(multaMascarada),
+    };
   }
 
   function recarregar() {
@@ -151,6 +217,9 @@ export function CadastroImovel({
 
   async function onSalvarContrato(form: FormData, renovar: boolean) {
     setErro(null);
+    const valores = validarCamposContrato();
+    if (!valores) return;
+    if (!validarAnexoSelecionado(anexoArquivo)) return;
     const dados: NovoContratoInput = {
       imovelId: imovel.id,
       inquilinoId: String(form.get("inquilinoId") ?? inquilino?.id ?? ""),
@@ -158,16 +227,19 @@ export function CadastroImovel({
       dataInicio: String(form.get("dataInicio") ?? ""),
       dataFimPrevista: textoOuNulo(form.get("dataFimPrevista")),
       diaVencimento: Number(form.get("diaVencimento") || 10),
-      valorAluguel: Number(String(form.get("valorAluguel") ?? "").replace(",", ".")),
-      jurosAtrasoPct: numeroOuNulo(form.get("jurosAtrasoPct")),
-      multaAtrasoPct: numeroOuNulo(form.get("multaAtrasoPct")),
+      valorAluguel: valores.valorAluguel,
+      jurosAtrasoPct: valores.jurosAtrasoPct,
+      multaAtrasoPct: valores.multaAtrasoPct,
     };
     setPending(true);
     try {
       if (renovar && contratoAtivo) {
         await bff.encerrarContrato(contratoAtivo.id);
       }
-      await bff.criarContrato(dados);
+      const criado = await bff.criarContrato(dados);
+      if (anexoArquivo) {
+        await bff.anexarContrato(criado.id, anexoArquivo);
+      }
       toast.success(renovar ? "Contrato renovado." : "Contrato incluído.");
       fechar();
       recarregar();
@@ -181,16 +253,22 @@ export function CadastroImovel({
   async function onEditarContrato(form: FormData) {
     if (!contratoAtivo) return;
     setErro(null);
+    const valores = validarCamposContrato();
+    if (!valores) return;
+    if (!validarAnexoSelecionado(anexoArquivo)) return;
     const dados: AtualizacaoContratoInput = {
       dataFimPrevista: textoOuNulo(form.get("dataFimPrevista")),
       diaVencimento: Number(form.get("diaVencimento") || contratoAtivo.diaVencimento),
-      valorAluguel: Number(String(form.get("valorAluguel") ?? "").replace(",", ".")),
-      jurosAtrasoPct: numeroOuNulo(form.get("jurosAtrasoPct")),
-      multaAtrasoPct: numeroOuNulo(form.get("multaAtrasoPct")),
+      valorAluguel: valores.valorAluguel,
+      jurosAtrasoPct: valores.jurosAtrasoPct,
+      multaAtrasoPct: valores.multaAtrasoPct,
     };
     setPending(true);
     try {
       await bff.atualizarContrato(contratoAtivo.id, dados);
+      if (anexoArquivo) {
+        await bff.anexarContrato(contratoAtivo.id, anexoArquivo);
+      }
       toast.success("Contrato atualizado.");
       fechar();
       recarregar();
@@ -338,8 +416,7 @@ export function CadastroImovel({
                     type="button"
                     className="h-8 rounded-[4px] px-3 text-xs"
                     onClick={() => {
-                      setErro(null);
-                      setPainel({ tipo: "contrato-editar" });
+                      abrirPainelContrato("contrato-editar");
                     }}
                   >
                     Editar
@@ -348,8 +425,7 @@ export function CadastroImovel({
                     type="button"
                     className="h-8 rounded-[4px] px-3 text-xs"
                     onClick={() => {
-                      setErro(null);
-                      setPainel({ tipo: "contrato-renovar" });
+                      abrirPainelContrato("contrato-renovar");
                     }}
                   >
                     Renovar
@@ -373,8 +449,7 @@ export function CadastroImovel({
                   disabled={listaInquilinos.length === 0}
                   title={listaInquilinos.length === 0 ? "Inclua o inquilino antes do contrato." : undefined}
                   onClick={() => {
-                    setErro(null);
-                    setPainel({ tipo: "contrato-criar" });
+                    abrirPainelContrato("contrato-criar");
                   }}
                 >
                   Incluir contrato
@@ -391,6 +466,23 @@ export function CadastroImovel({
             <CampoDetalhe rotulo="Fim previsto" valor={formatarData(contratoAtivo.dataFimPrevista)} />
             <CampoDetalhe rotulo="Vencimento" valor={`Dia ${contratoAtivo.diaVencimento}`} />
             <CampoDetalhe rotulo="Aluguel" valor={formatarMoeda(contratoAtivo.valorAluguel)} />
+            <CampoDetalhe
+              rotulo="Anexo"
+              valor={
+                contratoAtivo.anexoPath ? (
+                  <a
+                    href={`/api/contratos/${contratoAtivo.id}/anexo`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-[#DB6838] underline-offset-2 hover:underline"
+                  >
+                    Baixar PDF — {contratoAtivo.numeroContrato}
+                  </a>
+                ) : (
+                  "—"
+                )
+              }
+            />
           </dl>
         ) : (
           <p className="text-sm text-muted-foreground">Nenhum contrato ativo. Inclua ou renove após cadastrar o inquilino.</p>
@@ -503,7 +595,7 @@ export function CadastroImovel({
         {painel?.tipo === "contrato-criar" || painel?.tipo === "contrato-renovar" || painel?.tipo === "contrato-editar" ? (
           <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
             <form
-              className="flex flex-col"
+              className="m-[10px] flex flex-col"
               onSubmit={(ev: FormEvent<HTMLFormElement>) => {
                 ev.preventDefault();
                 const form = new FormData(ev.currentTarget);
@@ -511,17 +603,17 @@ export function CadastroImovel({
                 else void onSalvarContrato(form, painel.tipo === "contrato-renovar");
               }}
             >
-              <DialogHeader className="border-0 px-0 pt-0">
-                <DialogTitle className="pl-4">
+              <DialogHeader className="border-0 p-0 pr-10">
+                <DialogTitle>
                   {painel.tipo === "contrato-editar" ? "Editar contrato" : painel.tipo === "contrato-renovar" ? "Renovar contrato" : "Incluir contrato"}
                 </DialogTitle>
-                <DialogDescription className="pl-4">
+                <DialogDescription>
                   {painel.tipo === "contrato-renovar"
                     ? "O contrato atual será encerrado e um novo será cadastrado."
                     : "Um imóvel admite apenas um contrato ativo."}
                 </DialogDescription>
               </DialogHeader>
-              <div className="grid gap-4 px-6 py-2 sm:grid-cols-2">
+              <div className="grid gap-4 py-2 sm:grid-cols-2">
                 {painel.tipo !== "contrato-editar" ? (
                   <>
                     <Campo rotulo="Inquilino" htmlFor="inquilinoId" classe="sm:col-span-2">
@@ -548,17 +640,72 @@ export function CadastroImovel({
                   <Input id="diaVencimento" name="diaVencimento" type="number" min={1} max={31} required defaultValue={contratoAtivo?.diaVencimento ?? 10} className="h-10 rounded-[4px]" />
                 </Campo>
                 <Campo rotulo="Valor do aluguel" htmlFor="valorAluguel">
-                  <Input id="valorAluguel" name="valorAluguel" type="number" min={0.01} step="0.01" required defaultValue={contratoAtivo?.valorAluguel ?? ""} className="h-10 rounded-[4px]" />
+                  <Input
+                    id="valorAluguel"
+                    name="valorAluguel"
+                    inputMode="numeric"
+                    required
+                    value={valorAluguelMascarado}
+                    onChange={(e) => {
+                      setErro(null);
+                      setValorAluguelMascarado(mascaraMoeda(e.target.value));
+                    }}
+                    placeholder="R$ 0,00"
+                    className="h-10 rounded-[4px]"
+                  />
                 </Campo>
                 <Campo rotulo="Juros atraso (%)" htmlFor="jurosAtrasoPct">
-                  <Input id="jurosAtrasoPct" name="jurosAtrasoPct" type="number" step="0.01" defaultValue={contratoAtivo?.jurosAtrasoPct ?? ""} className="h-10 rounded-[4px]" />
+                  <Input
+                    id="jurosAtrasoPct"
+                    name="jurosAtrasoPct"
+                    inputMode="decimal"
+                    value={jurosMascarado}
+                    onChange={(e) => {
+                      setErro(null);
+                      setJurosMascarado(mascaraPercentual(e.target.value));
+                    }}
+                    placeholder="Ex.: 2,00"
+                    className="h-10 rounded-[4px]"
+                  />
                 </Campo>
                 <Campo rotulo="Multa atraso (%)" htmlFor="multaAtrasoPct">
-                  <Input id="multaAtrasoPct" name="multaAtrasoPct" type="number" step="0.01" defaultValue={contratoAtivo?.multaAtrasoPct ?? ""} className="h-10 rounded-[4px]" />
+                  <Input
+                    id="multaAtrasoPct"
+                    name="multaAtrasoPct"
+                    inputMode="decimal"
+                    value={multaMascarada}
+                    onChange={(e) => {
+                      setErro(null);
+                      setMultaMascarada(mascaraPercentual(e.target.value));
+                    }}
+                    placeholder="Ex.: 10,00"
+                    className="h-10 rounded-[4px]"
+                  />
+                </Campo>
+                <Campo rotulo="Anexo do contrato (PDF)" htmlFor="anexoContrato" classe="sm:col-span-2">
+                  <Input
+                    id="anexoContrato"
+                    name="anexoContrato"
+                    type="file"
+                    accept="application/pdf,.pdf"
+                    onChange={(e) => {
+                      setErro(null);
+                      const arquivo = e.target.files?.[0] ?? null;
+                      setAnexoArquivo(arquivo);
+                    }}
+                    className="h-10 rounded-[4px] pt-1.5 file:mr-3 file:rounded-[4px] file:border-0 file:bg-[#DB6838]/10 file:px-2 file:py-1 file:text-sm file:font-medium file:text-[#DB6838]"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {anexoArquivo
+                      ? `Selecionado: ${anexoArquivo.name}`
+                      : contratoAtivo?.anexoPath && painel.tipo === "contrato-editar"
+                        ? `Atual: ${nomeArquivoAnexo(contratoAtivo.anexoPath)}. Escolha outro PDF para substituir.`
+                        : "Opcional. PDF até 10 MB."}
+                  </p>
                 </Campo>
               </div>
-              <AlertaErro mensagem={erro} />
-              <DialogFooter className="border-0 px-0 pb-0">
+              <AlertaErro mensagem={erro} classe="mx-0" />
+              <DialogFooter className="border-0 p-0">
                 <Button type="button" variant="secondary" className="h-9 rounded-[4px] bg-[#95A5A6] text-white hover:bg-[#7F8C8D]" onClick={fechar}>
                   Cancelar
                 </Button>
@@ -604,16 +751,14 @@ function isoDate(valor: string | null | undefined): string {
   return valor.slice(0, 10);
 }
 
+function nomeArquivoAnexo(path: string): string {
+  const partes = path.split("/").filter(Boolean);
+  return partes[partes.length - 1] ?? path;
+}
+
 function textoOuNulo(valor: FormDataEntryValue | null): string | null {
   const s = String(valor ?? "").trim();
   return s.length ? s : null;
-}
-
-function numeroOuNulo(valor: FormDataEntryValue | null): number | null {
-  const s = String(valor ?? "").trim().replace(",", ".");
-  if (!s) return null;
-  const n = Number(s);
-  return Number.isFinite(n) ? n : null;
 }
 
 function Campo({ rotulo, htmlFor, children, classe }: { rotulo: string; htmlFor: string; children: ReactNode; classe?: string }) {
@@ -636,10 +781,10 @@ function CampoDetalhe({ rotulo, valor }: { rotulo: string; valor: ReactNode }) {
   );
 }
 
-function AlertaErro({ mensagem }: { mensagem: string | null }) {
+function AlertaErro({ mensagem, classe }: { mensagem: string | null; classe?: string }) {
   if (!mensagem) return null;
   return (
-    <p className="mx-6 mb-2 rounded-[4px] bg-[#f8d7da] px-3 py-2 text-sm text-[#721c24]" role="alert">
+    <p className={cn("mx-6 mb-2 rounded-[4px] bg-[#f8d7da] px-3 py-2 text-sm text-[#721c24]", classe)} role="alert">
       {mensagem}
     </p>
   );

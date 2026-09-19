@@ -111,6 +111,7 @@ export type Contrato = {
   valorAluguel: number;
   jurosAtrasoPct: number | null;
   multaAtrasoPct: number | null;
+  anexoPath: string | null;
 };
 
 export type Usuario = {

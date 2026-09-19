@@ -31,7 +31,7 @@ public sealed class AtualizarContratoCommandHandler(IContratoRepository reposito
             request.ValorAluguel,
             request.JurosAtrasoPct,
             request.MultaAtrasoPct,
-            string.IsNullOrWhiteSpace(request.AnexoPath) ? null : request.AnexoPath.Trim());
+            request.AnexoPath);
 
         await repositorio.SalvarAlteracoesAsync(cancellationToken);
         return contrato.ParaDto();
