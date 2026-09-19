@@ -1,6 +1,7 @@
 using Aluguel.Application.Autorizacao;
 using Aluguel.Application.Contratos.AnexarDocumentoContrato;
 using Aluguel.Application.Contratos.AtualizarContrato;
+using Aluguel.Application.Contratos.BaixarAnexoContrato;
 using Aluguel.Application.Contratos.CancelarContrato;
 using Aluguel.Application.Contratos.CriarContrato;
 using Aluguel.Application.Contratos.EncerrarContrato;
@@ -101,6 +102,27 @@ public static class ContratoEndpoints
         .WithName("AnexarDocumentoContrato")
         .DisableAntiforgery()
         .RequireAuthorization(Politicas.GerenciaCadastros);
+
+        grupo.MapGet("/{id:guid}/anexo", async (Guid id, ISender sender, CancellationToken ct) =>
+        {
+            try
+            {
+                var arquivo = await sender.Send(new BaixarAnexoContratoQuery(id), ct);
+                if (arquivo is null)
+                    return Results.NotFound(new { erro = "Anexo do contrato não encontrado." });
+
+                return Results.File(
+                    arquivo.Conteudo,
+                    arquivo.ContentType,
+                    fileDownloadName: arquivo.NomeArquivo,
+                    enableRangeProcessing: false);
+            }
+            catch (FileNotFoundException)
+            {
+                return Results.NotFound(new { erro = "Arquivo do anexo não está disponível no storage." });
+            }
+        })
+        .WithName("BaixarAnexoContrato");
 
         grupo.MapPost("/{id:guid}/encerrar", async (Guid id, ISender sender, CancellationToken ct) =>
         {

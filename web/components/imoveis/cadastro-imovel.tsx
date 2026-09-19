@@ -468,7 +468,20 @@ export function CadastroImovel({
             <CampoDetalhe rotulo="Aluguel" valor={formatarMoeda(contratoAtivo.valorAluguel)} />
             <CampoDetalhe
               rotulo="Anexo"
-              valor={contratoAtivo.anexoPath ? nomeArquivoAnexo(contratoAtivo.anexoPath) : "—"}
+              valor={
+                contratoAtivo.anexoPath ? (
+                  <a
+                    href={`/api/contratos/${contratoAtivo.id}/anexo`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-[#DB6838] underline-offset-2 hover:underline"
+                  >
+                    {nomeArquivoAnexo(contratoAtivo.anexoPath)}
+                  </a>
+                ) : (
+                  "—"
+                )
+              }
             />
           </dl>
         ) : (
