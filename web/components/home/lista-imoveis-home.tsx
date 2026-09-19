@@ -20,26 +20,28 @@ export function ListaImoveisHome({ imoveis }: { imoveis: { itens: Imovel[]; tota
       ) : (
         <ul className="grid gap-3">
           {imoveis.itens.map((imovel) => (
-            <li
-              key={imovel.id}
-              className="flex flex-col gap-3 rounded-lg bg-card p-4 shadow-[0_2px_8px_rgba(0,0,0,0.1)] ring-1 ring-border sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div className="flex items-start gap-3">
-                <div className="flex size-10 items-center justify-center rounded-[4px] bg-primary/10 text-primary">
-                  <Building2 className="size-5" />
+            <li key={imovel.id}>
+              <Link
+                href={`/imoveis/${imovel.id}`}
+                className="flex flex-col gap-3 rounded-lg bg-card p-4 shadow-[0_2px_8px_rgba(0,0,0,0.1)] ring-1 ring-border transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)] sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="flex size-10 items-center justify-center rounded-[4px] bg-primary/10 text-primary">
+                    <Building2 className="size-5" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-primary">{imovel.nome}</p>
+                    <p className="text-sm text-muted-foreground">{formatarEndereco(imovel.endereco)}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{imovel.tipo}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-semibold">{imovel.nome}</p>
-                  <p className="text-sm text-muted-foreground">{formatarEndereco(imovel.endereco)}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{imovel.tipo}</p>
+                <div className="flex items-center gap-3">
+                  <StatusBadge status={imovel.status} />
+                  <span className="hidden text-xs text-muted-foreground sm:inline">
+                    Ver cadastro
+                  </span>
                 </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <StatusBadge status={imovel.status} />
-                <span className="hidden text-xs text-muted-foreground sm:inline">
-                  NFS-e e pagamentos em breve
-                </span>
-              </div>
+              </Link>
             </li>
           ))}
         </ul>

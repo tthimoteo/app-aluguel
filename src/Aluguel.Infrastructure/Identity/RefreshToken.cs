@@ -8,6 +8,8 @@ public class RefreshToken
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid UserId { get; set; }
+    /// <summary>Cliente do contexto da sessão (perfil da vinculação). Nulo para o Administrador.</summary>
+    public Guid? ClienteId { get; set; }
     public string TokenHash { get; set; } = default!;
     public DateTimeOffset ExpiresAt { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;

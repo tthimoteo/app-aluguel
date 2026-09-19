@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { CardField, DataList, DesktopTable, MobileCard } from "@/components/data/data-list";
 import { EmptyState } from "@/components/data/empty-state";
 import { PageHeader } from "@/components/data/page-header";
@@ -9,15 +10,21 @@ import { api } from "@/lib/api/server";
 export default async function InquilinosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ termo?: string }>;
+  searchParams: Promise<{ termo?: string; clienteId?: string }>;
 }) {
-  const { termo } = await searchParams;
-  const pagina = await api.inquilinos({ termo, take: 50 });
+  const { termo, clienteId } = await searchParams;
+  const pagina = await api.inquilinos({ termo, take: 50, clienteId });
+  const voltarImoveis = clienteId ? `/imoveis?clienteId=${clienteId}` : "/imoveis";
 
   return (
     <div>
+      <p className="mb-3">
+        <Link href={voltarImoveis} className="text-sm font-medium text-primary hover:text-primary/80">
+          ← Imóveis
+        </Link>
+      </p>
       <PageHeader titulo="Inquilinos" descricao="Locatários vinculados aos imóveis do cliente." />
-      <SearchForm placeholder="Nome, documento ou e-mail" defaultValue={termo} />
+      <SearchForm placeholder="Nome, documento ou e-mail" defaultValue={termo} hidden={clienteId ? { clienteId } : undefined} />
       {pagina.itens.length === 0 ? (
         <EmptyState />
       ) : (

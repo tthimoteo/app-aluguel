@@ -12,3 +12,12 @@ public sealed record UsuarioDto(
     string Perfil,
     string Status,
     DateTimeOffset? UltimoLogin);
+
+/// <summary>Usuário já existente (mesmo CPF) encontrado para vincular a outro cliente.</summary>
+public sealed record UsuarioPorCpfDto(
+    Guid Id,
+    string Nome,
+    string Email,
+    string? Telefone,
+    string Cpf,
+    bool JaNoCliente);

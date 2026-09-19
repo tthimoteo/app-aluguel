@@ -93,7 +93,7 @@ Endpoints (`/api/usuarios`, exigem a política `GerenciaUsuarios` = **Administra
 - `GET /api/usuarios?clienteId=&termo=&skip=&take=` — lista paginada (filtro por nome/e-mail). O Gestor lista apenas o próprio cliente; o Administrador informa `clienteId`.
 - `GET /api/usuarios/{id}` — obtém por id (404 fora do escopo do cliente).
 - `POST /api/usuarios` — cria usuário Gestor/Analista (201). O cliente alvo é o do Gestor; o Administrador informa `clienteId` no corpo.
-- `PUT /api/usuarios/{id}` — atualiza nome, telefone, perfil e status (e-mail e CPF são imutáveis).
+- `PUT /api/usuarios/{id}` — atualiza nome, e-mail, telefone, perfil e status (CPF é imutável).
 - `DELETE /api/usuarios/{id}` — desativação lógica (`Status = Inativo`, 204) preservando o histórico/auditoria.
 
 Regras da documentação implementadas:
@@ -110,7 +110,7 @@ Validações (FluentValidation, via `ValidationBehavior`): e-mail obrigatório/�
 
 Cadastros operacionais (§7, §8, §9) em CQRS (MediatR), com repositórios EF Core escopados por tenant/soft delete. As tabelas `imovel`, `inquilino` e `contrato` já existem na migration `AddDomainModel` — **nenhuma migration nova**.
 
-Leitura liberada a qualquer perfil autenticado (o **Analista** consulta); escrita e transições de estado exigem a política `GerenciaCadastros` = **Administrador** ou **Gestor**. Não-admins operam apenas no próprio cliente (fora do escopo → `404`); o Administrador informa `clienteId`.
+Leitura liberada a qualquer perfil autenticado (o **Analista** consulta); escrita e transições de estado exigem a política `GerenciaCadastros` = **Administrador** ou **Gestor**. O Gestor informa `clienteId` de um cliente no qual é Gestor (senão usa o do JWT); o Administrador informa `clienteId`. Fora do escopo → `400`/`404`.
 
 **Imóveis** (`/api/imoveis`): `GET /` (filtros `clienteId`, `termo`, `tipo`, `status`, paginação), `GET /{id}`, `POST /`, `PUT /{id}` (inclui `status` Ativo/Inativo), `DELETE /{id}` (exclusão lógica).
 

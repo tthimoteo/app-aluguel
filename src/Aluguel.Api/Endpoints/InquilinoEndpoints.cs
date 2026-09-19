@@ -1,6 +1,7 @@
 using Aluguel.Application.Abstractions;
 using Aluguel.Application.Autorizacao;
 using Aluguel.Application.Clientes;
+using Aluguel.Application.Common.Acesso;
 using Aluguel.Application.Inquilinos.AtualizarInquilino;
 using Aluguel.Application.Inquilinos.CriarInquilino;
 using Aluguel.Application.Inquilinos.ListarInquilinos;
@@ -14,6 +15,7 @@ namespace Aluguel.Api.Endpoints;
 
 public sealed record CriarInquilinoRequest(
     Guid? ClienteId,
+    Guid? ImovelId,
     TipoPessoa TipoPessoa,
     string Nome,
     string Documento,
@@ -39,13 +41,13 @@ public static class InquilinoEndpoints
             .WithTags("Inquilinos")
             .RequireAuthorization();
 
-        grupo.MapGet("/", async (Guid? clienteId, string? termo, string? tipoPessoa, string? status,
+        grupo.MapGet("/", async (Guid? clienteId, Guid? imovelId, string? termo, string? tipoPessoa, string? status,
             int? skip, int? take, ISender sender, CancellationToken ct) =>
         {
             TipoPessoa? tp = Enum.TryParse<TipoPessoa>(tipoPessoa, ignoreCase: true, out var v) ? v : null;
             StatusAtivoInativo? statusFiltro = Enum.TryParse<StatusAtivoInativo>(status, ignoreCase: true, out var s) ? s : null;
             var pagina = await sender.Send(
-                new ListarInquilinosQuery(clienteId, termo, tp, statusFiltro, skip ?? 0, take ?? 20), ct);
+                new ListarInquilinosQuery(clienteId, termo, tp, statusFiltro, imovelId, skip ?? 0, take ?? 20), ct);
             return Results.Ok(pagina);
         })
         .WithName("ListarInquilinos");
@@ -58,15 +60,14 @@ public static class InquilinoEndpoints
         .WithName("ObterInquilinoPorId");
 
         grupo.MapPost("/", async (CriarInquilinoRequest req, ICurrentUser currentUser,
-            ISender sender, CancellationToken ct) =>
+            IAuthService auth, ISender sender, CancellationToken ct) =>
         {
-            var clienteId = currentUser.EhAdministrador ? req.ClienteId : currentUser.ClienteId;
-            if (clienteId is null)
-                return Results.BadRequest(new { erro = "clienteId é obrigatório para o Administrador." });
+            var clienteId = await EscopoVinculo.ExigirClienteComAcessoAsync(
+                currentUser, req.ClienteId, auth, ct, exigirGestor: true);
 
             var dto = await sender.Send(new CriarInquilinoCommand(
-                clienteId.Value, req.TipoPessoa, req.Nome, req.Documento,
-                req.InscricaoMunicipal, req.Telefone, req.Email, req.Endereco), ct);
+                clienteId, req.TipoPessoa, req.Nome, req.Documento,
+                req.InscricaoMunicipal, req.Telefone, req.Email, req.Endereco, req.ImovelId), ct);
             return Results.Created($"/api/inquilinos/{dto.Id}", dto);
         })
         .WithName("CriarInquilino")

@@ -15,7 +15,7 @@ export default async function RelatoriosPage() {
       <div className="rounded-lg bg-card p-6 shadow-[0_2px_8px_rgba(0,0,0,0.1)] ring-1 ring-border">
         <p className="text-sm text-muted-foreground">
           Os relatórios ficarão disponíveis quando o módulo financeiro e fiscal estiver ativo. Enquanto
-          isso, consulte os cadastros de imóveis, inquilinos e contratos no menu.
+          isso, consulte os cadastros de imóveis, inquilinos e contratos a partir da página de imóveis.
         </p>
       </div>
     </div>

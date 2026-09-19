@@ -6,8 +6,15 @@ import {
   formatarDataHora,
   formatarMoeda,
   iniciais,
+  mascaraMoeda,
+  mascaraPercentual,
+  moedaParaInput,
   nomeCliente,
   nomeDoPlano,
+  parseMoeda,
+  parsePercentual,
+  percentualParaInput,
+  percentualValido,
   rotuloStatus,
 } from "./format";
 import { semanticaStatus } from "./status";
@@ -99,5 +106,47 @@ describe("rotuloStatus", () => {
     expect(rotuloStatus("PendentePagamento")).toBe("Pendente pagamento");
     expect(rotuloStatus("Ativa")).toBe("Ativa");
     expect(rotuloStatus("Trial")).toBe("Trial");
+  });
+});
+
+describe("mascaraMoeda e parseMoeda", () => {
+  it("mascara dígitos como centavos em R$", () => {
+    expect(mascaraMoeda("200000")).toMatch(/R\$\s?2\.000,00/);
+    expect(mascaraMoeda("")).toBe("");
+    expect(mascaraMoeda("abc")).toBe("");
+  });
+
+  it("parseia moeda mascarada para número", () => {
+    expect(parseMoeda("R$ 2.000,00")).toBe(2000);
+    expect(parseMoeda("")).toBeNaN();
+  });
+
+  it("converte número para input mascarado", () => {
+    expect(moedaParaInput(2000)).toMatch(/R\$\s?2\.000,00/);
+    expect(moedaParaInput(null)).toBe("");
+  });
+});
+
+describe("mascaraPercentual e percentualValido", () => {
+  it("aceita só numérico com no máximo 2 casas decimais", () => {
+    expect(mascaraPercentual("12.345")).toBe("12,34");
+    expect(mascaraPercentual("2,5")).toBe("2,5");
+    expect(mascaraPercentual("abc10")).toBe("10");
+  });
+
+  it("valida maior que zero e no máximo 2 casas", () => {
+    expect(percentualValido("")).toBe(true);
+    expect(percentualValido("2")).toBe(true);
+    expect(percentualValido("2,5")).toBe(true);
+    expect(percentualValido("0")).toBe(false);
+    expect(percentualValido("-1")).toBe(false);
+    expect(percentualValido("1,234")).toBe(false);
+  });
+
+  it("parseia e formata percentual", () => {
+    expect(parsePercentual("2,5")).toBe(2.5);
+    expect(parsePercentual("")).toBeNull();
+    expect(percentualParaInput(10)).toBe("10");
+    expect(percentualParaInput(2.5)).toBe("2,5");
   });
 });

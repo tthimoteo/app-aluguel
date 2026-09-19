@@ -32,7 +32,8 @@ Abra [http://localhost:3000](http://localhost:3000). Em Development, usuários d
 - Layout com menu lateral (visibilidade por perfil, §13) e cabeçalho navy
 - Tema claro/escuro (`next-themes`)
 - Home com indicadores a partir de imóveis, inquilinos, contratos e planos
-- Listagens: clientes, imóveis, inquilinos, contratos, usuários
+- Listagens: clientes, imóveis (via seletor de cliente), usuários (via seletor de cliente)
+- Inquilinos e contratos acessados a partir da página de imóveis (fora do menu)
 - Minha Conta (Gestor) com `/api/auth/me` e catálogo de planos
 - Placeholders: relatórios, dados para contabilidade, auditoria
 

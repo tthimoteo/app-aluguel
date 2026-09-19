@@ -1078,6 +1078,10 @@ namespace Aluguel.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(150)")
                         .HasColumnName("email");
 
+                    b.Property<Guid?>("ImovelId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("imovel_id");
+
                     b.Property<string>("InscricaoMunicipal")
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)")
@@ -1119,6 +1123,11 @@ namespace Aluguel.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("ClienteId")
                         .HasDatabaseName("ix_inquilino_cliente_id");
+
+                    b.HasIndex("ImovelId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_inquilino_imovel_id_ativo")
+                        .HasFilter("imovel_id IS NOT NULL AND deleted_at IS NULL AND status = 'Ativo'");
 
                     b.ToTable("inquilino", "app");
                 });
@@ -1162,6 +1171,61 @@ namespace Aluguel.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_tenant_subdominio");
 
                     b.ToTable("tenant", "app");
+                });
+
+            modelBuilder.Entity("Aluguel.Domain.Usuarios.UsuarioCliente", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ClienteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cliente_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Perfil")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("perfil");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_usuario_cliente");
+
+                    b.HasIndex("UsuarioId")
+                        .HasDatabaseName("ix_usuario_cliente_usuario_id");
+
+                    b.HasIndex("ClienteId", "Status")
+                        .HasDatabaseName("ix_usuario_cliente_cliente_id_status");
+
+                    b.HasIndex("ClienteId", "UsuarioId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_usuario_cliente_cliente_id_usuario_id");
+
+                    b.ToTable("usuario_cliente", "app");
                 });
 
             modelBuilder.Entity("Aluguel.Infrastructure.Identity.AppRole", b =>
@@ -1307,6 +1371,9 @@ namespace Aluguel.Infrastructure.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("pk_asp_net_users");
 
+                    b.HasIndex("ClienteId")
+                        .HasDatabaseName("ix_asp_net_users_cliente_id");
+
                     b.HasIndex("NormalizedEmail")
                         .HasDatabaseName("EmailIndex");
 
@@ -1314,9 +1381,9 @@ namespace Aluguel.Infrastructure.Persistence.Migrations
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex");
 
-                    b.HasIndex("ClienteId", "Cpf")
+                    b.HasIndex("TenantId", "Cpf")
                         .IsUnique()
-                        .HasDatabaseName("ix_asp_net_users_cliente_id_cpf")
+                        .HasDatabaseName("ix_asp_net_users_tenant_id_cpf")
                         .HasFilter("cpf IS NOT NULL");
 
                     b.ToTable("asp_net_users", "identity");
@@ -1328,6 +1395,10 @@ namespace Aluguel.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
+
+                    b.Property<Guid?>("ClienteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cliente_id");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -1806,6 +1877,12 @@ namespace Aluguel.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasConstraintName("fk_inquilino_cliente_cliente_id");
 
+                    b.HasOne("Aluguel.Domain.Imoveis.Imovel", null)
+                        .WithMany()
+                        .HasForeignKey("ImovelId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_inquilino_imovel_imovel_id");
+
                     b.OwnsOne("Aluguel.Domain.ValueObjects.Endereco", "Endereco", b1 =>
                         {
                             b1.Property<Guid>("InquilinoId")
@@ -1858,6 +1935,23 @@ namespace Aluguel.Infrastructure.Persistence.Migrations
 
                     b.Navigation("Endereco")
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Aluguel.Domain.Usuarios.UsuarioCliente", b =>
+                {
+                    b.HasOne("Aluguel.Domain.Clientes.Cliente", null)
+                        .WithMany()
+                        .HasForeignKey("ClienteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_usuario_cliente_cliente_cliente_id");
+
+                    b.HasOne("Aluguel.Infrastructure.Identity.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_usuario_cliente_asp_net_users_usuario_id");
                 });
 
             modelBuilder.Entity("Aluguel.Infrastructure.Identity.AppUser", b =>

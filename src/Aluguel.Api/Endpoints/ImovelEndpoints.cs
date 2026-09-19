@@ -1,6 +1,7 @@
 using Aluguel.Application.Abstractions;
 using Aluguel.Application.Autorizacao;
 using Aluguel.Application.Clientes;
+using Aluguel.Application.Common.Acesso;
 using Aluguel.Application.Imoveis.AtualizarImovel;
 using Aluguel.Application.Imoveis.CriarImovel;
 using Aluguel.Application.Imoveis.ListarImoveis;
@@ -56,15 +57,14 @@ public static class ImovelEndpoints
         .WithName("ObterImovelPorId");
 
         grupo.MapPost("/", async (CriarImovelRequest req, ICurrentUser currentUser,
-            ISender sender, CancellationToken ct) =>
+            IAuthService auth, ISender sender, CancellationToken ct) =>
         {
-            // O Gestor só cadastra no próprio cliente; o Administrador informa o cliente alvo.
-            var clienteId = currentUser.EhAdministrador ? req.ClienteId : currentUser.ClienteId;
-            if (clienteId is null)
-                return Results.BadRequest(new { erro = "clienteId é obrigatório para o Administrador." });
+            // Administrador informa o cliente; Gestor cadastra no informado se for Gestor daquele vínculo.
+            var clienteId = await EscopoVinculo.ExigirClienteComAcessoAsync(
+                currentUser, req.ClienteId, auth, ct, exigirGestor: true);
 
             var dto = await sender.Send(new CriarImovelCommand(
-                clienteId.Value, req.Nome, req.Tipo, req.NumeroIptu, req.NumeroMatricula, req.Endereco), ct);
+                clienteId, req.Nome, req.Tipo, req.NumeroIptu, req.NumeroMatricula, req.Endereco), ct);
             return Results.Created($"/api/imoveis/{dto.Id}", dto);
         })
         .WithName("CriarImovel")

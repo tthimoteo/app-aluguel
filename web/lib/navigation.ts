@@ -12,8 +12,6 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Início", icone: "home", visivelPara: "todos" },
   { href: "/clientes", label: "Clientes", icone: "landmark", visivelPara: ["Administrador"] },
   { href: "/imoveis", label: "Imóveis", icone: "building", visivelPara: "todos" },
-  { href: "/inquilinos", label: "Inquilinos", icone: "users", visivelPara: "todos" },
-  { href: "/contratos", label: "Contratos", icone: "file", visivelPara: "todos" },
   { href: "/usuarios", label: "Usuários", icone: "userCog", visivelPara: ["Administrador", "Gestor"] },
   { href: "/minha-conta", label: "Minha Conta", icone: "user", visivelPara: ["Gestor"] },
   { href: "/relatorios", label: "Relatórios", icone: "barChart", visivelPara: ["Administrador", "Gestor", "Analista"] },
@@ -34,8 +32,22 @@ export function itensVisiveis(roles: readonly string[]): NavItem[] {
   });
 }
 
+const TITULOS_FORA_DO_MENU: Record<string, string> = {
+  "/imoveis/novo": "Incluir imóvel",
+  "/inquilinos": "Inquilinos",
+  "/contratos": "Contratos",
+};
+
 export function tituloDaRota(pathname: string): string {
   if (pathname === "/") return "Início";
-  const item = NAV_ITEMS.find((i) => i.href !== "/" && (pathname === i.href || pathname.startsWith(`${i.href}/`)));
-  return item?.label ?? "APP Aluguel";
+  if (/^\/imoveis\/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(\?.*)?$/.test(pathname)) {
+    return "Imóvel";
+  }
+  const candidatos: { href: string; label: string }[] = [
+    ...Object.entries(TITULOS_FORA_DO_MENU).map(([href, label]) => ({ href, label })),
+    ...NAV_ITEMS.filter((i) => i.href !== "/").map((i) => ({ href: i.href, label: i.label })),
+  ];
+  candidatos.sort((a, b) => b.href.length - a.href.length);
+  const match = candidatos.find(({ href }) => pathname === href || pathname.startsWith(`${href}/`));
+  return match?.label ?? "APP Aluguel";
 }

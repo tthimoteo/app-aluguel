@@ -14,7 +14,7 @@ public sealed record CriarUsuarioCommand(
     string? Cpf,
     string? Telefone,
     PerfilUsuario Perfil,
-    string Senha) : IRequest<UsuarioDto>;
+    string? Senha) : IRequest<UsuarioDto>;
 
 public sealed class CriarUsuarioCommandHandler(IUsuarioService usuarios, ICurrentTenant tenant)
     : IRequestHandler<CriarUsuarioCommand, UsuarioDto>

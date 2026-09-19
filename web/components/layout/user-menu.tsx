@@ -13,12 +13,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { UsuarioAutenticado } from "@/lib/api/types";
+import type { UsuarioAutenticado, VinculoCliente } from "@/lib/api/types";
 import { iniciais } from "@/lib/format";
 
-export function UserMenu({ usuario }: { usuario: UsuarioAutenticado }) {
+export function UserMenu({
+  usuario,
+  clientes = [],
+}: {
+  usuario: UsuarioAutenticado;
+  clientes?: VinculoCliente[];
+}) {
   const router = useRouter();
   const perfil = usuario.roles[0] ?? "Usuário";
+  const atual = clientes.find((c) => c.clienteId === usuario.clienteId);
 
   async function sair() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -52,7 +59,9 @@ export function UserMenu({ usuario }: { usuario: UsuarioAutenticado }) {
             <div className="flex flex-col gap-0.5">
               <span className="text-foreground">{usuario.nome}</span>
               <span className="font-normal">{usuario.email}</span>
-              <span className="font-normal text-primary">{perfil}</span>
+              <span className="font-normal text-primary">
+                {atual ? `${perfil} · ${atual.nome}` : perfil}
+              </span>
             </div>
           </DropdownMenuLabel>
         </DropdownMenuGroup>

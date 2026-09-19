@@ -7,7 +7,11 @@ public record UsuarioAutenticado(
     string Nome,
     Guid TenantId,
     Guid? ClienteId,
-    IReadOnlyList<string> Roles);
+    IReadOnlyList<string> Roles,
+    IReadOnlyList<VinculoClienteDto> Clientes);
+
+/// <summary>Cliente no qual o usuário autenticado pode atuar, com o perfil da vinculação.</summary>
+public record VinculoClienteDto(Guid ClienteId, string Nome, string Perfil, string Status);
 
 /// <summary>Par de tokens (access + refresh) e dados do usuário.</summary>
 public record TokensAutenticacao(
@@ -30,4 +34,10 @@ public interface IAuthService
     Task<ResultadoAuth> LoginAsync(string email, string senha, string? ip, CancellationToken ct = default);
     Task<ResultadoAuth> RefreshAsync(string refreshToken, string? ip, CancellationToken ct = default);
     Task LogoutAsync(string refreshToken, CancellationToken ct = default);
+
+    /// <summary>Troca o cliente do contexto da sessão e reemite os tokens com o perfil da vinculação.</summary>
+    Task<ResultadoAuth> SelecionarClienteAsync(Guid userId, Guid clienteId, string refreshToken, string? ip,
+        CancellationToken ct = default);
+
+    Task<IReadOnlyList<VinculoClienteDto>> ListarVinculosAsync(Guid userId, CancellationToken ct = default);
 }

@@ -1,3 +1,4 @@
+using Aluguel.Application.Usuarios;
 using Aluguel.Application.Usuarios.CriarUsuario;
 using Aluguel.Application.UnitTests.Fakes;
 using Aluguel.Domain.Usuarios;
@@ -12,9 +13,9 @@ public class CriarUsuarioValidatorTests
 
     private static CriarUsuarioCommand Comando(
         string email = "novo@demo.local",
-        string senha = "Senha@12345",
+        string? senha = "Senha@12345",
         PerfilUsuario perfil = PerfilUsuario.Analista,
-        string? cpf = null) =>
+        string? cpf = "39053344705") =>
         new(Cliente, "Fulano de Tal", email, cpf, "11999998888", perfil, senha);
 
     [Fact]
@@ -74,6 +75,28 @@ public class CriarUsuarioValidatorTests
         var result = await new CriarUsuarioCommandValidator(service)
             .TestValidateAsync(Comando(cpf: "390.533.447-05"));
         result.ShouldHaveValidationErrorFor(x => x.Cpf);
+    }
+
+    [Fact]
+    public async Task Cpf_obrigatorio()
+    {
+        var result = await new CriarUsuarioCommandValidator(new FakeUsuarioService())
+            .TestValidateAsync(Comando(cpf: null));
+        result.ShouldHaveValidationErrorFor(x => x.Cpf);
+    }
+
+    [Fact]
+    public async Task Mesmo_cpf_em_outro_cliente_nao_exige_senha()
+    {
+        var service = new FakeUsuarioService();
+        service.PorCpf["39053344705"] = new(Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"), "Ana", "ana@demo.local",
+            null, "39053344705", JaNoCliente: false);
+        service.EmailsEmUso.Add("ana@demo.local");
+
+        var result = await new CriarUsuarioCommandValidator(service)
+            .TestValidateAsync(Comando(email: "ana@demo.local", senha: null, cpf: "390.533.447-05"));
+
+        result.ShouldNotHaveAnyValidationErrors();
     }
 
     [Fact]

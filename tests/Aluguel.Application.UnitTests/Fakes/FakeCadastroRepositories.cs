@@ -51,16 +51,24 @@ public sealed class FakeInquilinoRepository : IInquilinoRepository
         Task.FromResult(Itens.FirstOrDefault(i => i.Id == id));
 
     public Task<IReadOnlyList<Inquilino>> ListarAsync(Guid? clienteId, string? termo, TipoPessoa? tipoPessoa,
-        StatusAtivoInativo? status, int skip, int take, CancellationToken ct = default) =>
+        StatusAtivoInativo? status, Guid? imovelId, int skip, int take, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<Inquilino>>(
-            Itens.Where(i => clienteId == null || i.ClienteId == clienteId).Skip(skip).Take(take).ToList());
+            Itens.Where(i => (clienteId == null || i.ClienteId == clienteId)
+                && (imovelId == null || i.ImovelId == imovelId))
+                .Skip(skip).Take(take).ToList());
 
     public Task<int> ContarAsync(Guid? clienteId, string? termo, TipoPessoa? tipoPessoa,
-        StatusAtivoInativo? status, CancellationToken ct = default) =>
-        Task.FromResult(Itens.Count(i => clienteId == null || i.ClienteId == clienteId));
+        StatusAtivoInativo? status, Guid? imovelId, CancellationToken ct = default) =>
+        Task.FromResult(Itens.Count(i => (clienteId == null || i.ClienteId == clienteId)
+            && (imovelId == null || i.ImovelId == imovelId)));
 
     public Task<bool> PossuiContratoAtivoAsync(Guid inquilinoId, CancellationToken ct = default) =>
         Task.FromResult(InquilinosComContratoAtivo.Contains(inquilinoId));
+
+    public Task<bool> ImovelPossuiInquilinoAtivoAsync(Guid imovelId, Guid? ignorarInquilinoId = null, CancellationToken ct = default) =>
+        Task.FromResult(Itens.Any(i => i.ImovelId == imovelId
+            && i.Status == StatusAtivoInativo.Ativo
+            && (ignorarInquilinoId == null || i.Id != ignorarInquilinoId)));
 
     public void Adicionar(Inquilino inquilino) => Itens.Add(inquilino);
 

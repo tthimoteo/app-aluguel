@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { CardField, DataList, DesktopTable, MobileCard } from "@/components/data/data-list";
 import { EmptyState } from "@/components/data/empty-state";
 import { PageHeader } from "@/components/data/page-header";
@@ -6,11 +7,22 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { api } from "@/lib/api/server";
 import { formatarData, formatarMoeda } from "@/lib/format";
 
-export default async function ContratosPage() {
-  const pagina = await api.contratos({ take: 50 });
+export default async function ContratosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ clienteId?: string }>;
+}) {
+  const { clienteId } = await searchParams;
+  const pagina = await api.contratos({ take: 50, clienteId });
+  const voltarImoveis = clienteId ? `/imoveis?clienteId=${clienteId}` : "/imoveis";
 
   return (
     <div>
+      <p className="mb-3">
+        <Link href={voltarImoveis} className="text-sm font-medium text-primary hover:text-primary/80">
+          ← Imóveis
+        </Link>
+      </p>
       <PageHeader
         titulo="Contratos"
         descricao="Contratos de locação. Um imóvel admite apenas um contrato ativo (CASO 3)."

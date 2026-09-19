@@ -7,6 +7,7 @@ public sealed record InquilinoDto(
     Guid Id,
     Guid TenantId,
     Guid ClienteId,
+    Guid? ImovelId,
     string TipoPessoa,
     string Nome,
     string Documento,

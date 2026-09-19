@@ -80,17 +80,27 @@ O "Usuário do cliente" (§6) é modelado estendendo `IdentityUser<Guid>` — a 
 public class AppUser : IdentityUser<Guid>   // tabela identity.asp_net_users
 {
     public Guid TenantId { get; set; }
-    public Guid ClienteId { get; set; }
+    public Guid? ClienteId { get; set; }   // contexto da sessão; vinculações em UsuarioCliente
     public string Nome { get; set; } = default!;
-    public string? Cpf { get; set; }
+    public string? Cpf { get; set; }       // único por tenant — chave de comparação entre clientes
     public string? Telefone { get; set; }
     public PerfilUsuario Perfil { get; set; } = PerfilUsuario.Gestor;
     public StatusUsuario Status { get; set; } = StatusUsuario.Ativo;
     public DateTimeOffset? UltimoLogin { get; set; }
-    // Email/PasswordHash/PhoneNumber/TwoFactorEnabled vêm de IdentityUser
 }
 public class AppRole : IdentityRole<Guid> { }
+
+public class UsuarioCliente : Entity, ITenantOwned   // app.usuario_cliente
+{
+    public Guid TenantId { get; private set; }
+    public Guid UsuarioId { get; private set; }
+    public Guid ClienteId { get; private set; }
+    public PerfilUsuario Perfil { get; private set; }   // Gestor | Analista
+    public StatusUsuario Status { get; private set; }
+}
 ```
+
+O mesmo CPF (uma identidade) pode ter N vinculações. Unique `(ClienteId, UsuarioId)` impede cadastro duplicado no mesmo cliente (CASO 1). O JWT carrega `cliente_id` + `role` da vinculação selecionada (`POST /api/auth/contexto`).
 
 ## 5. Cliente e Certificado
 

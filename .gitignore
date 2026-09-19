@@ -9,3 +9,6 @@ obj/
 node_modules/
 # OS
 .DS_Store
+# Storage local (anexos de contrato em desenvolvimento)
+storage/
+src/Aluguel.Api/storage/

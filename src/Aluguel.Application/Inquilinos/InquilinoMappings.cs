@@ -9,6 +9,7 @@ internal static class InquilinoMappings
         i.Id,
         i.TenantId,
         i.ClienteId,
+        i.ImovelId,
         i.TipoPessoa.ToString(),
         i.Nome,
         i.Documento,

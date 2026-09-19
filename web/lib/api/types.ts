@@ -1,5 +1,12 @@
 export type PerfilUsuario = "Administrador" | "Gestor" | "Analista";
 
+export type VinculoCliente = {
+  clienteId: string;
+  nome: string;
+  perfil: string;
+  status: string;
+};
+
 export type UsuarioAutenticado = {
   id: string;
   email: string;
@@ -7,6 +14,7 @@ export type UsuarioAutenticado = {
   tenantId: string;
   clienteId: string | null;
   roles: string[];
+  clientes?: VinculoCliente[];
 };
 
 export type TokensAutenticacao = {
@@ -78,11 +86,13 @@ export type Inquilino = {
   id: string;
   tenantId: string;
   clienteId: string;
+  imovelId: string | null;
   tipoPessoa: string;
   nome: string;
   documento: string;
   telefone: string | null;
   email: string | null;
+  inscricaoMunicipal: string | null;
   status: string;
   endereco: Endereco;
 };
@@ -101,6 +111,7 @@ export type Contrato = {
   valorAluguel: number;
   jurosAtrasoPct: number | null;
   multaAtrasoPct: number | null;
+  anexoPath: string | null;
 };
 
 export type Usuario = {
@@ -123,4 +134,5 @@ export type AuthMe = {
   tenantId: string | null;
   clienteId: string | null;
   roles: string[];
+  clientes?: VinculoCliente[];
 };
