@@ -165,6 +165,21 @@ export const bff = {
     bffFetch<Contrato>("/api/contratos", { method: "POST", body: JSON.stringify(dados) }),
   atualizarContrato: (id: string, dados: AtualizacaoContratoInput) =>
     bffFetch<Contrato>(`/api/contratos/${id}`, { method: "PUT", body: JSON.stringify(dados) }),
+  anexarContrato: async (id: string, arquivo: File) => {
+    const form = new FormData();
+    form.append("arquivo", arquivo);
+    const res = await fetch(`/api/contratos/${id}/anexo`, {
+      method: "POST",
+      body: form,
+      cache: "no-store",
+    });
+    const texto = await res.text();
+    const body = texto ? (JSON.parse(texto) as unknown) : null;
+    if (!res.ok) {
+      throw new BffError(res.status, mensagemApiErro(body));
+    }
+    return body as Contrato;
+  },
   encerrarContrato: (id: string) =>
     bffFetch<Contrato>(`/api/contratos/${id}/encerrar`, { method: "POST" }),
   selecionarCliente: (clienteId: string) =>

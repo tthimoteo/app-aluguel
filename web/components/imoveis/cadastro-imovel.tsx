@@ -83,6 +83,7 @@ export function CadastroImovel({
   const [valorAluguelMascarado, setValorAluguelMascarado] = useState("");
   const [jurosMascarado, setJurosMascarado] = useState("");
   const [multaMascarada, setMultaMascarada] = useState("");
+  const [anexoArquivo, setAnexoArquivo] = useState<File | null>(null);
   const inquilino = inquilinoProp ?? inquilinoLocal;
 
   function fechar() {
@@ -93,6 +94,7 @@ export function CadastroImovel({
     setValorAluguelMascarado("");
     setJurosMascarado("");
     setMultaMascarada("");
+    setAnexoArquivo(null);
   }
 
   function abrirPainelContrato(tipo: "contrato-criar" | "contrato-renovar" | "contrato-editar") {
@@ -100,7 +102,22 @@ export function CadastroImovel({
     setValorAluguelMascarado(moedaParaInput(contratoAtivo?.valorAluguel));
     setJurosMascarado(percentualParaInput(contratoAtivo?.jurosAtrasoPct));
     setMultaMascarada(percentualParaInput(contratoAtivo?.multaAtrasoPct));
+    setAnexoArquivo(null);
     setPainel({ tipo });
+  }
+
+  function validarAnexoSelecionado(arquivo: File | null): boolean {
+    if (!arquivo) return true;
+    const nome = arquivo.name.toLowerCase();
+    if (!nome.endsWith(".pdf")) {
+      setErro("Anexe o contrato em PDF (.pdf).");
+      return false;
+    }
+    if (arquivo.size > 10 * 1024 * 1024) {
+      setErro("O anexo do contrato deve ter no máximo 10 MB.");
+      return false;
+    }
+    return true;
   }
 
   function validarCamposContrato(): { valorAluguel: number; jurosAtrasoPct: number | null; multaAtrasoPct: number | null } | null {
@@ -202,6 +219,7 @@ export function CadastroImovel({
     setErro(null);
     const valores = validarCamposContrato();
     if (!valores) return;
+    if (!validarAnexoSelecionado(anexoArquivo)) return;
     const dados: NovoContratoInput = {
       imovelId: imovel.id,
       inquilinoId: String(form.get("inquilinoId") ?? inquilino?.id ?? ""),
@@ -218,7 +236,10 @@ export function CadastroImovel({
       if (renovar && contratoAtivo) {
         await bff.encerrarContrato(contratoAtivo.id);
       }
-      await bff.criarContrato(dados);
+      const criado = await bff.criarContrato(dados);
+      if (anexoArquivo) {
+        await bff.anexarContrato(criado.id, anexoArquivo);
+      }
       toast.success(renovar ? "Contrato renovado." : "Contrato incluído.");
       fechar();
       recarregar();
@@ -234,6 +255,7 @@ export function CadastroImovel({
     setErro(null);
     const valores = validarCamposContrato();
     if (!valores) return;
+    if (!validarAnexoSelecionado(anexoArquivo)) return;
     const dados: AtualizacaoContratoInput = {
       dataFimPrevista: textoOuNulo(form.get("dataFimPrevista")),
       diaVencimento: Number(form.get("diaVencimento") || contratoAtivo.diaVencimento),
@@ -244,6 +266,9 @@ export function CadastroImovel({
     setPending(true);
     try {
       await bff.atualizarContrato(contratoAtivo.id, dados);
+      if (anexoArquivo) {
+        await bff.anexarContrato(contratoAtivo.id, anexoArquivo);
+      }
       toast.success("Contrato atualizado.");
       fechar();
       recarregar();
@@ -441,6 +466,10 @@ export function CadastroImovel({
             <CampoDetalhe rotulo="Fim previsto" valor={formatarData(contratoAtivo.dataFimPrevista)} />
             <CampoDetalhe rotulo="Vencimento" valor={`Dia ${contratoAtivo.diaVencimento}`} />
             <CampoDetalhe rotulo="Aluguel" valor={formatarMoeda(contratoAtivo.valorAluguel)} />
+            <CampoDetalhe
+              rotulo="Anexo"
+              valor={contratoAtivo.anexoPath ? nomeArquivoAnexo(contratoAtivo.anexoPath) : "—"}
+            />
           </dl>
         ) : (
           <p className="text-sm text-muted-foreground">Nenhum contrato ativo. Inclua ou renove após cadastrar o inquilino.</p>
@@ -640,6 +669,27 @@ export function CadastroImovel({
                     className="h-10 rounded-[4px]"
                   />
                 </Campo>
+                <Campo rotulo="Anexo do contrato (PDF)" htmlFor="anexoContrato" classe="sm:col-span-2">
+                  <Input
+                    id="anexoContrato"
+                    name="anexoContrato"
+                    type="file"
+                    accept="application/pdf,.pdf"
+                    onChange={(e) => {
+                      setErro(null);
+                      const arquivo = e.target.files?.[0] ?? null;
+                      setAnexoArquivo(arquivo);
+                    }}
+                    className="h-10 rounded-[4px] pt-1.5 file:mr-3 file:rounded-[4px] file:border-0 file:bg-[#DB6838]/10 file:px-2 file:py-1 file:text-sm file:font-medium file:text-[#DB6838]"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {anexoArquivo
+                      ? `Selecionado: ${anexoArquivo.name}`
+                      : contratoAtivo?.anexoPath && painel.tipo === "contrato-editar"
+                        ? `Atual: ${nomeArquivoAnexo(contratoAtivo.anexoPath)}. Escolha outro PDF para substituir.`
+                        : "Opcional. PDF até 10 MB."}
+                  </p>
+                </Campo>
               </div>
               <AlertaErro mensagem={erro} classe="mx-0" />
               <DialogFooter className="border-0 p-0">
@@ -686,6 +736,11 @@ function rotuloTipo(tipo: string): string {
 function isoDate(valor: string | null | undefined): string {
   if (!valor) return "";
   return valor.slice(0, 10);
+}
+
+function nomeArquivoAnexo(path: string): string {
+  const partes = path.split("/").filter(Boolean);
+  return partes[partes.length - 1] ?? path;
 }
 
 function textoOuNulo(valor: FormDataEntryValue | null): string | null {
