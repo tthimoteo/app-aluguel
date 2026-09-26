@@ -53,6 +53,22 @@ export type Plano = {
   valorMensal: number | null;
 };
 
+export type CertificadoDigital = {
+  id: string;
+  clienteId: string;
+  thumbprint: string;
+  validade: string;
+  ativo: boolean;
+  vencido: boolean;
+  createdAt: string;
+};
+
+export type RegimeTributario =
+  | "SimplesNacional"
+  | "LucroPresumido"
+  | "LucroReal"
+  | "Mei";
+
 export type Cliente = {
   id: string;
   tipoPessoa: string;
@@ -62,9 +78,14 @@ export type Cliente = {
   nomeExibicao: string;
   nome: string | null;
   cpf: string | null;
+  dataNascimento: string | null;
   razaoSocial: string | null;
   nomeFantasia: string | null;
   cnpj: string | null;
+  inscricaoMunicipal: string | null;
+  cnaePrincipal: string | null;
+  codigoServico: string | null;
+  regimeTributario: RegimeTributario | string | null;
   telefone: string | null;
   email: string | null;
   endereco: Endereco;

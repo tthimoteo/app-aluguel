@@ -14,6 +14,8 @@ public sealed record AtualizarClienteCommand(
     string? NomeFantasia,
     string? InscricaoMunicipal,
     string? CnaePrincipal,
+    string? CodigoServico,
+    string? RegimeTributario,
     string? Telefone,
     string? Email,
     EnderecoInput? Endereco) : IRequest<ClienteDto?>;
@@ -35,6 +37,17 @@ public sealed class AtualizarClienteCommandHandler(IClienteRepository repositori
         else
             cliente.AtualizarDadosPessoaJuridica(request.RazaoSocial!, request.NomeFantasia,
                 request.InscricaoMunicipal, request.CnaePrincipal, request.Telefone, request.Email, endereco);
+
+        RegimeTributario? regime = null;
+        if (!string.IsNullOrWhiteSpace(request.RegimeTributario)
+            && Enum.TryParse<RegimeTributario>(request.RegimeTributario, ignoreCase: true, out var r))
+        {
+            regime = r;
+        }
+
+        // CNAE/serviço/regime: PF também precisa quando o plano permite NFS-e.
+        // Em PJ, CnaePrincipal já pode ter sido setado em AtualizarDadosPessoaJuridica — reaplicamos de forma unificada.
+        cliente.DefinirDadosFiscaisNfse(request.CnaePrincipal, request.CodigoServico, regime);
 
         if (request.PlanoId is not null)
             cliente.DefinirPlano(request.PlanoId);

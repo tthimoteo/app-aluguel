@@ -17,6 +17,11 @@ public sealed class AtualizarClienteCommandValidator : AbstractValidator<Atualiz
         RuleFor(x => x.NomeFantasia).MaximumLength(150);
         RuleFor(x => x.InscricaoMunicipal).MaximumLength(30);
         RuleFor(x => x.CnaePrincipal).MaximumLength(10);
+        RuleFor(x => x.CodigoServico).MaximumLength(20);
+        RuleFor(x => x.RegimeTributario)
+            .Must(r => string.IsNullOrWhiteSpace(r)
+                       || Enum.TryParse<Domain.Clientes.RegimeTributario>(r, ignoreCase: true, out _))
+            .WithMessage("Regime tributário inválido.");
         RuleFor(x => x.Telefone).MaximumLength(20);
 
         RuleFor(x => x.Email).EmailAddress().When(x => !string.IsNullOrWhiteSpace(x.Email));

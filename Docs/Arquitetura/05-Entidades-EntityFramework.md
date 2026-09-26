@@ -121,6 +121,8 @@ public class Cliente : AggregateRoot, ITenantOwned, IAuditable, ISoftDeletable
     public string? Cnpj { get; private set; }
     public string? InscricaoMunicipal { get; private set; }
     public string? CnaePrincipal { get; private set; }
+    public string? CodigoServico { get; private set; }       // NFS-e (LC 116 / municipal)
+    public RegimeTributario? RegimeTributario { get; private set; }
     public string? Telefone { get; private set; }
     public string? Email { get; private set; }
     public Endereco Endereco { get; private set; } = new(null,null,null,null,null,null,null);

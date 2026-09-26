@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getApiUrl } from "@/lib/api/config";
 import type {
   AuthMe,
+  CertificadoDigital,
   Cliente,
   Contrato,
   Imovel,
@@ -84,9 +85,14 @@ export const api = {
     ),
   inquilino: (id: string) => apiFetch<Inquilino>(`/api/inquilinos/${id}`),
   imovel: (id: string) => apiFetch<Imovel>(`/api/imoveis/${id}`),
-  contratos: (opts?: { take?: number; clienteId?: string; imovelId?: string }) =>
+  contratos: (opts?: { take?: number; clienteId?: string; imovelId?: string; status?: string }) =>
     apiFetch<Pagina<Contrato>>(
-      `/api/contratos${qs({ take: opts?.take ?? 20, clienteId: opts?.clienteId, imovelId: opts?.imovelId })}`,
+      `/api/contratos${qs({
+        take: opts?.take ?? 20,
+        clienteId: opts?.clienteId,
+        imovelId: opts?.imovelId,
+        status: opts?.status,
+      })}`,
     ),
   usuarios: (opts?: { termo?: string; take?: number; clienteId?: string }) =>
     apiFetch<Pagina<Usuario>>(
@@ -95,4 +101,12 @@ export const api = {
   usuario: (id: string, clienteId?: string) =>
     apiFetch<Usuario>(`/api/usuarios/${id}${qs({ clienteId })}`),
   cliente: (id: string) => apiFetch<Cliente>(`/api/clientes/${id}`),
+  certificadoCliente: async (clienteId: string) => {
+    try {
+      return await apiFetch<CertificadoDigital>(`/api/clientes/${clienteId}/certificado`);
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 404) return null;
+      throw e;
+    }
+  },
 };

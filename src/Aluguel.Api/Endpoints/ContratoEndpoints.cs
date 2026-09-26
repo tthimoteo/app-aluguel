@@ -111,10 +111,13 @@ public static class ContratoEndpoints
                 if (arquivo is null)
                     return Results.NotFound(new { erro = "Anexo do contrato não encontrado." });
 
+                // fileDownloadName força Content-Disposition: attachment (download do PDF antigo ou atual).
                 return Results.File(
                     arquivo.Conteudo,
-                    arquivo.ContentType,
-                    fileDownloadName: arquivo.NomeArquivo,
+                    contentType: "application/pdf",
+                    fileDownloadName: arquivo.NomeArquivo.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase)
+                        ? arquivo.NomeArquivo
+                        : $"{arquivo.NomeArquivo}.pdf",
                     enableRangeProcessing: false);
             }
             catch (FileNotFoundException)

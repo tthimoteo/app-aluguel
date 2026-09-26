@@ -3,6 +3,7 @@ using System;
 using Aluguel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Aluguel.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260926153015_ClienteDadosFiscaisNfse")]
+    partial class ClienteDadosFiscaisNfse
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1005,10 +1008,6 @@ namespace Aluguel.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("cliente_id");
 
-                    b.Property<string>("CompetenciaInicial")
-                        .HasColumnType("char(7)")
-                        .HasColumnName("competencia_inicial");
-
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -1016,14 +1015,6 @@ namespace Aluguel.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("DeletedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("deleted_at");
-
-                    b.Property<decimal?>("DespesasCondominiais")
-                        .HasColumnType("numeric(14,2)")
-                        .HasColumnName("despesas_condominiais");
-
-                    b.Property<int?>("DiaVencimentoCobranca")
-                        .HasColumnType("integer")
-                        .HasColumnName("dia_vencimento_cobranca");
 
                     b.Property<string>("Nome")
                         .IsRequired()
@@ -1040,11 +1031,6 @@ namespace Aluguel.Infrastructure.Persistence.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)")
                         .HasColumnName("numero_matricula");
-
-                    b.Property<string>("PropositoLocacao")
-                        .HasMaxLength(40)
-                        .HasColumnType("character varying(40)")
-                        .HasColumnName("proposito_locacao");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -1065,10 +1051,6 @@ namespace Aluguel.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
-
-                    b.Property<decimal?>("ValorIptu")
-                        .HasColumnType("numeric(14,2)")
-                        .HasColumnName("valor_iptu");
 
                     b.HasKey("Id")
                         .HasName("pk_imovel");

@@ -36,7 +36,7 @@ const PERFIS = ["Gestor", "Analista"] as const;
 const STATUS = ["Ativo", "Inativo", "Bloqueado"] as const;
 
 const selectClass =
-  "h-10 w-full rounded-[4px] border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/20 dark:bg-input/30";
+  "h-10 w-full rounded-[4px] border border-input bg-transparent px-3 text-sm text-foreground outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/20 dark:bg-input/30 dark:scheme-dark";
 
 export function GestaoUsuarios({
   usuarios,

@@ -77,6 +77,8 @@ CREATE TABLE app.cliente (
     cnpj                varchar(14)  NULL,
     inscricao_municipal varchar(30)  NULL,
     cnae_principal      varchar(10)  NULL,
+    codigo_servico      varchar(20)  NULL,   -- item LC 116 / municipal (NFS-e)
+    regime_tributario   varchar(30)  NULL,   -- SimplesNacional | LucroPresumido | LucroReal | Mei
     -- contato + endereço
     telefone            varchar(20) NULL,
     email               citext NULL,
