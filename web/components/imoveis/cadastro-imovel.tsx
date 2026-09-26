@@ -885,11 +885,12 @@ export function CadastroImovel({
                       : "—"
                   }
                 />
-                <CampoDetalhe
-                  rotulo="Endereço"
-                  valor={painel.item.detalhe ? formatarEndereco(painel.item.detalhe.endereco) : "—"}
-                  classe="sm:col-span-2"
-                />
+                <div className="sm:col-span-2">
+                  <CampoDetalhe
+                    rotulo="Endereço"
+                    valor={painel.item.detalhe ? formatarEndereco(painel.item.detalhe.endereco) : "—"}
+                  />
+                </div>
               </dl>
               <DialogFooter className="border-0 p-0">
                 <Button
@@ -962,9 +963,11 @@ export function CadastroImovel({
                                   href={`/api/contratos/${c.id}/anexo`}
                                   target="_blank"
                                   rel="noopener noreferrer"
+                                  download
                                   className="font-medium text-[#DB6838] underline-offset-2 hover:underline"
+                                  onClick={(e) => e.stopPropagation()}
                                 >
-                                  PDF
+                                  Baixar
                                 </a>
                               ) : (
                                 "—"
@@ -1019,24 +1022,28 @@ export function CadastroImovel({
                   rotulo="Multa atraso"
                   valor={painel.contrato.multaAtrasoPct != null ? `${String(painel.contrato.multaAtrasoPct).replace(".", ",")}%` : "—"}
                 />
-                <CampoDetalhe
-                  rotulo="Anexo"
-                  valor={
-                    painel.contrato.anexoPath ? (
-                      <a
-                        href={`/api/contratos/${painel.contrato.id}/anexo`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-medium text-[#DB6838] underline-offset-2 hover:underline"
-                      >
-                        Baixar PDF
-                      </a>
-                    ) : (
-                      "—"
-                    )
-                  }
-                />
               </dl>
+              <div className="mb-3 rounded-[4px] border border-border bg-[#F8F9FA] p-3 dark:bg-muted/40">
+                <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Anexo do contrato</p>
+                {painel.contrato.anexoPath ? (
+                  <div className="mt-2 flex flex-wrap items-center gap-3">
+                    <a
+                      href={`/api/contratos/${painel.contrato.id}/anexo`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      download
+                      className="inline-flex h-9 items-center rounded-[4px] bg-[#DB6838] px-4 text-sm font-medium text-white hover:bg-[#C55A32]"
+                    >
+                      Baixar PDF do contrato
+                    </a>
+                    <span className="text-xs text-muted-foreground">
+                      {nomeArquivoAnexo(painel.contrato.anexoPath)}
+                    </span>
+                  </div>
+                ) : (
+                  <p className="mt-1 text-sm text-muted-foreground">Nenhum anexo registrado neste contrato.</p>
+                )}
+              </div>
               <DialogFooter className="border-0 p-0">
                 <Button
                   type="button"
