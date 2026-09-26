@@ -32,6 +32,10 @@ public class ImovelConfiguration : IEntityTypeConfiguration<Imovel>
         b.Property(x => x.Status).HasConversion<string>().HasMaxLength(10).IsRequired();
         b.Property(x => x.NumeroIptu).HasMaxLength(30);
         b.Property(x => x.NumeroMatricula).HasMaxLength(30);
+        b.Property(x => x.CompetenciaInicial).HasColumnType("char(7)");
+        b.Property(x => x.PropositoLocacao).HasConversion<string>().HasMaxLength(40);
+        b.Property(x => x.DespesasCondominiais).HasColumnType("numeric(14,2)");
+        b.Property(x => x.ValorIptu).HasColumnType("numeric(14,2)");
         b.OwnsOne(x => x.Endereco, e => e.MapEndereco());
 
         b.HasOne<Cliente>().WithMany().HasForeignKey(x => x.ClienteId).OnDelete(DeleteBehavior.Restrict);

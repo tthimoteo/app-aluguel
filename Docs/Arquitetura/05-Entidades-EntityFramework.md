@@ -191,9 +191,17 @@ public class Imovel : Entity, ITenantOwned, ISoftDeletable
     public Endereco Endereco { get; private set; } = new(null,null,null,null,null,null,null);
     public string? NumeroIptu { get; private set; }
     public string? NumeroMatricula { get; private set; }
+    // Cadastro de cobrança (ficha do imóvel)
+    public string? CompetenciaInicial { get; private set; }       // MM/AAAA
+    public PropositoLocacao? PropositoLocacao { get; private set; }
+    public int? DiaVencimentoCobranca { get; private set; }
+    public decimal? DespesasCondominiais { get; private set; }
+    public decimal? ValorIptu { get; private set; }               // monetário (≠ NumeroIptu)
     public StatusImovel Status { get; private set; } = StatusImovel.Ativo;
     public DateTimeOffset? DeletedAt { get; private set; }
     private Imovel() { }
+    public void DefinirCobranca(string? competenciaInicial, PropositoLocacao? proposito,
+        int? diaVencimento, decimal? despesasCondominiais, decimal? valorIptu) { /* … */ }
 }
 
 public class Inquilino : Entity, ITenantOwned, ISoftDeletable

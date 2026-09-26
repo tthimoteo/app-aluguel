@@ -201,3 +201,21 @@ export function percentualParaInput(valor: number | null | undefined): string {
   if (valor == null || Number.isNaN(valor)) return "";
   return String(valor).replace(".", ",");
 }
+
+/**
+ * Máscara de competência MM/AAAA durante a digitação.
+ * Aceita só dígitos e insere a barra após o mês.
+ */
+export function mascaraCompetencia(valor: string): string {
+  const digitos = soDigitos(valor).slice(0, 6);
+  if (digitos.length <= 2) return digitos;
+  return `${digitos.slice(0, 2)}/${digitos.slice(2)}`;
+}
+
+/** Valida competência no formato MM/AAAA (mês 01–12). Vazio = opcional/ok. */
+export function competenciaValida(valor: string): boolean {
+  const s = valor.trim();
+  if (!s) return true;
+  if (!/^(0[1-9]|1[0-2])\/\d{4}$/.test(s)) return false;
+  return true;
+}

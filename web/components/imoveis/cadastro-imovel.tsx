@@ -12,6 +12,7 @@ import {
   selectClass,
   type EnderecoFormulario,
 } from "@/components/imoveis/campos-endereco";
+import { FormularioCobrancaImovel } from "@/components/imoveis/formulario-cobranca-imovel";
 import { FormularioImovel } from "@/components/imoveis/formulario-imovel";
 import { StatusBadge } from "@/components/data/status-badge";
 import { Button } from "@/components/ui/button";
@@ -331,6 +332,14 @@ export function CadastroImovel({
             </dl>
           </>
         )}
+      </section>
+
+      <section className="rounded-lg bg-card p-6 shadow-[0_2px_8px_rgba(0,0,0,0.1)] ring-1 ring-border">
+        <FormularioCobrancaImovel
+          key={`cobranca-${imovel.id}-${imovel.updatedAt ?? imovel.competenciaInicial ?? ""}`}
+          imovel={imovel}
+          podeGerenciar={podeGerenciar}
+        />
       </section>
 
       <section className="rounded-lg bg-card p-6 shadow-[0_2px_8px_rgba(0,0,0,0.1)] ring-1 ring-border">

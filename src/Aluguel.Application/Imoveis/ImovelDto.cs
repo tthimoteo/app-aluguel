@@ -12,6 +12,11 @@ public sealed record ImovelDto(
     string? NumeroIptu,
     string? NumeroMatricula,
     string Status,
+    string? CompetenciaInicial,
+    string? PropositoLocacao,
+    int? DiaVencimentoCobranca,
+    decimal? DespesasCondominiais,
+    decimal? ValorIptu,
     EnderecoDto Endereco,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);

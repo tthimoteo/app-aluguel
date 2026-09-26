@@ -53,6 +53,34 @@ public class ImovelInquilinoTests
     }
 
     [Fact]
+    public void Imovel_definir_cobranca_ok()
+    {
+        var i = new Imovel(Guid.NewGuid(), Guid.NewGuid(), "Apto", TipoImovel.Residencial);
+        i.DefinirCobranca("09/2026", PropositoLocacao.Residencial, 10, 350.50m, 120m);
+        i.CompetenciaInicial.Should().Be("09/2026");
+        i.PropositoLocacao.Should().Be(PropositoLocacao.Residencial);
+        i.DiaVencimentoCobranca.Should().Be(10);
+        i.DespesasCondominiais.Should().Be(350.50m);
+        i.ValorIptu.Should().Be(120m);
+    }
+
+    [Fact]
+    public void Imovel_definir_cobranca_competencia_invalida_lanca()
+    {
+        var i = new Imovel(Guid.NewGuid(), Guid.NewGuid(), "Apto", TipoImovel.Residencial);
+        var act = () => i.DefinirCobranca("13/2026", PropositoLocacao.Comercial, 5, null, null);
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void Imovel_definir_cobranca_dia_invalido_lanca()
+    {
+        var i = new Imovel(Guid.NewGuid(), Guid.NewGuid(), "Apto", TipoImovel.Residencial);
+        var act = () => i.DefinirCobranca("01/2026", PropositoLocacao.Comercial, 32, null, null);
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
     public void Inquilino_sem_documento_lanca()
     {
         var act = () => new Inquilino(Guid.NewGuid(), Guid.NewGuid(), TipoPessoa.PF, "João", "  ");

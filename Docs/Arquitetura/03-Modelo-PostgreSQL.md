@@ -204,6 +204,14 @@ CREATE TABLE app.imovel (
     bairro varchar(80), cidade varchar(80), uf char(2), cep varchar(8),
     numero_iptu varchar(30) NULL,
     numero_matricula varchar(30) NULL,
+    -- Cadastro de cobrança (ficha do imóvel, entre dados básicos e inquilino)
+    competencia_inicial char(7) NULL,              -- MM/AAAA
+    proposito_locacao varchar(40) NULL
+        CHECK (proposito_locacao IS NULL OR proposito_locacao IN (
+            'Comercial','Residencial','AdministracaoDeImoveis','IntermediacaoImobiliaria')),
+    dia_vencimento_cobranca int NULL CHECK (dia_vencimento_cobranca IS NULL OR dia_vencimento_cobranca BETWEEN 1 AND 31),
+    despesas_condominiais numeric(14,2) NULL,
+    valor_iptu numeric(14,2) NULL,                 -- valor monetário (≠ numero_iptu)
     status varchar(10) NOT NULL DEFAULT 'Ativo' CHECK (status IN ('Ativo','Inativo')),
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now(),

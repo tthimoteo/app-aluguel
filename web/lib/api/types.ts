@@ -70,6 +70,12 @@ export type Cliente = {
   endereco: Endereco;
 };
 
+export type PropositoLocacao =
+  | "Comercial"
+  | "Residencial"
+  | "AdministracaoDeImoveis"
+  | "IntermediacaoImobiliaria";
+
 export type Imovel = {
   id: string;
   tenantId: string;
@@ -79,7 +85,14 @@ export type Imovel = {
   numeroIptu: string | null;
   numeroMatricula: string | null;
   status: string;
+  competenciaInicial: string | null;
+  propositoLocacao: PropositoLocacao | string | null;
+  diaVencimentoCobranca: number | null;
+  despesasCondominiais: number | null;
+  valorIptu: number | null;
   endereco: Endereco;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type Inquilino = {

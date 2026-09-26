@@ -1,6 +1,7 @@
 using Aluguel.Application.Abstractions;
 using Aluguel.Application.Imoveis.AtualizarImovel;
 using Aluguel.Application.Imoveis.CriarImovel;
+using Aluguel.Application.Imoveis.DefinirCobrancaImovel;
 using Aluguel.Application.Imoveis.ListarImoveis;
 using Aluguel.Application.Imoveis.RemoverImovel;
 using Aluguel.Application.UnitTests.Fakes;
@@ -140,5 +141,65 @@ public class ImovelTests
         await handler.Invoking(h => h.Handle(
                 new AtualizarImovelCommand(imovel.Id, "Apto", TipoImovel.Residencial, null, null, StatusAtivoInativo.Ativo, null), default))
             .Should().ThrowAsync<InvalidOperationException>();
+    }
+
+    [Fact]
+    public async Task Validator_cobranca_valida_passa()
+    {
+        var cmd = new DefinirCobrancaImovelCommand(
+            Guid.NewGuid(), "09/2026", PropositoLocacao.Residencial, 10, 100m, 50m);
+        var result = await new DefinirCobrancaImovelCommandValidator().TestValidateAsync(cmd);
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public async Task Validator_cobranca_competencia_invalida_falha()
+    {
+        var cmd = new DefinirCobrancaImovelCommand(
+            Guid.NewGuid(), "13/2026", PropositoLocacao.Comercial, 5, null, null);
+        var result = await new DefinirCobrancaImovelCommandValidator().TestValidateAsync(cmd);
+        result.ShouldHaveValidationErrorFor(x => x.CompetenciaInicial);
+    }
+
+    [Fact]
+    public async Task Definir_cobranca_no_escopo_persiste()
+    {
+        var repo = new FakeImovelRepository();
+        var imovel = new Imovel(Tenant, ClienteA, "Apto", TipoImovel.Residencial);
+        repo.Itens.Add(imovel);
+
+        var gestor = new FakeCurrentUser(Guid.NewGuid(), ClienteA, ehAdministrador: false);
+        var handler = new DefinirCobrancaImovelCommandHandler(repo, gestor);
+
+        var dto = await handler.Handle(
+            new DefinirCobrancaImovelCommand(
+                imovel.Id, "01/2026", PropositoLocacao.AdministracaoDeImoveis, 15, 200m, 80m),
+            default);
+
+        dto.Should().NotBeNull();
+        dto!.CompetenciaInicial.Should().Be("01/2026");
+        dto.PropositoLocacao.Should().Be(nameof(PropositoLocacao.AdministracaoDeImoveis));
+        dto.DiaVencimentoCobranca.Should().Be(15);
+        dto.DespesasCondominiais.Should().Be(200m);
+        dto.ValorIptu.Should().Be(80m);
+        repo.SalvouVezes.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Definir_cobranca_fora_do_escopo_retorna_null()
+    {
+        var repo = new FakeImovelRepository();
+        var imovel = new Imovel(Tenant, ClienteB, "Apto", TipoImovel.Residencial);
+        repo.Itens.Add(imovel);
+
+        var gestor = new FakeCurrentUser(Guid.NewGuid(), ClienteA, ehAdministrador: false);
+        var handler = new DefinirCobrancaImovelCommandHandler(repo, gestor);
+
+        var dto = await handler.Handle(
+            new DefinirCobrancaImovelCommand(imovel.Id, "01/2026", PropositoLocacao.Comercial, 10, null, null),
+            default);
+
+        dto.Should().BeNull();
+        repo.SalvouVezes.Should().Be(0);
     }
 }
