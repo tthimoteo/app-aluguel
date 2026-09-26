@@ -14,11 +14,10 @@ export default async function HomePage() {
   const ehAdmin = temPerfil(usuario, "Administrador");
   const podeIncluirImovel = temPerfil(usuario, "Gestor");
 
-  const [imoveis, inquilinos, contratos, planos, clientes] = await Promise.all([
+  const [imoveis, contratos, planos, clientes] = await Promise.all([
     api.imoveis({ take: ehAdmin ? 1 : 8 }),
-    ehAdmin ? Promise.resolve(null) : api.inquilinos({ take: 1 }),
-    ehAdmin ? Promise.resolve(null) : api.contratos({ take: 1 }),
-    api.planos(),
+    ehAdmin ? Promise.resolve(null) : api.contratos({ take: 1, status: "Ativo" }),
+    ehAdmin ? api.planos() : Promise.resolve([]),
     ehAdmin ? api.clientes({ take: 20 }) : Promise.resolve<Pagina<Cliente> | null>(null),
   ]);
 
@@ -44,7 +43,7 @@ export default async function HomePage() {
         }
       />
 
-      <div className={cn("mb-6 grid gap-3 sm:grid-cols-2", ehAdmin ? "xl:grid-cols-3" : "xl:grid-cols-4")}>
+      <div className="mb-6 grid gap-3 sm:grid-cols-2">
         {ehAdmin ? (
           <IndicadorCard
             titulo="Clientes"
@@ -58,24 +57,12 @@ export default async function HomePage() {
           detalhe="Cadastro ativo no tenant"
         />
         {ehAdmin ? null : (
-          <>
-            <IndicadorCard
-              titulo="Inquilinos"
-              valor={inquilinos?.total ?? 0}
-              detalhe="Pessoas físicas e jurídicas"
-            />
-            <IndicadorCard
-              titulo="Contratos"
-              valor={contratos?.total ?? 0}
-              detalhe="Ativos, encerrados e cancelados"
-            />
-          </>
+          <IndicadorCard
+            titulo="Contratos ativos"
+            valor={contratos?.total ?? 0}
+            detalhe="Contratos vigentes no cadastro"
+          />
         )}
-        <IndicadorCard
-          titulo="Planos"
-          valor={planos.length}
-          detalhe="Catálogo disponível"
-        />
       </div>
 
       {ehAdmin && clientes ? (

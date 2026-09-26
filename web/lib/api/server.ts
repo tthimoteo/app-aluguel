@@ -84,9 +84,14 @@ export const api = {
     ),
   inquilino: (id: string) => apiFetch<Inquilino>(`/api/inquilinos/${id}`),
   imovel: (id: string) => apiFetch<Imovel>(`/api/imoveis/${id}`),
-  contratos: (opts?: { take?: number; clienteId?: string; imovelId?: string }) =>
+  contratos: (opts?: { take?: number; clienteId?: string; imovelId?: string; status?: string }) =>
     apiFetch<Pagina<Contrato>>(
-      `/api/contratos${qs({ take: opts?.take ?? 20, clienteId: opts?.clienteId, imovelId: opts?.imovelId })}`,
+      `/api/contratos${qs({
+        take: opts?.take ?? 20,
+        clienteId: opts?.clienteId,
+        imovelId: opts?.imovelId,
+        status: opts?.status,
+      })}`,
     ),
   usuarios: (opts?: { termo?: string; take?: number; clienteId?: string }) =>
     apiFetch<Pagina<Usuario>>(
