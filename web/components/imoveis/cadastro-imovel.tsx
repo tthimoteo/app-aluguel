@@ -346,7 +346,11 @@ export function CadastroImovel({
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div>
             <h3 className="text-sm font-semibold">Inquilino</h3>
-            <p className="mt-1 text-xs text-muted-foreground">Um inquilino por vez neste imóvel.</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {podeGerenciar
+                ? "Um inquilino por vez neste imóvel."
+                : "Consulta do locatário atual e do histórico. Sem permissão para editar ou remover."}
+            </p>
             <button
               type="button"
               className="mt-1 text-xs font-medium text-[#DB6838] underline-offset-2 hover:underline"
@@ -415,9 +419,14 @@ export function CadastroImovel({
             <CampoDetalhe rotulo="E-mail" valor={inquilino.email ?? "—"} />
             <CampoDetalhe rotulo="Telefone" valor={inquilino.telefone ?? "—"} />
             <CampoDetalhe rotulo="Status" valor={<StatusBadge status={inquilino.status} />} />
+            <CampoDetalhe rotulo="Endereço" valor={formatarEndereco(inquilino.endereco)} />
           </dl>
         ) : (
-          <p className="text-sm text-muted-foreground">Nenhum inquilino vinculado. Inclua o locatário para emitir NFS-e e gerar o contrato.</p>
+          <p className="text-sm text-muted-foreground">
+            {podeGerenciar
+              ? "Nenhum inquilino vinculado. Inclua o locatário para emitir NFS-e e gerar o contrato."
+              : "Nenhum inquilino vinculado a este imóvel. Consulte o histórico se houver registros anteriores."}
+          </p>
         )}
       </section>
 
@@ -425,7 +434,11 @@ export function CadastroImovel({
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div>
             <h3 className="text-sm font-semibold">Contrato</h3>
-            <p className="mt-1 text-xs text-muted-foreground">Um contrato ativo por imóvel (CASO 3). Encerrar libera renovação.</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {podeGerenciar
+                ? "Um contrato ativo por imóvel (CASO 3). Encerrar libera renovação."
+                : "Consulta do contrato vigente e do histórico. Sem permissão para editar, renovar ou encerrar."}
+            </p>
             <button
               type="button"
               className="mt-1 text-xs font-medium text-[#DB6838] underline-offset-2 hover:underline"
@@ -496,6 +509,22 @@ export function CadastroImovel({
             <CampoDetalhe rotulo="Vencimento" valor={`Dia ${contratoAtivo.diaVencimento}`} />
             <CampoDetalhe rotulo="Aluguel" valor={formatarMoeda(contratoAtivo.valorAluguel)} />
             <CampoDetalhe
+              rotulo="Juros atraso"
+              valor={
+                contratoAtivo.jurosAtrasoPct != null
+                  ? `${String(contratoAtivo.jurosAtrasoPct).replace(".", ",")}%`
+                  : "—"
+              }
+            />
+            <CampoDetalhe
+              rotulo="Multa atraso"
+              valor={
+                contratoAtivo.multaAtrasoPct != null
+                  ? `${String(contratoAtivo.multaAtrasoPct).replace(".", ",")}%`
+                  : "—"
+              }
+            />
+            <CampoDetalhe
               rotulo="Anexo"
               valor={
                 contratoAtivo.anexoPath ? (
@@ -514,7 +543,11 @@ export function CadastroImovel({
             />
           </dl>
         ) : (
-          <p className="text-sm text-muted-foreground">Nenhum contrato ativo. Inclua ou renove após cadastrar o inquilino.</p>
+          <p className="text-sm text-muted-foreground">
+            {podeGerenciar
+              ? "Nenhum contrato ativo. Inclua ou renove após cadastrar o inquilino."
+              : "Nenhum contrato ativo neste imóvel. Consulte o histórico se houver contratos encerrados."}
+          </p>
         )}
       </section>
 
