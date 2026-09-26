@@ -53,6 +53,16 @@ export type Plano = {
   valorMensal: number | null;
 };
 
+export type CertificadoDigital = {
+  id: string;
+  clienteId: string;
+  thumbprint: string;
+  validade: string;
+  ativo: boolean;
+  vencido: boolean;
+  createdAt: string;
+};
+
 export type RegimeTributario =
   | "SimplesNacional"
   | "LucroPresumido"

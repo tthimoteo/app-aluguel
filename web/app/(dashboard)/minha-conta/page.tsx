@@ -21,7 +21,11 @@ export default async function MinhaContaPage() {
     );
   }
 
-  const [cliente, planos] = await Promise.all([api.cliente(clienteId), api.planos()]);
+  const [cliente, planos, certificado] = await Promise.all([
+    api.cliente(clienteId),
+    api.planos(),
+    api.certificadoCliente(clienteId),
+  ]);
 
   return (
     <div>
@@ -29,7 +33,12 @@ export default async function MinhaContaPage() {
         titulo="Minha Conta"
         descricao="Edite os dados cadastrais do cliente, consulte o plano vigente e altere a assinatura quando necessário."
       />
-      <FormularioMinhaConta me={me} cliente={cliente} planos={planos} />
+      <FormularioMinhaConta
+        me={me}
+        cliente={cliente}
+        planos={planos}
+        certificado={certificado}
+      />
     </div>
   );
 }

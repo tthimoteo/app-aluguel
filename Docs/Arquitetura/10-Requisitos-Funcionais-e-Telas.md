@@ -73,7 +73,7 @@ Tela mostra, **mês a mês**, o histórico de faturamento (XML e PDF para baixar
 |---|---|---|
 | **Usuários** | Administrador e Gestor (escolhem o cliente) | Abre a lista dos clientes aos quais o usuário tem acesso (Gestor: vinculações com perfil Gestor). Ao selecionar um cliente, lista e gerencia os usuários daquele cadastro. CPF identifica a pessoa: o mesmo usuário pode ser vinculado a outro cliente com perfil próprio; não pode repetir o CPF no mesmo cliente. |
 | **Imóveis** | Todos | Se o usuário tem **mais de um** cliente, abre a lista para selecionar; com **um** cliente, vai direto à lista de imóveis. Clique no imóvel abre o cadastro (`/imoveis/{id}`) com inquilino e contrato. Inquilinos e contratos não aparecem na listagem nem no menu. |
-| **Minha Conta** | Gestor | Editar dados cadastrais do cliente (endereço/contato); visualizar plano vigente e **alterar plano**; se o plano permite NFS-e, informar **CNAE**, **código de serviço** e **regime tributário**. Histórico de cobrança do app entra no módulo de assinaturas. |
+| **Minha Conta** | Gestor | Editar dados cadastrais do cliente (endereço/contato); visualizar plano vigente; ao clicar em outro plano, modal com serviços + link de pagamento (Mercado Pago — futuro); se o plano vigente permite NFS-e, informar **CNAE**, **código de serviço**, **regime tributário** e **upload do certificado A1** (PFX/P12 + senha, senha só no backend). |
 | **Relatório** | Administrador/Gestor/Analista | Extrair histórico de faturamentos, pagamentos, IPTU e demais despesas. |
 | **Dados para Contabilidade** | Gestor | Exportar Contas a Receber e Contas a Pagar em XLSX/CSV. |
 | **Auditoria** | AdminSistema/Gestor | Consultar logs de alterações. |

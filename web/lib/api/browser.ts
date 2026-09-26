@@ -1,4 +1,4 @@
-import type { Cliente, Contrato, Imovel, Inquilino, Usuario } from "@/lib/api/types";
+import type { CertificadoDigital, Cliente, Contrato, Imovel, Inquilino, Usuario } from "@/lib/api/types";
 import type { EnderecoViaCep } from "@/lib/cep";
 import { mensagemApiErro } from "@/lib/api/erro";
 
@@ -189,6 +189,22 @@ export const bff = {
     }),
   atualizarCliente: (id: string, dados: AtualizacaoClienteInput) =>
     bffFetch<Cliente>(`/api/clientes/${id}`, { method: "PUT", body: JSON.stringify(dados) }),
+  enviarCertificado: async (clienteId: string, arquivo: File, senha: string) => {
+    const form = new FormData();
+    form.append("arquivo", arquivo);
+    form.append("senha", senha);
+    const res = await fetch(`/api/clientes/${clienteId}/certificado`, {
+      method: "POST",
+      body: form,
+      cache: "no-store",
+    });
+    const texto = await res.text();
+    const body = texto ? (JSON.parse(texto) as unknown) : null;
+    if (!res.ok) {
+      throw new BffError(res.status, mensagemApiErro(body));
+    }
+    return body as CertificadoDigital;
+  },
 };
 
 export type AtualizacaoClienteInput = {

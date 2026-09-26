@@ -2,7 +2,9 @@ using Aluguel.Application.Autorizacao;
 using Aluguel.Application.Clientes;
 using Aluguel.Application.Clientes.AtualizarCliente;
 using Aluguel.Application.Clientes.CriarCliente;
+using Aluguel.Application.Clientes.EnviarCertificadoCliente;
 using Aluguel.Application.Clientes.ListarClientes;
+using Aluguel.Application.Clientes.ObterCertificadoCliente;
 using Aluguel.Application.Clientes.ObterClientePorId;
 using Aluguel.Application.Clientes.RemoverCliente;
 using Aluguel.Domain.Clientes;
@@ -91,6 +93,40 @@ public static class ClienteEndpoints
             return removido ? Results.NoContent() : Results.NotFound();
         })
         .WithName("RemoverCliente")
+        .RequireAuthorization(Politicas.GerenciaUsuarios);
+
+        grupo.MapGet("/{id:guid}/certificado", async (Guid id, ISender sender, CancellationToken ct) =>
+        {
+            var dto = await sender.Send(new ObterCertificadoClienteQuery(id), ct);
+            return dto is null ? Results.NotFound(new { erro = "Nenhum certificado A1 ativo para este cliente." }) : Results.Ok(dto);
+        })
+        .WithName("ObterCertificadoCliente");
+
+        grupo.MapPost("/{id:guid}/certificado", async (Guid id, HttpRequest http, ISender sender, CancellationToken ct) =>
+        {
+            if (!http.HasFormContentType)
+                return Results.BadRequest(new { erro = "Envie o certificado em multipart/form-data (arquivo + senha)." });
+
+            var form = await http.ReadFormAsync(ct);
+            var arquivo = form.Files.GetFile("arquivo") ?? form.Files.FirstOrDefault();
+            if (arquivo is null || arquivo.Length == 0)
+                return Results.BadRequest(new { erro = "Selecione o arquivo do certificado A1 (.pfx ou .p12)." });
+
+            var senha = form["senha"].ToString();
+            await using var stream = arquivo.OpenReadStream();
+            try
+            {
+                var dto = await sender.Send(new EnviarCertificadoClienteCommand(
+                    id, stream, arquivo.FileName, arquivo.ContentType ?? "application/x-pkcs12", senha), ct);
+                return dto is null ? Results.NotFound() : Results.Ok(dto);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new { erro = ex.Message });
+            }
+        })
+        .WithName("EnviarCertificadoCliente")
+        .DisableAntiforgery()
         .RequireAuthorization(Politicas.GerenciaUsuarios);
 
         return app;

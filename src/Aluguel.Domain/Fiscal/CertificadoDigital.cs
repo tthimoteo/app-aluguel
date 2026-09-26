@@ -19,11 +19,21 @@ public class CertificadoDigital : Entity, ITenantOwned
     public CertificadoDigital(Guid tenantId, Guid clienteId, string storagePath, string thumbprint,
         DateTimeOffset validade, byte[] senhaCifrada)
     {
+        if (string.IsNullOrWhiteSpace(storagePath))
+            throw new ArgumentException("Caminho do certificado é obrigatório.", nameof(storagePath));
+        if (string.IsNullOrWhiteSpace(thumbprint))
+            throw new ArgumentException("Thumbprint é obrigatório.", nameof(thumbprint));
+        if (senhaCifrada is null || senhaCifrada.Length == 0)
+            throw new ArgumentException("Senha cifrada é obrigatória.", nameof(senhaCifrada));
+
         TenantId = tenantId;
         ClienteId = clienteId;
-        StoragePath = storagePath;
-        Thumbprint = thumbprint;
+        StoragePath = storagePath.Trim();
+        Thumbprint = thumbprint.Trim();
         Validade = validade;
         SenhaCifrada = senhaCifrada;
+        Ativo = true;
     }
+
+    public void Desativar() => Ativo = false;
 }

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getApiUrl } from "@/lib/api/config";
 import type {
   AuthMe,
+  CertificadoDigital,
   Cliente,
   Contrato,
   Imovel,
@@ -100,4 +101,12 @@ export const api = {
   usuario: (id: string, clienteId?: string) =>
     apiFetch<Usuario>(`/api/usuarios/${id}${qs({ clienteId })}`),
   cliente: (id: string) => apiFetch<Cliente>(`/api/clientes/${id}`),
+  certificadoCliente: async (clienteId: string) => {
+    try {
+      return await apiFetch<CertificadoDigital>(`/api/clientes/${clienteId}/certificado`);
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 404) return null;
+      throw e;
+    }
+  },
 };
