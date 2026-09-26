@@ -33,6 +33,8 @@ public sealed record AtualizarClienteRequest(
     string? NomeFantasia,
     string? InscricaoMunicipal,
     string? CnaePrincipal,
+    string? CodigoServico,
+    string? RegimeTributario,
     string? Telefone,
     string? Email,
     EnderecoInput? Endereco);
@@ -76,7 +78,8 @@ public static class ClienteEndpoints
         {
             var dto = await sender.Send(new AtualizarClienteCommand(
                 id, req.PlanoId, req.Nome, req.DataNascimento, req.RazaoSocial, req.NomeFantasia,
-                req.InscricaoMunicipal, req.CnaePrincipal, req.Telefone, req.Email, req.Endereco), ct);
+                req.InscricaoMunicipal, req.CnaePrincipal, req.CodigoServico, req.RegimeTributario,
+                req.Telefone, req.Email, req.Endereco), ct);
             return dto is null ? Results.NotFound() : Results.Ok(dto);
         })
         .WithName("AtualizarCliente")
