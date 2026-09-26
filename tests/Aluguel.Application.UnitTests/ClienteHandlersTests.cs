@@ -49,7 +49,7 @@ public class ClienteHandlersTests
     {
         var handler = new AtualizarClienteCommandHandler(new FakeClienteRepository());
         var cmd = new AtualizarClienteCommand(Guid.NewGuid(), null, "Novo", null,
-            null, null, null, null, null, null, null);
+            null, null, null, null, null, null, null, null, null);
 
         (await handler.Handle(cmd, default)).Should().BeNull();
     }
@@ -63,7 +63,7 @@ public class ClienteHandlersTests
         var handler = new AtualizarClienteCommandHandler(repo);
 
         var dto = await handler.Handle(new AtualizarClienteCommand(cliente.Id, null, "Novo Nome", null,
-            null, null, null, null, "11888887777", "novo@x.com", null), default);
+            null, null, null, null, null, null, "11888887777", "novo@x.com", null), default);
 
         dto!.Nome.Should().Be("Novo Nome");
         dto.Telefone.Should().Be("11888887777");
