@@ -12,6 +12,7 @@ import {
   selectClass,
   type EnderecoFormulario,
 } from "@/components/imoveis/campos-endereco";
+import { FormularioCobrancaImovel } from "@/components/imoveis/formulario-cobranca-imovel";
 import { FormularioImovel } from "@/components/imoveis/formulario-imovel";
 import { StatusBadge } from "@/components/data/status-badge";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,7 @@ import {
   type NovoContratoInput,
   type NovoInquilinoInput,
 } from "@/lib/api/browser";
+import type { HistoricoInquilinoItem } from "@/components/imoveis/historico-types";
 import type { Contrato, Imovel, Inquilino } from "@/lib/api/types";
 import {
   formatarCpfCnpj,
@@ -57,19 +59,27 @@ type Painel =
   | { tipo: "inquilino-remover" }
   | { tipo: "contrato-criar" | "contrato-renovar" }
   | { tipo: "contrato-editar" }
-  | { tipo: "contrato-encerrar" };
+  | { tipo: "contrato-encerrar" }
+  | { tipo: "historico-inquilinos" }
+  | { tipo: "historico-contratos" }
+  | { tipo: "detalhe-inquilino"; item: HistoricoInquilinoItem }
+  | { tipo: "detalhe-contrato"; contrato: Contrato };
 
 export function CadastroImovel({
   imovel,
   inquilino: inquilinoProp,
   contratoAtivo,
   inquilinosCliente,
+  historicoContratos,
+  historicoInquilinos,
   podeGerenciar,
 }: {
   imovel: Imovel;
   inquilino: Inquilino | null;
   contratoAtivo: Contrato | null;
   inquilinosCliente: Inquilino[];
+  historicoContratos: Contrato[];
+  historicoInquilinos: HistoricoInquilinoItem[];
   podeGerenciar: boolean;
 }) {
   const router = useRouter();
@@ -334,10 +344,32 @@ export function CadastroImovel({
       </section>
 
       <section className="rounded-lg bg-card p-6 shadow-[0_2px_8px_rgba(0,0,0,0.1)] ring-1 ring-border">
+        <FormularioCobrancaImovel
+          key={`cobranca-${imovel.id}-${imovel.updatedAt ?? imovel.competenciaInicial ?? ""}`}
+          imovel={imovel}
+          podeGerenciar={podeGerenciar}
+        />
+      </section>
+
+      <section className="rounded-lg bg-card p-6 shadow-[0_2px_8px_rgba(0,0,0,0.1)] ring-1 ring-border">
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div>
             <h3 className="text-sm font-semibold">Inquilino</h3>
-            <p className="mt-1 text-xs text-muted-foreground">Um inquilino por vez neste imóvel.</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {podeGerenciar
+                ? "Um inquilino por vez neste imóvel."
+                : "Consulta do locatário atual e do histórico. Sem permissão para editar ou remover."}
+            </p>
+            <button
+              type="button"
+              className="mt-1 text-xs font-medium text-[#DB6838] underline-offset-2 hover:underline"
+              onClick={() => {
+                setErro(null);
+                setPainel({ tipo: "historico-inquilinos" });
+              }}
+            >
+              Ver histórico de inquilinos
+            </button>
           </div>
           {podeGerenciar ? (
             <div className="flex flex-wrap gap-2">
@@ -396,9 +428,14 @@ export function CadastroImovel({
             <CampoDetalhe rotulo="E-mail" valor={inquilino.email ?? "—"} />
             <CampoDetalhe rotulo="Telefone" valor={inquilino.telefone ?? "—"} />
             <CampoDetalhe rotulo="Status" valor={<StatusBadge status={inquilino.status} />} />
+            <CampoDetalhe rotulo="Endereço" valor={formatarEndereco(inquilino.endereco)} />
           </dl>
         ) : (
-          <p className="text-sm text-muted-foreground">Nenhum inquilino vinculado. Inclua o locatário para emitir NFS-e e gerar o contrato.</p>
+          <p className="text-sm text-muted-foreground">
+            {podeGerenciar
+              ? "Nenhum inquilino vinculado. Inclua o locatário para emitir NFS-e e gerar o contrato."
+              : "Nenhum inquilino vinculado a este imóvel. Consulte o histórico se houver registros anteriores."}
+          </p>
         )}
       </section>
 
@@ -406,7 +443,21 @@ export function CadastroImovel({
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div>
             <h3 className="text-sm font-semibold">Contrato</h3>
-            <p className="mt-1 text-xs text-muted-foreground">Um contrato ativo por imóvel (CASO 3). Encerrar libera renovação.</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {podeGerenciar
+                ? "Um contrato ativo por imóvel (CASO 3). Encerrar libera renovação."
+                : "Consulta do contrato vigente e do histórico. Sem permissão para editar, renovar ou encerrar."}
+            </p>
+            <button
+              type="button"
+              className="mt-1 text-xs font-medium text-[#DB6838] underline-offset-2 hover:underline"
+              onClick={() => {
+                setErro(null);
+                setPainel({ tipo: "historico-contratos" });
+              }}
+            >
+              Ver histórico de contratos
+            </button>
           </div>
           {podeGerenciar ? (
             <div className="flex flex-wrap gap-2">
@@ -467,6 +518,22 @@ export function CadastroImovel({
             <CampoDetalhe rotulo="Vencimento" valor={`Dia ${contratoAtivo.diaVencimento}`} />
             <CampoDetalhe rotulo="Aluguel" valor={formatarMoeda(contratoAtivo.valorAluguel)} />
             <CampoDetalhe
+              rotulo="Juros atraso"
+              valor={
+                contratoAtivo.jurosAtrasoPct != null
+                  ? `${String(contratoAtivo.jurosAtrasoPct).replace(".", ",")}%`
+                  : "—"
+              }
+            />
+            <CampoDetalhe
+              rotulo="Multa atraso"
+              valor={
+                contratoAtivo.multaAtrasoPct != null
+                  ? `${String(contratoAtivo.multaAtrasoPct).replace(".", ",")}%`
+                  : "—"
+              }
+            />
+            <CampoDetalhe
               rotulo="Anexo"
               valor={
                 contratoAtivo.anexoPath ? (
@@ -485,7 +552,11 @@ export function CadastroImovel({
             />
           </dl>
         ) : (
-          <p className="text-sm text-muted-foreground">Nenhum contrato ativo. Inclua ou renove após cadastrar o inquilino.</p>
+          <p className="text-sm text-muted-foreground">
+            {podeGerenciar
+              ? "Nenhum contrato ativo. Inclua ou renove após cadastrar o inquilino."
+              : "Nenhum contrato ativo neste imóvel. Consulte o histórico se houver contratos encerrados."}
+          </p>
         )}
       </section>
 
@@ -734,6 +805,301 @@ export function CadastroImovel({
                 Encerrar
               </Button>
             </DialogFooter>
+          </DialogContent>
+        ) : null}
+
+        {painel?.tipo === "historico-inquilinos" ? (
+          <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+            <div className="m-[10px] flex flex-col">
+            <DialogHeader className="border-0 p-0 pr-10">
+              <DialogTitle>Histórico de inquilinos</DialogTitle>
+              <DialogDescription>
+                Locatários que já estiveram vinculados a este imóvel (via contrato ou cadastro). Clique no nome para ver o detalhe.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-2">
+              {historicoInquilinos.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhum histórico de inquilino neste imóvel.</p>
+              ) : (
+                <div className="overflow-x-auto rounded-[4px] ring-1 ring-border">
+                  <table className="w-full min-w-[480px] text-left text-sm">
+                    <thead className="bg-[#34495e] text-white">
+                      <tr>
+                        <th className="px-3 py-2 font-medium">Nome</th>
+                        <th className="px-3 py-2 font-medium">Documento</th>
+                        <th className="px-3 py-2 font-medium">Período</th>
+                        <th className="px-3 py-2 font-medium">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {historicoInquilinos.map((item) => (
+                        <tr key={item.inquilinoId} className="border-t border-border">
+                          <td className="px-3 py-2 font-medium">
+                            <button
+                              type="button"
+                              className="text-left font-medium text-[#DB6838] underline-offset-2 hover:underline"
+                              onClick={() => setPainel({ tipo: "detalhe-inquilino", item })}
+                            >
+                              {item.nome}
+                            </button>
+                          </td>
+                          <td className="px-3 py-2">{item.documento ? formatarCpfCnpj(item.documento) : "—"}</td>
+                          <td className="px-3 py-2">
+                            {item.dataInicio
+                              ? `${formatarData(item.dataInicio)} – ${item.dataFim ? formatarData(item.dataFim) : "…"}`
+                              : "—"}
+                          </td>
+                          <td className="px-3 py-2">
+                            {item.removido ? (
+                              <span className="text-xs text-muted-foreground">Removido</span>
+                            ) : item.status ? (
+                              <StatusBadge status={item.status} />
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+            <DialogFooter className="border-0 p-0">
+              <Button type="button" variant="secondary" className="h-9 rounded-[4px] bg-[#95A5A6] text-white hover:bg-[#7F8C8D]" onClick={fechar}>
+                Fechar
+              </Button>
+            </DialogFooter>
+            </div>
+          </DialogContent>
+        ) : null}
+
+        {painel?.tipo === "detalhe-inquilino" ? (
+          <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
+            <div className="m-[10px] flex flex-col">
+              <DialogHeader className="border-0 p-0 pr-10">
+                <DialogTitle>Detalhe do inquilino</DialogTitle>
+                <DialogDescription>
+                  {painel.item.removido
+                    ? "O cadastro deste inquilino foi removido; restam os dados do histórico."
+                    : "Informações cadastrais do locatário neste imóvel."}
+                </DialogDescription>
+              </DialogHeader>
+              <dl className="grid gap-4 py-2 sm:grid-cols-2">
+                <CampoDetalhe rotulo="Nome" valor={painel.item.detalhe?.nome ?? painel.item.nome} />
+                <CampoDetalhe
+                  rotulo="Tipo"
+                  valor={
+                    painel.item.detalhe
+                      ? painel.item.detalhe.tipoPessoa === "PJ"
+                        ? "Pessoa jurídica"
+                        : "Pessoa física"
+                      : "—"
+                  }
+                />
+                <CampoDetalhe
+                  rotulo="Documento"
+                  valor={
+                    painel.item.detalhe?.documento || painel.item.documento
+                      ? formatarCpfCnpj(painel.item.detalhe?.documento ?? painel.item.documento)
+                      : "—"
+                  }
+                />
+                <CampoDetalhe rotulo="E-mail" valor={painel.item.detalhe?.email ?? "—"} />
+                <CampoDetalhe rotulo="Telefone" valor={painel.item.detalhe?.telefone ?? "—"} />
+                <CampoDetalhe
+                  rotulo="Status"
+                  valor={
+                    painel.item.removido ? (
+                      <span className="text-sm text-muted-foreground">Removido</span>
+                    ) : painel.item.detalhe?.status || painel.item.status ? (
+                      <StatusBadge status={painel.item.detalhe?.status ?? painel.item.status ?? ""} />
+                    ) : (
+                      "—"
+                    )
+                  }
+                />
+                <CampoDetalhe
+                  rotulo="Período no imóvel"
+                  valor={
+                    painel.item.dataInicio
+                      ? `${formatarData(painel.item.dataInicio)} – ${painel.item.dataFim ? formatarData(painel.item.dataFim) : "…"}`
+                      : "—"
+                  }
+                />
+                <div className="sm:col-span-2">
+                  <CampoDetalhe
+                    rotulo="Endereço"
+                    valor={painel.item.detalhe ? formatarEndereco(painel.item.detalhe.endereco) : "—"}
+                  />
+                </div>
+              </dl>
+              <DialogFooter className="border-0 p-0">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-9 rounded-[4px]"
+                  onClick={() => setPainel({ tipo: "historico-inquilinos" })}
+                >
+                  Voltar ao histórico
+                </Button>
+                <Button type="button" variant="secondary" className="h-9 rounded-[4px] bg-[#95A5A6] text-white hover:bg-[#7F8C8D]" onClick={fechar}>
+                  Fechar
+                </Button>
+              </DialogFooter>
+            </div>
+          </DialogContent>
+        ) : null}
+
+        {painel?.tipo === "historico-contratos" ? (
+          <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+            <div className="m-[10px] flex flex-col">
+            <DialogHeader className="border-0 p-0 pr-10">
+              <DialogTitle>Histórico de contratos</DialogTitle>
+              <DialogDescription>
+                Contratos deste imóvel, do mais recente ao mais antigo. Clique no número para ver o detalhe.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-2">
+              {historicoContratos.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhum contrato registrado neste imóvel.</p>
+              ) : (
+                <div className="overflow-x-auto rounded-[4px] ring-1 ring-border">
+                  <table className="w-full min-w-[520px] text-left text-sm">
+                    <thead className="bg-[#34495e] text-white">
+                      <tr>
+                        <th className="px-3 py-2 font-medium">Número</th>
+                        <th className="px-3 py-2 font-medium">Inquilino</th>
+                        <th className="px-3 py-2 font-medium">Início</th>
+                        <th className="px-3 py-2 font-medium">Aluguel</th>
+                        <th className="px-3 py-2 font-medium">Status</th>
+                        <th className="px-3 py-2 font-medium">Anexo</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {historicoContratos.map((c) => {
+                        const nomeInq =
+                          historicoInquilinos.find((i) => i.inquilinoId === c.inquilinoId)?.nome
+                          ?? inquilinosCliente.find((i) => i.id === c.inquilinoId)?.nome
+                          ?? "—";
+                        return (
+                          <tr key={c.id} className="border-t border-border">
+                            <td className="px-3 py-2 font-medium">
+                              <button
+                                type="button"
+                                className="text-left font-medium text-[#DB6838] underline-offset-2 hover:underline"
+                                onClick={() => setPainel({ tipo: "detalhe-contrato", contrato: c })}
+                              >
+                                {c.numeroContrato}
+                              </button>
+                            </td>
+                            <td className="px-3 py-2">{nomeInq}</td>
+                            <td className="px-3 py-2">{formatarData(c.dataInicio)}</td>
+                            <td className="px-3 py-2">{formatarMoeda(c.valorAluguel)}</td>
+                            <td className="px-3 py-2">
+                              <StatusBadge status={c.status} />
+                            </td>
+                            <td className="px-3 py-2">
+                              {c.anexoPath ? (
+                                <a
+                                  href={`/api/contratos/${c.id}/anexo`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  download
+                                  className="font-medium text-[#DB6838] underline-offset-2 hover:underline"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  Baixar
+                                </a>
+                              ) : (
+                                "—"
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+            <DialogFooter className="border-0 p-0">
+              <Button type="button" variant="secondary" className="h-9 rounded-[4px] bg-[#95A5A6] text-white hover:bg-[#7F8C8D]" onClick={fechar}>
+                Fechar
+              </Button>
+            </DialogFooter>
+            </div>
+          </DialogContent>
+        ) : null}
+
+        {painel?.tipo === "detalhe-contrato" ? (
+          <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
+            <div className="m-[10px] flex flex-col">
+              <DialogHeader className="border-0 p-0 pr-10">
+                <DialogTitle>Detalhe do contrato</DialogTitle>
+                <DialogDescription>
+                  {painel.contrato.numeroContrato} — informações completas do contrato neste imóvel.
+                </DialogDescription>
+              </DialogHeader>
+              <dl className="grid gap-4 py-2 sm:grid-cols-2">
+                <CampoDetalhe rotulo="Número" valor={painel.contrato.numeroContrato} />
+                <CampoDetalhe rotulo="Status" valor={<StatusBadge status={painel.contrato.status} />} />
+                <CampoDetalhe
+                  rotulo="Inquilino"
+                  valor={
+                    historicoInquilinos.find((i) => i.inquilinoId === painel.contrato.inquilinoId)?.nome
+                    ?? inquilinosCliente.find((i) => i.id === painel.contrato.inquilinoId)?.nome
+                    ?? "—"
+                  }
+                />
+                <CampoDetalhe rotulo="Vencimento" valor={`Dia ${painel.contrato.diaVencimento}`} />
+                <CampoDetalhe rotulo="Início" valor={formatarData(painel.contrato.dataInicio)} />
+                <CampoDetalhe rotulo="Fim previsto" valor={formatarData(painel.contrato.dataFimPrevista)} />
+                <CampoDetalhe rotulo="Aluguel" valor={formatarMoeda(painel.contrato.valorAluguel)} />
+                <CampoDetalhe
+                  rotulo="Juros atraso"
+                  valor={painel.contrato.jurosAtrasoPct != null ? `${String(painel.contrato.jurosAtrasoPct).replace(".", ",")}%` : "—"}
+                />
+                <CampoDetalhe
+                  rotulo="Multa atraso"
+                  valor={painel.contrato.multaAtrasoPct != null ? `${String(painel.contrato.multaAtrasoPct).replace(".", ",")}%` : "—"}
+                />
+              </dl>
+              <div className="mb-3 rounded-[4px] border border-border bg-[#F8F9FA] p-3 dark:bg-muted/40">
+                <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Anexo do contrato</p>
+                {painel.contrato.anexoPath ? (
+                  <div className="mt-2 flex flex-wrap items-center gap-3">
+                    <a
+                      href={`/api/contratos/${painel.contrato.id}/anexo`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      download
+                      className="inline-flex h-9 items-center rounded-[4px] bg-[#DB6838] px-4 text-sm font-medium text-white hover:bg-[#C55A32]"
+                    >
+                      Baixar PDF do contrato
+                    </a>
+                    <span className="text-xs text-muted-foreground">
+                      {nomeArquivoAnexo(painel.contrato.anexoPath)}
+                    </span>
+                  </div>
+                ) : (
+                  <p className="mt-1 text-sm text-muted-foreground">Nenhum anexo registrado neste contrato.</p>
+                )}
+              </div>
+              <DialogFooter className="border-0 p-0">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-9 rounded-[4px]"
+                  onClick={() => setPainel({ tipo: "historico-contratos" })}
+                >
+                  Voltar ao histórico
+                </Button>
+                <Button type="button" variant="secondary" className="h-9 rounded-[4px] bg-[#95A5A6] text-white hover:bg-[#7F8C8D]" onClick={fechar}>
+                  Fechar
+                </Button>
+              </DialogFooter>
+            </div>
           </DialogContent>
         ) : null}
       </Dialog>

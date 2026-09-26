@@ -121,6 +121,8 @@ public class Cliente : AggregateRoot, ITenantOwned, IAuditable, ISoftDeletable
     public string? Cnpj { get; private set; }
     public string? InscricaoMunicipal { get; private set; }
     public string? CnaePrincipal { get; private set; }
+    public string? CodigoServico { get; private set; }       // NFS-e (LC 116 / municipal)
+    public RegimeTributario? RegimeTributario { get; private set; }
     public string? Telefone { get; private set; }
     public string? Email { get; private set; }
     public Endereco Endereco { get; private set; } = new(null,null,null,null,null,null,null);
@@ -191,9 +193,17 @@ public class Imovel : Entity, ITenantOwned, ISoftDeletable
     public Endereco Endereco { get; private set; } = new(null,null,null,null,null,null,null);
     public string? NumeroIptu { get; private set; }
     public string? NumeroMatricula { get; private set; }
+    // Cadastro de cobrança (ficha do imóvel)
+    public string? CompetenciaInicial { get; private set; }       // MM/AAAA
+    public PropositoLocacao? PropositoLocacao { get; private set; }
+    public int? DiaVencimentoCobranca { get; private set; }
+    public decimal? DespesasCondominiais { get; private set; }
+    public decimal? ValorIptu { get; private set; }               // monetário (≠ NumeroIptu)
     public StatusImovel Status { get; private set; } = StatusImovel.Ativo;
     public DateTimeOffset? DeletedAt { get; private set; }
     private Imovel() { }
+    public void DefinirCobranca(string? competenciaInicial, PropositoLocacao? proposito,
+        int? diaVencimento, decimal? despesasCondominiais, decimal? valorIptu) { /* … */ }
 }
 
 public class Inquilino : Entity, ITenantOwned, ISoftDeletable

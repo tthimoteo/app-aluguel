@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  competenciaValida,
   documentoCliente,
   formatarCpfCnpj,
   formatarData,
   formatarDataHora,
   formatarMoeda,
   iniciais,
+  mascaraCompetencia,
   mascaraMoeda,
   mascaraPercentual,
   moedaParaInput,
@@ -148,5 +150,21 @@ describe("mascaraPercentual e percentualValido", () => {
     expect(parsePercentual("")).toBeNull();
     expect(percentualParaInput(10)).toBe("10");
     expect(percentualParaInput(2.5)).toBe("2,5");
+  });
+});
+
+describe("mascaraCompetencia e competenciaValida", () => {
+  it("mascara dígitos como MM/AAAA", () => {
+    expect(mascaraCompetencia("092026")).toBe("09/2026");
+    expect(mascaraCompetencia("09")).toBe("09");
+    expect(mascaraCompetencia("")).toBe("");
+  });
+
+  it("valida mês 01–12 no formato MM/AAAA", () => {
+    expect(competenciaValida("")).toBe(true);
+    expect(competenciaValida("09/2026")).toBe(true);
+    expect(competenciaValida("13/2026")).toBe(false);
+    expect(competenciaValida("9/2026")).toBe(false);
+    expect(competenciaValida("092026")).toBe(false);
   });
 });

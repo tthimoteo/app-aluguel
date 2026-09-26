@@ -4,6 +4,7 @@ using Aluguel.Application.Clientes;
 using Aluguel.Application.Common.Acesso;
 using Aluguel.Application.Imoveis.AtualizarImovel;
 using Aluguel.Application.Imoveis.CriarImovel;
+using Aluguel.Application.Imoveis.DefinirCobrancaImovel;
 using Aluguel.Application.Imoveis.ListarImoveis;
 using Aluguel.Application.Imoveis.ObterImovelPorId;
 using Aluguel.Application.Imoveis.RemoverImovel;
@@ -28,6 +29,13 @@ public sealed record AtualizarImovelRequest(
     string? NumeroMatricula,
     StatusAtivoInativo Status,
     EnderecoInput? Endereco);
+
+public sealed record DefinirCobrancaImovelRequest(
+    string? CompetenciaInicial,
+    PropositoLocacao? PropositoLocacao,
+    int? DiaVencimentoCobranca,
+    decimal? DespesasCondominiais,
+    decimal? ValorIptu);
 
 public static class ImovelEndpoints
 {
@@ -77,6 +85,20 @@ public static class ImovelEndpoints
             return dto is null ? Results.NotFound() : Results.Ok(dto);
         })
         .WithName("AtualizarImovel")
+        .RequireAuthorization(Politicas.GerenciaCadastros);
+
+        grupo.MapPut("/{id:guid}/cobranca", async (Guid id, DefinirCobrancaImovelRequest req, ISender sender, CancellationToken ct) =>
+        {
+            var dto = await sender.Send(new DefinirCobrancaImovelCommand(
+                id,
+                req.CompetenciaInicial,
+                req.PropositoLocacao,
+                req.DiaVencimentoCobranca,
+                req.DespesasCondominiais,
+                req.ValorIptu), ct);
+            return dto is null ? Results.NotFound() : Results.Ok(dto);
+        })
+        .WithName("DefinirCobrancaImovel")
         .RequireAuthorization(Politicas.GerenciaCadastros);
 
         grupo.MapDelete("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>

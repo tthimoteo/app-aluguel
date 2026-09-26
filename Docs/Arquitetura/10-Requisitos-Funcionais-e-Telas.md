@@ -14,7 +14,7 @@ Detalha as telas e regras funcionais (§10–§14) e como mapeiam para endpoints
 
 **Lista e cadastro do imóvel** — cada linha (e o card na home) abre `/imoveis/{id}` com os dados do imóvel. Gestor e Administrador **editam** nome, tipo, IPTU, matrícula, status e endereço no próprio cadastro (`PUT /api/imoveis/{id}`); Analista só consulta. CEP, logradouro, número, bairro, cidade e UF são **obrigatórios** no incluir e no editar (complemento é opcional). **Inquilino** e **contrato** ficam nesse cadastro, não na listagem nem no menu: um inquilino e um contrato ativo por vez (CASO 3). Ao incluir o inquilino na ficha do imóvel, o vínculo `imovelId` é gravado (`POST /api/inquilinos` com `imovelId`) e a ficha exibe o locatário mesmo antes do contrato. Ações no cadastro: incluir/editar/remover inquilino; incluir/editar/renovar/encerrar contrato (renovar encerra o ativo e cria o novo).
 
-**Administrador:** a lista da home é de **clientes** (nome/razão social, CPF ou CNPJ, plano, status), não de imóveis. Os cards de indicadores exibem quantidade de **clientes**, imóveis e planos (sem inquilinos nem contratos). Gestor e Analista continuam com a lista de imóveis e os cards de imóveis, inquilinos, contratos e planos.
+**Administrador:** a lista da home é de **clientes** (nome/razão social, CPF ou CNPJ, plano, status), não de imóveis. Os cards de indicadores exibem quantidade de **clientes** e imóveis (sem card de planos). **Gestor e Analista** compartilham a mesma visão da home: lista de imóveis e cards de **imóveis** e **contratos ativos** (sem cards de inquilinos nem planos). Na ficha do imóvel, o Analista **consulta** inquilino, contrato e históricos (incluindo download de anexo); não edita nem remove.
 
 **Lista de imóveis** (Gestor/Analista), por linha:
 - Situação de NFS-e e pagamento: `Dentro do prazo` · `NFS-e pendente` · `Inadimplente`;
@@ -73,7 +73,7 @@ Tela mostra, **mês a mês**, o histórico de faturamento (XML e PDF para baixar
 |---|---|---|
 | **Usuários** | Administrador e Gestor (escolhem o cliente) | Abre a lista dos clientes aos quais o usuário tem acesso (Gestor: vinculações com perfil Gestor). Ao selecionar um cliente, lista e gerencia os usuários daquele cadastro. CPF identifica a pessoa: o mesmo usuário pode ser vinculado a outro cliente com perfil próprio; não pode repetir o CPF no mesmo cliente. |
 | **Imóveis** | Todos | Se o usuário tem **mais de um** cliente, abre a lista para selecionar; com **um** cliente, vai direto à lista de imóveis. Clique no imóvel abre o cadastro (`/imoveis/{id}`) com inquilino e contrato. Inquilinos e contratos não aparecem na listagem nem no menu. |
-| **Minha Conta** | Gestor | Dados de cliente/usuário; histórico de cobrança do app; plano atual; **upgrade**. |
+| **Minha Conta** | Gestor | Editar dados cadastrais do cliente (endereço/contato); visualizar plano vigente; ao clicar em outro plano, modal com serviços + link de pagamento (Mercado Pago — futuro); se o plano vigente permite NFS-e, informar **CNAE**, **código de serviço**, **regime tributário** e **upload do certificado A1** (PFX/P12 + senha, senha só no backend). |
 | **Relatório** | Administrador/Gestor/Analista | Extrair histórico de faturamentos, pagamentos, IPTU e demais despesas. |
 | **Dados para Contabilidade** | Gestor | Exportar Contas a Receber e Contas a Pagar em XLSX/CSV. |
 | **Auditoria** | AdminSistema/Gestor | Consultar logs de alterações. |
