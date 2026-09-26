@@ -60,7 +60,9 @@ type Painel =
   | { tipo: "contrato-editar" }
   | { tipo: "contrato-encerrar" }
   | { tipo: "historico-inquilinos" }
-  | { tipo: "historico-contratos" };
+  | { tipo: "historico-contratos" }
+  | { tipo: "detalhe-inquilino"; item: HistoricoInquilinoItem }
+  | { tipo: "detalhe-contrato"; contrato: Contrato };
 
 export function CadastroImovel({
   imovel,
@@ -770,7 +772,7 @@ export function CadastroImovel({
             <DialogHeader className="border-0 p-0 pr-10">
               <DialogTitle>Histórico de inquilinos</DialogTitle>
               <DialogDescription>
-                Locatários que já estiveram vinculados a este imóvel (via contrato ou cadastro).
+                Locatários que já estiveram vinculados a este imóvel (via contrato ou cadastro). Clique no nome para ver o detalhe.
               </DialogDescription>
             </DialogHeader>
             <div className="py-2">
@@ -790,7 +792,15 @@ export function CadastroImovel({
                     <tbody>
                       {historicoInquilinos.map((item) => (
                         <tr key={item.inquilinoId} className="border-t border-border">
-                          <td className="px-3 py-2 font-medium">{item.nome}</td>
+                          <td className="px-3 py-2 font-medium">
+                            <button
+                              type="button"
+                              className="text-left font-medium text-[#DB6838] underline-offset-2 hover:underline"
+                              onClick={() => setPainel({ tipo: "detalhe-inquilino", item })}
+                            >
+                              {item.nome}
+                            </button>
+                          </td>
                           <td className="px-3 py-2">{item.documento ? formatarCpfCnpj(item.documento) : "—"}</td>
                           <td className="px-3 py-2">
                             {item.dataInicio
@@ -822,13 +832,89 @@ export function CadastroImovel({
           </DialogContent>
         ) : null}
 
+        {painel?.tipo === "detalhe-inquilino" ? (
+          <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
+            <div className="m-[10px] flex flex-col">
+              <DialogHeader className="border-0 p-0 pr-10">
+                <DialogTitle>Detalhe do inquilino</DialogTitle>
+                <DialogDescription>
+                  {painel.item.removido
+                    ? "O cadastro deste inquilino foi removido; restam os dados do histórico."
+                    : "Informações cadastrais do locatário neste imóvel."}
+                </DialogDescription>
+              </DialogHeader>
+              <dl className="grid gap-4 py-2 sm:grid-cols-2">
+                <CampoDetalhe rotulo="Nome" valor={painel.item.detalhe?.nome ?? painel.item.nome} />
+                <CampoDetalhe
+                  rotulo="Tipo"
+                  valor={
+                    painel.item.detalhe
+                      ? painel.item.detalhe.tipoPessoa === "PJ"
+                        ? "Pessoa jurídica"
+                        : "Pessoa física"
+                      : "—"
+                  }
+                />
+                <CampoDetalhe
+                  rotulo="Documento"
+                  valor={
+                    painel.item.detalhe?.documento || painel.item.documento
+                      ? formatarCpfCnpj(painel.item.detalhe?.documento ?? painel.item.documento)
+                      : "—"
+                  }
+                />
+                <CampoDetalhe rotulo="E-mail" valor={painel.item.detalhe?.email ?? "—"} />
+                <CampoDetalhe rotulo="Telefone" valor={painel.item.detalhe?.telefone ?? "—"} />
+                <CampoDetalhe
+                  rotulo="Status"
+                  valor={
+                    painel.item.removido ? (
+                      <span className="text-sm text-muted-foreground">Removido</span>
+                    ) : painel.item.detalhe?.status || painel.item.status ? (
+                      <StatusBadge status={painel.item.detalhe?.status ?? painel.item.status ?? ""} />
+                    ) : (
+                      "—"
+                    )
+                  }
+                />
+                <CampoDetalhe
+                  rotulo="Período no imóvel"
+                  valor={
+                    painel.item.dataInicio
+                      ? `${formatarData(painel.item.dataInicio)} – ${painel.item.dataFim ? formatarData(painel.item.dataFim) : "…"}`
+                      : "—"
+                  }
+                />
+                <CampoDetalhe
+                  rotulo="Endereço"
+                  valor={painel.item.detalhe ? formatarEndereco(painel.item.detalhe.endereco) : "—"}
+                  classe="sm:col-span-2"
+                />
+              </dl>
+              <DialogFooter className="border-0 p-0">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-9 rounded-[4px]"
+                  onClick={() => setPainel({ tipo: "historico-inquilinos" })}
+                >
+                  Voltar ao histórico
+                </Button>
+                <Button type="button" variant="secondary" className="h-9 rounded-[4px] bg-[#95A5A6] text-white hover:bg-[#7F8C8D]" onClick={fechar}>
+                  Fechar
+                </Button>
+              </DialogFooter>
+            </div>
+          </DialogContent>
+        ) : null}
+
         {painel?.tipo === "historico-contratos" ? (
           <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
             <div className="m-[10px] flex flex-col">
             <DialogHeader className="border-0 p-0 pr-10">
               <DialogTitle>Histórico de contratos</DialogTitle>
               <DialogDescription>
-                Contratos deste imóvel, do mais recente ao mais antigo (CASO 3 — apenas um ativo por vez).
+                Contratos deste imóvel, do mais recente ao mais antigo. Clique no número para ver o detalhe.
               </DialogDescription>
             </DialogHeader>
             <div className="py-2">
@@ -855,7 +941,15 @@ export function CadastroImovel({
                           ?? "—";
                         return (
                           <tr key={c.id} className="border-t border-border">
-                            <td className="px-3 py-2 font-medium">{c.numeroContrato}</td>
+                            <td className="px-3 py-2 font-medium">
+                              <button
+                                type="button"
+                                className="text-left font-medium text-[#DB6838] underline-offset-2 hover:underline"
+                                onClick={() => setPainel({ tipo: "detalhe-contrato", contrato: c })}
+                              >
+                                {c.numeroContrato}
+                              </button>
+                            </td>
                             <td className="px-3 py-2">{nomeInq}</td>
                             <td className="px-3 py-2">{formatarData(c.dataInicio)}</td>
                             <td className="px-3 py-2">{formatarMoeda(c.valorAluguel)}</td>
@@ -889,6 +983,73 @@ export function CadastroImovel({
                 Fechar
               </Button>
             </DialogFooter>
+            </div>
+          </DialogContent>
+        ) : null}
+
+        {painel?.tipo === "detalhe-contrato" ? (
+          <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
+            <div className="m-[10px] flex flex-col">
+              <DialogHeader className="border-0 p-0 pr-10">
+                <DialogTitle>Detalhe do contrato</DialogTitle>
+                <DialogDescription>
+                  {painel.contrato.numeroContrato} — informações completas do contrato neste imóvel.
+                </DialogDescription>
+              </DialogHeader>
+              <dl className="grid gap-4 py-2 sm:grid-cols-2">
+                <CampoDetalhe rotulo="Número" valor={painel.contrato.numeroContrato} />
+                <CampoDetalhe rotulo="Status" valor={<StatusBadge status={painel.contrato.status} />} />
+                <CampoDetalhe
+                  rotulo="Inquilino"
+                  valor={
+                    historicoInquilinos.find((i) => i.inquilinoId === painel.contrato.inquilinoId)?.nome
+                    ?? inquilinosCliente.find((i) => i.id === painel.contrato.inquilinoId)?.nome
+                    ?? "—"
+                  }
+                />
+                <CampoDetalhe rotulo="Vencimento" valor={`Dia ${painel.contrato.diaVencimento}`} />
+                <CampoDetalhe rotulo="Início" valor={formatarData(painel.contrato.dataInicio)} />
+                <CampoDetalhe rotulo="Fim previsto" valor={formatarData(painel.contrato.dataFimPrevista)} />
+                <CampoDetalhe rotulo="Aluguel" valor={formatarMoeda(painel.contrato.valorAluguel)} />
+                <CampoDetalhe
+                  rotulo="Juros atraso"
+                  valor={painel.contrato.jurosAtrasoPct != null ? `${String(painel.contrato.jurosAtrasoPct).replace(".", ",")}%` : "—"}
+                />
+                <CampoDetalhe
+                  rotulo="Multa atraso"
+                  valor={painel.contrato.multaAtrasoPct != null ? `${String(painel.contrato.multaAtrasoPct).replace(".", ",")}%` : "—"}
+                />
+                <CampoDetalhe
+                  rotulo="Anexo"
+                  valor={
+                    painel.contrato.anexoPath ? (
+                      <a
+                        href={`/api/contratos/${painel.contrato.id}/anexo`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-medium text-[#DB6838] underline-offset-2 hover:underline"
+                      >
+                        Baixar PDF
+                      </a>
+                    ) : (
+                      "—"
+                    )
+                  }
+                />
+              </dl>
+              <DialogFooter className="border-0 p-0">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-9 rounded-[4px]"
+                  onClick={() => setPainel({ tipo: "historico-contratos" })}
+                >
+                  Voltar ao histórico
+                </Button>
+                <Button type="button" variant="secondary" className="h-9 rounded-[4px] bg-[#95A5A6] text-white hover:bg-[#7F8C8D]" onClick={fechar}>
+                  Fechar
+                </Button>
+              </DialogFooter>
             </div>
           </DialogContent>
         ) : null}

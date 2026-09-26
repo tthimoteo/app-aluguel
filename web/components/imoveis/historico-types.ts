@@ -1,4 +1,4 @@
-import type { Contrato } from "@/lib/api/types";
+import type { Contrato, Inquilino } from "@/lib/api/types";
 
 export type HistoricoInquilinoItem = {
   inquilinoId: string;
@@ -8,6 +8,8 @@ export type HistoricoInquilinoItem = {
   removido: boolean;
   dataInicio: string | null;
   dataFim: string | null;
+  /** Cadastro completo quando ainda existir (não soft-deleted). */
+  detalhe: Inquilino | null;
 };
 
 export type HistoricoContratoItem = Contrato;

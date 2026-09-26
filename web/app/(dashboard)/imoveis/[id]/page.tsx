@@ -111,6 +111,7 @@ async function montarHistoricoInquilinos(
       removido: !inq,
       dataInicio: inicio,
       dataFim: fim,
+      detalhe: inq ?? null,
     };
   });
 
@@ -124,6 +125,7 @@ async function montarHistoricoInquilinos(
       removido: false,
       dataInicio: null,
       dataFim: null,
+      detalhe: i,
     });
   }
 
