@@ -224,6 +224,7 @@ export const bff = {
 
 export type AtualizacaoClienteInput = {
   planoId?: string | null;
+  status?: "Ativo" | "Inativo" | "Bloqueado" | null;
   nome?: string | null;
   dataNascimento?: string | null;
   razaoSocial?: string | null;

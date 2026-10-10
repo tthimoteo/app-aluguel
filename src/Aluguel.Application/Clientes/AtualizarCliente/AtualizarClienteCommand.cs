@@ -19,7 +19,8 @@ public sealed record AtualizarClienteCommand(
     string? RegimeTributario,
     string? Telefone,
     string? Email,
-    EnderecoInput? Endereco) : IRequest<ClienteDto?>;
+    EnderecoInput? Endereco,
+    StatusCliente? Status = null) : IRequest<ClienteDto?>;
 
 public sealed class AtualizarClienteCommandHandler(IClienteRepository repositorio, ICurrentUser currentUser)
     : IRequestHandler<AtualizarClienteCommand, ClienteDto?>
@@ -52,6 +53,9 @@ public sealed class AtualizarClienteCommandHandler(IClienteRepository repositori
 
         if (request.PlanoId is not null)
             cliente.DefinirPlano(request.PlanoId);
+
+        if (request.Status is { } status)
+            cliente.DefinirStatus(status);
 
         await repositorio.SalvarAlteracoesAsync(cancellationToken);
         return cliente.ParaDto();

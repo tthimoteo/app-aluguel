@@ -28,7 +28,8 @@ public interface IDomainEvent { }
 
 ```csharp
 public enum TipoPessoa { PF = 1, PJ = 2 }
-public enum StatusCliente { Trial = 1, PendentePagamento = 2, Ativa = 3, Suspensa = 4, Cancelada = 5 }
+// Situação operacional do cliente (Admin). Ciclo comercial: StatusAssinatura.
+public enum StatusCliente { Ativo = 1, Inativo = 2, Bloqueado = 3 }
 
 // Usuário do cliente (§6)
 public enum PerfilUsuario { Gestor = 1, Analista = 2, AdminSistema = 9 }
@@ -110,7 +111,7 @@ public class Cliente : AggregateRoot, ITenantOwned, IAuditable, ISoftDeletable
     public Guid TenantId { get; private set; }
     public TipoPessoa TipoPessoa { get; private set; }
     public Guid? PlanoId { get; private set; }
-    public StatusCliente Status { get; private set; } = StatusCliente.Trial;
+    public StatusCliente Status { get; private set; } = StatusCliente.Ativo;
     // PF
     public string? Nome { get; private set; }
     public string? Cpf { get; private set; }

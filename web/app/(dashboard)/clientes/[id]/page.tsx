@@ -39,7 +39,7 @@ export default async function EditarClientePage({
       </p>
       <PageHeader
         titulo={nomeCliente(cliente)}
-        descricao="Edição cadastral e gestão da assinatura (somente Administrador)."
+        descricao="Edite cadastro, status operacional (Ativo/Inativo/Bloqueado) e plano de assinatura."
       />
       <FormularioMinhaConta
         me={me}

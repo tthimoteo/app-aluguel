@@ -90,6 +90,22 @@ public class ClienteHandlersTests
     }
 
     [Fact]
+    public async Task Atualizar_admin_altera_status_operacional()
+    {
+        var repo = new FakeClienteRepository();
+        var cliente = Cliente.CriarPessoaFisica(Tenant, null, "Antigo", "39053344705", null, null, null, null);
+        repo.Adicionar(cliente);
+        var admin = new FakeCurrentUser(Guid.NewGuid(), clienteId: null, ehAdministrador: true);
+        var handler = new AtualizarClienteCommandHandler(repo, admin);
+
+        var dto = await handler.Handle(new AtualizarClienteCommand(cliente.Id, null, "Antigo", null,
+            null, null, null, null, null, null, null, null, null, StatusCliente.Bloqueado), default);
+
+        dto!.Status.Should().Be(nameof(StatusCliente.Bloqueado));
+        cliente.Status.Should().Be(StatusCliente.Bloqueado);
+    }
+
+    [Fact]
     public async Task Remover_inexistente_retorna_false()
     {
         var handler = new RemoverClienteCommandHandler(new FakeClienteRepository());

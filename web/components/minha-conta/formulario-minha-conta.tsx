@@ -55,6 +55,11 @@ export function FormularioMinhaConta({
   const [certificado, setCertificado] = useState(certificadoInicial);
   const [endereco, setEndereco] = useState<EnderecoFormulario>(enderecoDeApi(clienteInicial.endereco));
   const [telefone, setTelefone] = useState(clienteInicial.telefone ? mascaraTelefone(clienteInicial.telefone) : "");
+  const [statusCliente, setStatusCliente] = useState<"Ativo" | "Inativo" | "Bloqueado">(
+    clienteInicial.status === "Inativo" || clienteInicial.status === "Bloqueado"
+      ? clienteInicial.status
+      : "Ativo",
+  );
   const [pending, setPending] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [planoModal, setPlanoModal] = useState<Plano | null>(null);
@@ -88,6 +93,7 @@ export function FormularioMinhaConta({
         ? String(form.get("regimeTributario") ?? "").trim() || null
         : cliente.regimeTributario,
     };
+    if (ehAdmin) dados.status = statusCliente;
 
     if (ehPj) {
       dados.razaoSocial = String(form.get("razaoSocial") ?? "").trim() || null;
@@ -104,7 +110,10 @@ export function FormularioMinhaConta({
       setCliente(atualizado);
       setEndereco(enderecoDeApi(atualizado.endereco));
       setTelefone(atualizado.telefone ? mascaraTelefone(atualizado.telefone) : "");
-      toast.success("Dados da conta atualizados.");
+      if (atualizado.status === "Inativo" || atualizado.status === "Bloqueado" || atualizado.status === "Ativo") {
+        setStatusCliente(atualizado.status);
+      }
+      toast.success(ehAdmin ? "Cliente atualizado." : "Dados da conta atualizados.");
       router.refresh();
     } catch (e) {
       const msg = e instanceof BffError ? e.message : "Não foi possível salvar.";
@@ -197,19 +206,33 @@ export function FormularioMinhaConta({
           </section>
         ) : (
           <section className="rounded-lg bg-card p-5 shadow-[0_2px_8px_rgba(0,0,0,0.1)] ring-1 ring-border">
-            <h3 className="mb-1 text-sm font-semibold">Assinatura</h3>
+            <h3 className="mb-1 text-sm font-semibold">Situação do cliente</h3>
             <p className="mb-4 text-xs text-muted-foreground">
-              Situação comercial do cliente na plataforma. Altere o plano na seção abaixo.
+              Status operacional (Ativo, Inativo ou Bloqueado). O plano vigente é gerenciado na seção de assinatura
+              abaixo.
             </p>
-            <dl className="grid gap-3 text-sm sm:grid-cols-2">
-              <Linha rotulo="Status" valor={<StatusBadge status={cliente.status} />} />
-              <Linha
-                rotulo="Plano vigente"
-                valor={planoVigente?.nome ?? "Nenhum plano vinculado"}
-              />
-              <Linha rotulo="Tipo" valor={cliente.tipoPessoa === "PJ" ? "Pessoa jurídica" : "Pessoa física"} />
-              <Linha rotulo="E-mail" valor={cliente.email ?? "—"} />
-            </dl>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Campo rotulo="Status" htmlFor="statusCliente">
+                <select
+                  id="statusCliente"
+                  name="statusCliente"
+                  value={statusCliente}
+                  onChange={(e) => setStatusCliente(e.target.value as "Ativo" | "Inativo" | "Bloqueado")}
+                  className={selectClass}
+                >
+                  <option value="Ativo">Ativo</option>
+                  <option value="Inativo">Inativo</option>
+                  <option value="Bloqueado">Bloqueado</option>
+                </select>
+              </Campo>
+              <dl className="grid gap-3 text-sm content-start">
+                <Linha
+                  rotulo="Plano vigente"
+                  valor={planoVigente?.nome ?? "Nenhum plano vinculado"}
+                />
+                <Linha rotulo="Tipo" valor={cliente.tipoPessoa === "PJ" ? "Pessoa jurídica" : "Pessoa física"} />
+              </dl>
+            </div>
           </section>
         )}
 
