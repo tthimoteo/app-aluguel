@@ -30,6 +30,10 @@ public sealed class FakeUsuarioService : IUsuarioService
     public Task<int> ContarAsync(Guid clienteId, string? termo, CancellationToken ct = default) =>
         Task.FromResult(Itens.Count(u => u.ClienteId == clienteId));
 
+    public Task<int> ContarUsuariosAtivosAsync(Guid clienteId, CancellationToken ct = default) =>
+        Task.FromResult(Itens.Count(u => u.ClienteId == clienteId
+            && string.Equals(u.Status, "Ativo", StringComparison.OrdinalIgnoreCase)));
+
     public Task<bool> EmailEmUsoAsync(string email, Guid? ignorarId, CancellationToken ct = default) =>
         Task.FromResult(EmailsEmUso.Contains(email.Trim()));
 

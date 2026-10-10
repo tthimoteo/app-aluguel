@@ -65,8 +65,9 @@ CREATE TABLE app.cliente (
     tenant_id           uuid NOT NULL REFERENCES app.tenant(id),
     tipo_pessoa         varchar(2)  NOT NULL CHECK (tipo_pessoa IN ('PF','PJ')),
     plano_id            uuid NULL REFERENCES app.plano(id),
-    status              varchar(20) NOT NULL DEFAULT 'Trial'
-                        CHECK (status IN ('Trial','PendentePagamento','Ativa','Suspensa','Cancelada')),
+    -- Situação operacional (Admin). Ciclo comercial Trial/Ativa fica em app.assinatura.
+    status              varchar(20) NOT NULL DEFAULT 'Ativo'
+                        CHECK (status IN ('Ativo','Inativo','Bloqueado')),
     -- PF
     nome                varchar(150) NULL,
     cpf                 varchar(11)  NULL,

@@ -38,10 +38,16 @@ const TITULOS_FORA_DO_MENU: Record<string, string> = {
   "/contratos": "Contratos",
 };
 
+const UUID =
+  "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
+
 export function tituloDaRota(pathname: string): string {
   if (pathname === "/") return "Início";
-  if (/^\/imoveis\/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(\?.*)?$/.test(pathname)) {
+  if (new RegExp(`^/imoveis/${UUID}(\\?.*)?$`).test(pathname)) {
     return "Imóvel";
+  }
+  if (new RegExp(`^/clientes/${UUID}(\\?.*)?$`).test(pathname)) {
+    return "Editar cliente";
   }
   const candidatos: { href: string; label: string }[] = [
     ...Object.entries(TITULOS_FORA_DO_MENU).map(([href, label]) => ({ href, label })),

@@ -8,6 +8,25 @@ namespace Aluguel.Domain.UnitTests;
 public class ClienteTests
 {
     [Fact]
+    public void Cliente_nasce_ativo()
+    {
+        var c = Cliente.CriarPessoaFisica(Guid.NewGuid(), null, "João", "39053344705", null, null, null, null);
+        c.Status.Should().Be(StatusCliente.Ativo);
+    }
+
+    [Fact]
+    public void DefinirStatus_aceita_ativo_inativo_bloqueado()
+    {
+        var c = Cliente.CriarPessoaFisica(Guid.NewGuid(), null, "João", "39053344705", null, null, null, null);
+        c.DefinirStatus(StatusCliente.Inativo);
+        c.Status.Should().Be(StatusCliente.Inativo);
+        c.DefinirStatus(StatusCliente.Bloqueado);
+        c.Status.Should().Be(StatusCliente.Bloqueado);
+        c.DefinirStatus(StatusCliente.Ativo);
+        c.Status.Should().Be(StatusCliente.Ativo);
+    }
+
+    [Fact]
     public void DefinirDadosFiscaisNfse_persiste_cnae_servico_e_regime_em_pf()
     {
         var c = Cliente.CriarPessoaFisica(
