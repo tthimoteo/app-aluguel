@@ -47,7 +47,8 @@ public class ClienteHandlersTests
     [Fact]
     public async Task Atualizar_inexistente_retorna_null()
     {
-        var handler = new AtualizarClienteCommandHandler(new FakeClienteRepository());
+        var admin = new FakeCurrentUser(Guid.NewGuid(), clienteId: null, ehAdministrador: true);
+        var handler = new AtualizarClienteCommandHandler(new FakeClienteRepository(), admin);
         var cmd = new AtualizarClienteCommand(Guid.NewGuid(), null, "Novo", null,
             null, null, null, null, null, null, null, null, null);
 
@@ -60,7 +61,8 @@ public class ClienteHandlersTests
         var repo = new FakeClienteRepository();
         var cliente = Cliente.CriarPessoaFisica(Tenant, null, "Antigo", "39053344705", null, null, null, null);
         repo.Adicionar(cliente);
-        var handler = new AtualizarClienteCommandHandler(repo);
+        var admin = new FakeCurrentUser(Guid.NewGuid(), clienteId: null, ehAdministrador: true);
+        var handler = new AtualizarClienteCommandHandler(repo, admin);
 
         var dto = await handler.Handle(new AtualizarClienteCommand(cliente.Id, null, "Novo Nome", null,
             null, null, null, null, null, null, "11888887777", "novo@x.com", null), default);
@@ -68,6 +70,23 @@ public class ClienteHandlersTests
         dto!.Nome.Should().Be("Novo Nome");
         dto.Telefone.Should().Be("11888887777");
         repo.SalvouVezes.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Atualizar_fora_do_escopo_retorna_null()
+    {
+        var repo = new FakeClienteRepository();
+        var cliente = Cliente.CriarPessoaFisica(Tenant, null, "Antigo", "39053344705", null, null, null, null);
+        repo.Adicionar(cliente);
+        var outroCliente = Guid.NewGuid();
+        var gestor = new FakeCurrentUser(Guid.NewGuid(), outroCliente, ehAdministrador: false);
+        var handler = new AtualizarClienteCommandHandler(repo, gestor);
+
+        var dto = await handler.Handle(new AtualizarClienteCommand(cliente.Id, null, "Novo Nome", null,
+            null, null, null, null, null, null, null, null, null), default);
+
+        dto.Should().BeNull();
+        repo.SalvouVezes.Should().Be(0);
     }
 
     [Fact]

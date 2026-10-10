@@ -1,4 +1,5 @@
 using Aluguel.Application.Abstractions;
+using Aluguel.Application.Common.Acesso;
 using Aluguel.Domain.Clientes;
 using MediatR;
 
@@ -20,13 +21,13 @@ public sealed record AtualizarClienteCommand(
     string? Email,
     EnderecoInput? Endereco) : IRequest<ClienteDto?>;
 
-public sealed class AtualizarClienteCommandHandler(IClienteRepository repositorio)
+public sealed class AtualizarClienteCommandHandler(IClienteRepository repositorio, ICurrentUser currentUser)
     : IRequestHandler<AtualizarClienteCommand, ClienteDto?>
 {
     public async Task<ClienteDto?> Handle(AtualizarClienteCommand request, CancellationToken cancellationToken)
     {
         var cliente = await repositorio.ObterPorIdAsync(request.Id, cancellationToken);
-        if (cliente is null)
+        if (cliente is null || !EscopoCliente.PodeAcessar(currentUser, cliente.Id))
             return null;
 
         var endereco = request.Endereco?.ParaValueObject();
