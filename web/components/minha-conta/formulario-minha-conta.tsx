@@ -40,20 +40,30 @@ export function FormularioMinhaConta({
   cliente: clienteInicial,
   planos,
   certificado: certificadoInicial,
+  variante = "minha-conta",
 }: {
   me: AuthMe;
   cliente: Cliente;
   planos: Plano[];
   certificado: CertificadoDigital | null;
+  /** Admin edita qualquer cliente e aplica plano sem fluxo de pagamento. */
+  variante?: "minha-conta" | "admin";
 }) {
   const router = useRouter();
+  const ehAdmin = variante === "admin";
   const [cliente, setCliente] = useState(clienteInicial);
   const [certificado, setCertificado] = useState(certificadoInicial);
   const [endereco, setEndereco] = useState<EnderecoFormulario>(enderecoDeApi(clienteInicial.endereco));
   const [telefone, setTelefone] = useState(clienteInicial.telefone ? mascaraTelefone(clienteInicial.telefone) : "");
+  const [statusCliente, setStatusCliente] = useState<"Ativo" | "Inativo" | "Bloqueado">(
+    clienteInicial.status === "Inativo" || clienteInicial.status === "Bloqueado"
+      ? clienteInicial.status
+      : "Ativo",
+  );
   const [pending, setPending] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [planoModal, setPlanoModal] = useState<Plano | null>(null);
+  const [aplicandoPlano, setAplicandoPlano] = useState(false);
 
   const [arquivoCert, setArquivoCert] = useState<File | null>(null);
   const [senhaCert, setSenhaCert] = useState("");
@@ -83,6 +93,7 @@ export function FormularioMinhaConta({
         ? String(form.get("regimeTributario") ?? "").trim() || null
         : cliente.regimeTributario,
     };
+    if (ehAdmin) dados.status = statusCliente;
 
     if (ehPj) {
       dados.razaoSocial = String(form.get("razaoSocial") ?? "").trim() || null;
@@ -99,7 +110,10 @@ export function FormularioMinhaConta({
       setCliente(atualizado);
       setEndereco(enderecoDeApi(atualizado.endereco));
       setTelefone(atualizado.telefone ? mascaraTelefone(atualizado.telefone) : "");
-      toast.success("Dados da conta atualizados.");
+      if (atualizado.status === "Inativo" || atualizado.status === "Bloqueado" || atualizado.status === "Ativo") {
+        setStatusCliente(atualizado.status);
+      }
+      toast.success(ehAdmin ? "Cliente atualizado." : "Dados da conta atualizados.");
       router.refresh();
     } catch (e) {
       const msg = e instanceof BffError ? e.message : "Não foi possível salvar.";
@@ -139,28 +153,88 @@ export function FormularioMinhaConta({
     setPlanoModal(plano);
   }
 
+  async function onAplicarPlano(plano: Plano) {
+    setAplicandoPlano(true);
+    try {
+      const atualizado = await bff.atualizarCliente(cliente.id, {
+        planoId: plano.id,
+        nome: cliente.nome,
+        dataNascimento: cliente.dataNascimento,
+        razaoSocial: cliente.razaoSocial,
+        nomeFantasia: cliente.nomeFantasia,
+        inscricaoMunicipal: cliente.inscricaoMunicipal,
+        cnaePrincipal: cliente.cnaePrincipal,
+        codigoServico: cliente.codigoServico,
+        regimeTributario: cliente.regimeTributario,
+        telefone: cliente.telefone,
+        email: cliente.email,
+        endereco: enderecoParaApi(enderecoDeApi(cliente.endereco)),
+      });
+      setCliente(atualizado);
+      setPlanoModal(null);
+      toast.success(`Plano ${plano.nome} aplicado ao cliente.`);
+      router.refresh();
+    } catch (e) {
+      toast.error(e instanceof BffError ? e.message : "Não foi possível alterar o plano.");
+    } finally {
+      setAplicandoPlano(false);
+    }
+  }
+
   return (
     <>
       <form onSubmit={(ev) => void onSubmit(ev)} className="space-y-4">
-        <section className="rounded-lg bg-card p-5 shadow-[0_2px_8px_rgba(0,0,0,0.1)] ring-1 ring-border">
-          <h3 className="mb-1 text-sm font-semibold">Usuário</h3>
-          <p className="mb-4 text-xs text-muted-foreground">Identidade da sessão (somente leitura).</p>
-          <dl className="grid gap-3 text-sm sm:grid-cols-2">
-            <Linha rotulo="Nome" valor={me.nome} />
-            <Linha rotulo="E-mail" valor={me.email} />
-            <Linha
-              rotulo="Perfil"
-              valor={
-                <span className="flex flex-wrap gap-1">
-                  {me.roles.map((r) => (
-                    <StatusBadge key={r} status={r} />
-                  ))}
-                </span>
-              }
-            />
-            <Linha rotulo="Status do cliente" valor={<StatusBadge status={cliente.status} />} />
-          </dl>
-        </section>
+        {!ehAdmin ? (
+          <section className="rounded-lg bg-card p-5 shadow-[0_2px_8px_rgba(0,0,0,0.1)] ring-1 ring-border">
+            <h3 className="mb-1 text-sm font-semibold">Usuário</h3>
+            <p className="mb-4 text-xs text-muted-foreground">Identidade da sessão (somente leitura).</p>
+            <dl className="grid gap-3 text-sm sm:grid-cols-2">
+              <Linha rotulo="Nome" valor={me.nome} />
+              <Linha rotulo="E-mail" valor={me.email} />
+              <Linha
+                rotulo="Perfil"
+                valor={
+                  <span className="flex flex-wrap gap-1">
+                    {me.roles.map((r) => (
+                      <StatusBadge key={r} status={r} />
+                    ))}
+                  </span>
+                }
+              />
+              <Linha rotulo="Status do cliente" valor={<StatusBadge status={cliente.status} />} />
+            </dl>
+          </section>
+        ) : (
+          <section className="rounded-lg bg-card p-5 shadow-[0_2px_8px_rgba(0,0,0,0.1)] ring-1 ring-border">
+            <h3 className="mb-1 text-sm font-semibold">Situação do cliente</h3>
+            <p className="mb-4 text-xs text-muted-foreground">
+              Status operacional (Ativo, Inativo ou Bloqueado). O plano vigente é gerenciado na seção de assinatura
+              abaixo.
+            </p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Campo rotulo="Status" htmlFor="statusCliente">
+                <select
+                  id="statusCliente"
+                  name="statusCliente"
+                  value={statusCliente}
+                  onChange={(e) => setStatusCliente(e.target.value as "Ativo" | "Inativo" | "Bloqueado")}
+                  className={selectClass}
+                >
+                  <option value="Ativo">Ativo</option>
+                  <option value="Inativo">Inativo</option>
+                  <option value="Bloqueado">Bloqueado</option>
+                </select>
+              </Campo>
+              <dl className="grid gap-3 text-sm content-start">
+                <Linha
+                  rotulo="Plano vigente"
+                  valor={planoVigente?.nome ?? "Nenhum plano vinculado"}
+                />
+                <Linha rotulo="Tipo" valor={cliente.tipoPessoa === "PJ" ? "Pessoa jurídica" : "Pessoa física"} />
+              </dl>
+            </div>
+          </section>
+        )}
 
         <section className="rounded-lg bg-card p-5 shadow-[0_2px_8px_rgba(0,0,0,0.1)] ring-1 ring-border">
           <h3 className="mb-1 text-sm font-semibold">Dados cadastrais do cliente</h3>
@@ -261,8 +335,10 @@ export function FormularioMinhaConta({
         <section className="rounded-lg bg-card p-5 shadow-[0_2px_8px_rgba(0,0,0,0.1)] ring-1 ring-border">
           <h3 className="mb-1 text-sm font-semibold">Plano de assinatura</h3>
           <p className="mb-4 text-xs text-muted-foreground">
-            Plano vigente{planoVigente ? `: ${planoVigente.nome}` : ""}. Clique em outro plano para ver os serviços e o
-            link de pagamento.
+            Plano vigente{planoVigente ? `: ${planoVigente.nome}` : ""}.{" "}
+            {ehAdmin
+              ? "Clique em outro plano para aplicá-lo diretamente a este cliente."
+              : "Clique em outro plano para ver os serviços e o link de pagamento."}
           </p>
           <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {planos.map((p) => {
@@ -411,7 +487,9 @@ export function FormularioMinhaConta({
               <DialogHeader className="border-0 p-0 pr-10">
                 <DialogTitle>Plano {planoModal.nome}</DialogTitle>
                 <DialogDescription>
-                  Detalhes dos serviços. A contratação com pagamento online será habilitada em breve.
+                  {ehAdmin
+                    ? "Detalhes dos serviços. Como Administrador, você pode aplicar este plano ao cliente sem passar pelo pagamento."
+                    : "Detalhes dos serviços. A contratação com pagamento online será habilitada em breve."}
                 </DialogDescription>
               </DialogHeader>
               <div className="py-3">
@@ -431,18 +509,30 @@ export function FormularioMinhaConta({
                   variant="secondary"
                   className="h-9 rounded-[4px] bg-[#95A5A6] text-white hover:bg-[#7F8C8D]"
                   onClick={() => setPlanoModal(null)}
+                  disabled={aplicandoPlano}
                 >
                   Fechar
                 </Button>
-                <Button
-                  type="button"
-                  className="h-9 rounded-[4px]"
-                  onClick={() => {
-                    toast.info("O link de pagamento (Mercado Pago) estará disponível em breve.");
-                  }}
-                >
-                  Ir para pagamento
-                </Button>
+                {ehAdmin ? (
+                  <Button
+                    type="button"
+                    className="h-9 rounded-[4px]"
+                    disabled={aplicandoPlano}
+                    onClick={() => void onAplicarPlano(planoModal)}
+                  >
+                    {aplicandoPlano ? "Aplicando…" : "Aplicar plano"}
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    className="h-9 rounded-[4px]"
+                    onClick={() => {
+                      toast.info("O link de pagamento (Mercado Pago) estará disponível em breve.");
+                    }}
+                  >
+                    Ir para pagamento
+                  </Button>
+                )}
               </DialogFooter>
             </div>
           </DialogContent>

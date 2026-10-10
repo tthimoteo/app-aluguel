@@ -15,6 +15,9 @@ public interface IUsuarioService
 
     Task<int> ContarAsync(Guid clienteId, string? termo, CancellationToken ct = default);
 
+    /// <summary>Quantidade de vínculos ativos do cliente (limite de plano / CASO 2).</summary>
+    Task<int> ContarUsuariosAtivosAsync(Guid clienteId, CancellationToken ct = default);
+
     Task<bool> EmailEmUsoAsync(string email, Guid? ignorarId, CancellationToken ct = default);
 
     Task<bool> CpfEmUsoNoClienteAsync(Guid clienteId, string cpf, Guid? ignorarId, CancellationToken ct = default);

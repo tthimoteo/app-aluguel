@@ -9,7 +9,7 @@ public class Cliente : AggregateRoot, ITenantOwned, IAuditable, ISoftDeletable
     public Guid TenantId { get; private set; }
     public TipoPessoa TipoPessoa { get; private set; }
     public Guid? PlanoId { get; private set; }
-    public StatusCliente Status { get; private set; } = StatusCliente.Trial;
+    public StatusCliente Status { get; private set; } = StatusCliente.Ativo;
 
     // Pessoa Física
     public string? Nome { get; private set; }
@@ -85,6 +85,15 @@ public class Cliente : AggregateRoot, ITenantOwned, IAuditable, ISoftDeletable
     public void DefinirPlano(Guid? planoId)
     {
         PlanoId = planoId;
+        Touch();
+    }
+
+    /// <summary>Define a situação operacional do cliente (Ativo, Inativo ou Bloqueado).</summary>
+    public void DefinirStatus(StatusCliente status)
+    {
+        if (!Enum.IsDefined(status))
+            throw new ArgumentOutOfRangeException(nameof(status), "Status do cliente inválido.");
+        Status = status;
         Touch();
     }
 
