@@ -10,7 +10,16 @@ namespace Aluguel.Api.Endpoints;
 
 public static class CobrancaEndpoints
 {
-    public sealed record GerarCobrancaRequest(Guid ImovelId, string Competencia);
+    public sealed record GerarCobrancaRequest(
+        Guid ImovelId,
+        string Competencia,
+        decimal ValorAluguel,
+        bool IncluirCondominio = true,
+        decimal? ValorCondominio = null,
+        bool IncluirIptu = true,
+        decimal? ValorIptu = null,
+        int DiaVencimento = 10,
+        bool EmitirNfse = true);
 
     public static IEndpointRouteBuilder MapCobrancaEndpoints(this IEndpointRouteBuilder app)
     {
@@ -31,7 +40,16 @@ public static class CobrancaEndpoints
         {
             try
             {
-                var dto = await sender.Send(new GerarCobrancaCommand(req.ImovelId, req.Competencia), ct);
+                var dto = await sender.Send(new GerarCobrancaCommand(
+                    req.ImovelId,
+                    req.Competencia,
+                    req.ValorAluguel,
+                    req.IncluirCondominio,
+                    req.ValorCondominio,
+                    req.IncluirIptu,
+                    req.ValorIptu,
+                    req.DiaVencimento,
+                    req.EmitirNfse), ct);
                 return Results.Created($"/api/cobrancas/{dto.Id}", dto);
             }
             catch (ArgumentException ex)
