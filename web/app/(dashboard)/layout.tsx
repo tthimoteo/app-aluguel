@@ -1,14 +1,19 @@
 import { AppHeader } from "@/components/layout/app-header";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { api } from "@/lib/api/server";
-import { requireSession } from "@/lib/auth/session";
+import { requireSession, temPerfil } from "@/lib/auth/session";
 import { itensVisiveis } from "@/lib/navigation";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const usuario = await requireSession();
   const me = await api.me().catch(() => null);
   const clientes = me?.clientes ?? [];
-  const itens = itensVisiveis(usuario.roles);
+  const ehAdmin = temPerfil(usuario, "Administrador");
+  const clienteAtual = me?.clienteId
+    ? clientes.find((c) => c.clienteId === me.clienteId)
+    : clientes[0];
+  const permiteCobranca = ehAdmin || Boolean(clienteAtual?.permiteCobranca);
+  const itens = itensVisiveis(usuario.roles, { ehAdministrador: ehAdmin, permiteCobranca });
 
   return (
     <div className="flex min-h-svh bg-background">

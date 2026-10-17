@@ -52,4 +52,10 @@ public class Plano : Entity
 
     /// <summary>Utilização atual de usuários cabe no plano (downgrade — CASO 2).</summary>
     public bool SuportaUtilizacaoUsuarios(int totalAtual) => MaxUsuarios is null || totalAtual <= MaxUsuarios;
+
+    /// <summary>
+    /// Módulo Cobrança (histórico NFS-e + boletos): liberado quando o plano permite NFS-e
+    /// (planos Intermediário/Avançado/Pro também geram boletos de aluguel).
+    /// </summary>
+    public bool PermiteModuloCobranca => PermiteNfse;
 }

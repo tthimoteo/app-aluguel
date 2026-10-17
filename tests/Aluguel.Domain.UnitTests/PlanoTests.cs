@@ -64,4 +64,11 @@ public class PlanoTests
     [InlineData(2, false)]
     public void SuportaUtilizacaoUsuarios_para_downgrade(int totalAtual, bool esperado) =>
         Basico().SuportaUtilizacaoUsuarios(totalAtual).Should().Be(esperado);
+
+    [Fact]
+    public void PermiteModuloCobranca_segue_flag_de_nfse()
+    {
+        Basico().PermiteModuloCobranca.Should().BeFalse();
+        Pro().PermiteModuloCobranca.Should().BeTrue();
+    }
 }

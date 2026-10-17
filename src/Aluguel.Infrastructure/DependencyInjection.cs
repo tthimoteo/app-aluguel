@@ -43,6 +43,7 @@ public static class DependencyInjection
         services.AddScoped<IInquilinoRepository, InquilinoRepository>();
         services.AddScoped<IContratoRepository, ContratoRepository>();
         services.AddScoped<ICertificadoDigitalRepository, CertificadoDigitalRepository>();
+        services.AddScoped<ICobrancaRepository, CobrancaRepository>();
 
         services.AddSingleton<IFileStorage, LocalFileStorage>();
         services.AddSingleton<ISecretProtector, AesSecretProtector>();

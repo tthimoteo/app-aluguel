@@ -38,6 +38,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentTenant
     public DbSet<DocumentoFiscal> DocumentosFiscais => Set<DocumentoFiscal>();
     public DbSet<CertificadoDigital> Certificados => Set<CertificadoDigital>();
     public DbSet<Pagamento> Pagamentos => Set<Pagamento>();
+    public DbSet<Boleto> Boletos => Set<Boleto>();
     public DbSet<Despesa> Despesas => Set<Despesa>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<Identity.RefreshToken> RefreshTokens => Set<Identity.RefreshToken>();
