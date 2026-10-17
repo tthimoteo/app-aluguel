@@ -102,9 +102,19 @@ public class AuthService(
         var vinculos = await (
             from v in db.UsuariosClientes.AsNoTracking()
             join c in db.Clientes.AsNoTracking() on v.ClienteId equals c.Id
+            join p in db.Planos.AsNoTracking() on c.PlanoId equals p.Id into pj
+            from p in pj.DefaultIfEmpty()
             where v.UsuarioId == userId && v.Status == StatusUsuario.Ativo
             orderby c.Nome, c.RazaoSocial
-            select new { v.ClienteId, c.Nome, c.RazaoSocial, Perfil = v.Perfil, v.Status }
+            select new
+            {
+                v.ClienteId,
+                c.Nome,
+                c.RazaoSocial,
+                Perfil = v.Perfil,
+                v.Status,
+                PermiteCobranca = p != null && p.PermiteNfse,
+            }
         ).ToListAsync(ct);
 
         return vinculos
@@ -112,7 +122,8 @@ public class AuthService(
                 x.ClienteId,
                 string.IsNullOrWhiteSpace(x.Nome) ? x.RazaoSocial ?? "" : x.Nome!,
                 x.Perfil.ToString(),
-                x.Status.ToString()))
+                x.Status.ToString(),
+                x.PermiteCobranca))
             .ToList();
     }
 

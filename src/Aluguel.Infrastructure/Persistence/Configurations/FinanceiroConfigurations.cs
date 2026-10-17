@@ -45,3 +45,26 @@ public class DespesaConfiguration : IEntityTypeConfiguration<Despesa>
         b.HasIndex(x => new { x.ImovelId, x.Competencia });
     }
 }
+
+public class BoletoConfiguration : IEntityTypeConfiguration<Boleto>
+{
+    public void Configure(EntityTypeBuilder<Boleto> b)
+    {
+        b.ToTable("boleto");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.Competencia).HasColumnType("char(7)").IsRequired();
+        b.Property(x => x.Valor).HasColumnType("numeric(14,2)");
+        b.Property(x => x.NossoNumero).HasMaxLength(40);
+        b.Property(x => x.LinhaDigitavel).HasMaxLength(80);
+        b.Property(x => x.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
+        b.Property(x => x.StoragePathPdf);
+
+        b.HasOne<Cliente>().WithMany().HasForeignKey(x => x.ClienteId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<Imovel>().WithMany().HasForeignKey(x => x.ImovelId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<NotaFiscalServico>().WithMany().HasForeignKey(x => x.NfseId).OnDelete(DeleteBehavior.Restrict);
+
+        b.HasIndex(x => new { x.ImovelId, x.Competencia }).IsUnique()
+            .HasDatabaseName("ux_boleto_competencia");
+        b.HasIndex(x => x.NfseId);
+    }
+}

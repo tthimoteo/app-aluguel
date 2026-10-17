@@ -4,6 +4,8 @@ import type {
   AuthMe,
   CertificadoDigital,
   Cliente,
+  CobrancaDetalhe,
+  CobrancaListItem,
   Contrato,
   Imovel,
   Inquilino,
@@ -109,4 +111,21 @@ export const api = {
       throw e;
     }
   },
+  cobrancas: (opts?: {
+    clienteId?: string;
+    imovelId?: string;
+    competencia?: string;
+    take?: number;
+    skip?: number;
+  }) =>
+    apiFetch<Pagina<CobrancaListItem>>(
+      `/api/cobrancas${qs({
+        clienteId: opts?.clienteId,
+        imovelId: opts?.imovelId,
+        competencia: opts?.competencia,
+        take: opts?.take ?? 50,
+        skip: opts?.skip ?? 0,
+      })}`,
+    ),
+  cobranca: (id: string) => apiFetch<CobrancaDetalhe>(`/api/cobrancas/${id}`),
 };

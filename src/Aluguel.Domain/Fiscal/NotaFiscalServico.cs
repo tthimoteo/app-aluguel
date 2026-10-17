@@ -52,4 +52,24 @@ public class NotaFiscalServico : AggregateRoot, ITenantOwned, IAuditable
         Juros = juros;
         ValorFaturado = valorServico - desconto + multa + juros;
     }
+
+    public void MarcarEmitida(long numero, string serie, string chaveAcesso, Guid usuarioEmissorId,
+        DateTimeOffset emitidaEm)
+    {
+        Numero = numero;
+        Serie = serie;
+        ChaveAcesso = chaveAcesso;
+        UsuarioEmissorId = usuarioEmissorId;
+        DataEmissao = emitidaEm;
+        SolicitadoEm = emitidaEm;
+        Status = StatusNfse.Emitida;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    public void AnexarDocumento(DocumentoFiscal documento)
+    {
+        ArgumentNullException.ThrowIfNull(documento);
+        _documentos.Add(documento);
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
 }

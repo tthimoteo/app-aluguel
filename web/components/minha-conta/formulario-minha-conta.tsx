@@ -54,7 +54,16 @@ export function FormularioMinhaConta({
   const [cliente, setCliente] = useState(clienteInicial);
   const [certificado, setCertificado] = useState(certificadoInicial);
   const [endereco, setEndereco] = useState<EnderecoFormulario>(enderecoDeApi(clienteInicial.endereco));
+  const [nome, setNome] = useState(clienteInicial.nome ?? "");
+  const [dataNascimento, setDataNascimento] = useState(clienteInicial.dataNascimento?.slice(0, 10) ?? "");
+  const [razaoSocial, setRazaoSocial] = useState(clienteInicial.razaoSocial ?? "");
+  const [nomeFantasia, setNomeFantasia] = useState(clienteInicial.nomeFantasia ?? "");
+  const [inscricaoMunicipal, setInscricaoMunicipal] = useState(clienteInicial.inscricaoMunicipal ?? "");
+  const [email, setEmail] = useState(clienteInicial.email ?? "");
   const [telefone, setTelefone] = useState(clienteInicial.telefone ? mascaraTelefone(clienteInicial.telefone) : "");
+  const [cnaePrincipal, setCnaePrincipal] = useState(clienteInicial.cnaePrincipal ?? "");
+  const [codigoServico, setCodigoServico] = useState(clienteInicial.codigoServico ?? "");
+  const [regimeTributario, setRegimeTributario] = useState(clienteInicial.regimeTributario ?? "");
   const [statusCliente, setStatusCliente] = useState<"Ativo" | "Inativo" | "Bloqueado">(
     clienteInicial.status === "Inativo" || clienteInicial.status === "Bloqueado"
       ? clienteInicial.status
@@ -69,6 +78,23 @@ export function FormularioMinhaConta({
   const [senhaCert, setSenhaCert] = useState("");
   const [enviandoCert, setEnviandoCert] = useState(false);
 
+  function sincronizarCampos(c: Cliente) {
+    setNome(c.nome ?? "");
+    setDataNascimento(c.dataNascimento?.slice(0, 10) ?? "");
+    setRazaoSocial(c.razaoSocial ?? "");
+    setNomeFantasia(c.nomeFantasia ?? "");
+    setInscricaoMunicipal(c.inscricaoMunicipal ?? "");
+    setEmail(c.email ?? "");
+    setTelefone(c.telefone ? mascaraTelefone(c.telefone) : "");
+    setCnaePrincipal(c.cnaePrincipal ?? "");
+    setCodigoServico(c.codigoServico ?? "");
+    setRegimeTributario(c.regimeTributario ?? "");
+    setEndereco(enderecoDeApi(c.endereco));
+    if (c.status === "Inativo" || c.status === "Bloqueado" || c.status === "Ativo") {
+      setStatusCliente(c.status);
+    }
+  }
+
   const planoVigente = useMemo(
     () => planos.find((p) => p.id === cliente.planoId) ?? null,
     [planos, cliente.planoId],
@@ -80,39 +106,31 @@ export function FormularioMinhaConta({
     ev.preventDefault();
     setErro(null);
     setPending(true);
-    const form = new FormData(ev.currentTarget);
 
     const dados: AtualizacaoClienteInput = {
       planoId: cliente.planoId,
       telefone: telefone.replace(/\D/g, "") || null,
-      email: String(form.get("email") ?? "").trim() || null,
+      email: email.trim() || null,
       endereco: enderecoParaApi(endereco),
-      cnaePrincipal: mostraNfse ? String(form.get("cnaePrincipal") ?? "").trim() || null : cliente.cnaePrincipal,
-      codigoServico: mostraNfse ? String(form.get("codigoServico") ?? "").trim() || null : cliente.codigoServico,
-      regimeTributario: mostraNfse
-        ? String(form.get("regimeTributario") ?? "").trim() || null
-        : cliente.regimeTributario,
+      cnaePrincipal: mostraNfse ? cnaePrincipal.trim() || null : cliente.cnaePrincipal,
+      codigoServico: mostraNfse ? codigoServico.trim() || null : cliente.codigoServico,
+      regimeTributario: mostraNfse ? regimeTributario.trim() || null : cliente.regimeTributario,
     };
     if (ehAdmin) dados.status = statusCliente;
 
     if (ehPj) {
-      dados.razaoSocial = String(form.get("razaoSocial") ?? "").trim() || null;
-      dados.nomeFantasia = String(form.get("nomeFantasia") ?? "").trim() || null;
-      dados.inscricaoMunicipal = String(form.get("inscricaoMunicipal") ?? "").trim() || null;
+      dados.razaoSocial = razaoSocial.trim() || null;
+      dados.nomeFantasia = nomeFantasia.trim() || null;
+      dados.inscricaoMunicipal = inscricaoMunicipal.trim() || null;
     } else {
-      dados.nome = String(form.get("nome") ?? "").trim() || null;
-      const nasc = String(form.get("dataNascimento") ?? "").trim();
-      dados.dataNascimento = nasc || null;
+      dados.nome = nome.trim() || null;
+      dados.dataNascimento = dataNascimento.trim() || null;
     }
 
     try {
       const atualizado = await bff.atualizarCliente(cliente.id, dados);
       setCliente(atualizado);
-      setEndereco(enderecoDeApi(atualizado.endereco));
-      setTelefone(atualizado.telefone ? mascaraTelefone(atualizado.telefone) : "");
-      if (atualizado.status === "Inativo" || atualizado.status === "Bloqueado" || atualizado.status === "Ativo") {
-        setStatusCliente(atualizado.status);
-      }
+      sincronizarCampos(atualizado);
       toast.success(ehAdmin ? "Cliente atualizado." : "Dados da conta atualizados.");
       router.refresh();
     } catch (e) {
@@ -249,7 +267,8 @@ export function FormularioMinhaConta({
                     id="razaoSocial"
                     name="razaoSocial"
                     required
-                    defaultValue={cliente.razaoSocial ?? ""}
+                    value={razaoSocial}
+                    onChange={(e) => setRazaoSocial(e.target.value)}
                     className="h-10 rounded-[4px]"
                   />
                 </Campo>
@@ -257,7 +276,8 @@ export function FormularioMinhaConta({
                   <Input
                     id="nomeFantasia"
                     name="nomeFantasia"
-                    defaultValue={cliente.nomeFantasia ?? ""}
+                    value={nomeFantasia}
+                    onChange={(e) => setNomeFantasia(e.target.value)}
                     className="h-10 rounded-[4px]"
                   />
                 </Campo>
@@ -273,7 +293,8 @@ export function FormularioMinhaConta({
                   <Input
                     id="inscricaoMunicipal"
                     name="inscricaoMunicipal"
-                    defaultValue={cliente.inscricaoMunicipal ?? ""}
+                    value={inscricaoMunicipal}
+                    onChange={(e) => setInscricaoMunicipal(e.target.value)}
                     className="h-10 rounded-[4px]"
                   />
                 </Campo>
@@ -285,7 +306,8 @@ export function FormularioMinhaConta({
                     id="nome"
                     name="nome"
                     required
-                    defaultValue={cliente.nome ?? ""}
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
                     className="h-10 rounded-[4px]"
                   />
                 </Campo>
@@ -302,7 +324,8 @@ export function FormularioMinhaConta({
                     id="dataNascimento"
                     name="dataNascimento"
                     type="date"
-                    defaultValue={cliente.dataNascimento?.slice(0, 10) ?? ""}
+                    value={dataNascimento}
+                    onChange={(e) => setDataNascimento(e.target.value)}
                     className="h-10 rounded-[4px]"
                   />
                 </Campo>
@@ -313,7 +336,8 @@ export function FormularioMinhaConta({
                 id="email"
                 name="email"
                 type="email"
-                defaultValue={cliente.email ?? ""}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className="h-10 rounded-[4px]"
               />
             </Campo>
@@ -384,7 +408,8 @@ export function FormularioMinhaConta({
                   id="cnaePrincipal"
                   name="cnaePrincipal"
                   placeholder="Ex.: 6821801"
-                  defaultValue={cliente.cnaePrincipal ?? ""}
+                  value={cnaePrincipal}
+                  onChange={(e) => setCnaePrincipal(e.target.value)}
                   className="h-10 rounded-[4px]"
                 />
               </Campo>
@@ -393,7 +418,8 @@ export function FormularioMinhaConta({
                   id="codigoServico"
                   name="codigoServico"
                   placeholder="Ex.: 07.02"
-                  defaultValue={cliente.codigoServico ?? ""}
+                  value={codigoServico}
+                  onChange={(e) => setCodigoServico(e.target.value)}
                   className="h-10 rounded-[4px]"
                 />
               </Campo>
@@ -401,7 +427,8 @@ export function FormularioMinhaConta({
                 <select
                   id="regimeTributario"
                   name="regimeTributario"
-                  defaultValue={cliente.regimeTributario ?? ""}
+                  value={regimeTributario}
+                  onChange={(e) => setRegimeTributario(e.target.value)}
                   className={selectClass}
                 >
                   <option value="">Selecione</option>

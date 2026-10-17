@@ -114,6 +114,8 @@ if (builder.Configuration.GetValue("Database:MigrateOnStartup", true))
 
 // Roles sempre; usuários demo apenas em Development.
 await IdentitySeeder.SeedAsync(app.Services, seedDemoUsers: app.Environment.IsDevelopment());
+if (app.Environment.IsDevelopment())
+    await CobrancaDemoSeeder.SeedAsync(app.Services);
 
 if (app.Environment.IsDevelopment())
 {
@@ -140,6 +142,7 @@ app.MapUsuarioEndpoints();
 app.MapImovelEndpoints();
 app.MapInquilinoEndpoints();
 app.MapContratoEndpoints();
+app.MapCobrancaEndpoints();
 
 // Endpoints de diagnóstico para demonstrar a autorização por role/política.
 app.MapGet("/api/admin/ping", () => Results.Ok(new { escopo = "Administrador", ok = true }))

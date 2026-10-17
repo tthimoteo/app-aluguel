@@ -5,6 +5,57 @@ export type VinculoCliente = {
   nome: string;
   perfil: string;
   status: string;
+  /** Plano permite NFS-e e boletos (módulo Cobrança). */
+  permiteCobranca?: boolean;
+};
+
+export type CobrancaListItem = {
+  id: string;
+  clienteId: string;
+  clienteNome: string;
+  imovelId: string;
+  imovelNome: string;
+  competencia: string;
+  valorFaturado: number;
+  statusNfse: string;
+  temPagamento: boolean;
+  dataPagamento: string | null;
+  temXml: boolean;
+  temPdfNfse: boolean;
+  temBoletoPdf: boolean;
+};
+
+export type CobrancaDetalhe = {
+  id: string;
+  clienteId: string;
+  clienteNome: string;
+  imovelId: string;
+  imovelNome: string;
+  inquilinoId: string | null;
+  inquilinoNome: string | null;
+  competencia: string;
+  numeroNfse: number | null;
+  serie: string | null;
+  chaveAcesso: string | null;
+  statusNfse: string;
+  valorServico: number;
+  desconto: number;
+  multa: number;
+  juros: number;
+  valorFaturado: number;
+  dataEmissao: string | null;
+  temPagamento: boolean;
+  dataPagamento: string | null;
+  valorPago: number | null;
+  temXml: boolean;
+  temPdfNfse: boolean;
+  temBoletoPdf: boolean;
+  boletoId: string | null;
+  nossoNumero: string | null;
+  linhaDigitavel: string | null;
+  dataVencimentoBoleto: string | null;
+  valorBoleto: number | null;
+  statusBoleto: string | null;
 };
 
 export type UsuarioAutenticado = {

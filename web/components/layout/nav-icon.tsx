@@ -5,6 +5,7 @@ import {
   FileText,
   Home,
   Landmark,
+  Receipt,
   ScrollText,
   User,
   UserCog,
@@ -24,6 +25,7 @@ const ICONES: Record<NavItem["icone"], LucideIcon> = {
   calculator: Calculator,
   scroll: ScrollText,
   landmark: Landmark,
+  receipt: Receipt,
 };
 
 export function NavIcon({ name, className }: { name: NavItem["icone"]; className?: string }) {
