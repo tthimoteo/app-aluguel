@@ -84,6 +84,7 @@ public static class CobrancaDemoSeeder
 
         if (comPagamento)
         {
+            boleto.MarcarPago();
             db.Pagamentos.Add(new Pagamento(tenantId, clienteId, imovelId, competencia, valor,
                 venc.AddDays(2), nfseId: nfse.Id));
         }

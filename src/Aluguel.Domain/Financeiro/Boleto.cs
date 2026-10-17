@@ -45,5 +45,7 @@ public class Boleto : Entity, ITenantOwned
         Status = StatusBoleto.Gerado;
     }
 
+    public void MarcarPago() => Status = StatusBoleto.Pago;
+
     public bool PossuiPdf => !string.IsNullOrWhiteSpace(StoragePathPdf);
 }

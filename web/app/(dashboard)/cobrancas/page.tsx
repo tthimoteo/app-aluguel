@@ -147,7 +147,7 @@ export default async function CobrancasPage({
                       </TableCell>
                       <TableCell>
                         <Link href={`/cobrancas/${c.id}`} className="block">
-                          {c.temPagamento ? "Pago" : "Pendente"}
+                          <StatusBadge status={c.temPagamento ? "Pago" : "Pendente"} />
                         </Link>
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
@@ -174,7 +174,9 @@ export default async function CobrancasPage({
                 <CardField label="NFS-e">
                   <StatusBadge status={c.statusNfse} />
                 </CardField>
-                <CardField label="Pagamento">{c.temPagamento ? "Pago" : "Pendente"}</CardField>
+                <CardField label="Pagamento">
+                  <StatusBadge status={c.temPagamento ? "Pago" : "Pendente"} />
+                </CardField>
               </Link>
             </MobileCard>
           ))}

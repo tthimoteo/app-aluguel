@@ -161,6 +161,9 @@ public class CobrancaRepository(AppDbContext db) : ICobrancaRepository
     public Task<DocumentoFiscal?> ObterDocumentoAsync(Guid nfseId, TipoDocumentoFiscal tipo, CancellationToken ct = default) =>
         db.DocumentosFiscais.FirstOrDefaultAsync(d => d.NfseId == nfseId && d.Tipo == tipo, ct);
 
+    public Task<Pagamento?> ObterPagamentoPorNfseAsync(Guid nfseId, CancellationToken ct = default) =>
+        db.Pagamentos.FirstOrDefaultAsync(p => p.NfseId == nfseId, ct);
+
     public Task<bool> ExisteCobrancaNaoCanceladaAsync(Guid imovelId, string competencia, CancellationToken ct = default) =>
         db.NotasFiscais.AnyAsync(
             n => n.ImovelId == imovelId
@@ -172,6 +175,20 @@ public class CobrancaRepository(AppDbContext db) : ICobrancaRepository
     public void AdicionarDocumento(DocumentoFiscal documento) => db.DocumentosFiscais.Add(documento);
     public void AdicionarBoleto(Boleto boleto) => db.Boletos.Add(boleto);
     public void AdicionarPagamento(Pagamento pagamento) => db.Pagamentos.Add(pagamento);
+
+    public async Task RemoverCobrancaAsync(Guid nfseId, CancellationToken ct = default)
+    {
+        var docs = await db.DocumentosFiscais.Where(d => d.NfseId == nfseId).ToListAsync(ct);
+        db.DocumentosFiscais.RemoveRange(docs);
+
+        var boletos = await db.Boletos.Where(b => b.NfseId == nfseId).ToListAsync(ct);
+        db.Boletos.RemoveRange(boletos);
+
+        var nfse = await db.NotasFiscais.FirstOrDefaultAsync(n => n.Id == nfseId, ct);
+        if (nfse is not null)
+            db.NotasFiscais.Remove(nfse);
+    }
+
     public Task<int> SalvarAlteracoesAsync(CancellationToken ct = default) => db.SaveChangesAsync(ct);
     public Task<int> ContarNfseAsync(CancellationToken ct = default) => db.NotasFiscais.IgnoreQueryFilters().CountAsync(ct);
 }

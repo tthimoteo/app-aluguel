@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { AcoesCobranca } from "@/components/cobrancas/acoes-cobranca";
 import { PageHeader } from "@/components/data/page-header";
 import { StatusBadge } from "@/components/data/status-badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -16,6 +17,7 @@ export default async function DetalheCobrancaPage({
 }) {
   const usuario = await requireSession();
   const ehAdmin = temPerfil(usuario, "Administrador");
+  const podeGerenciar = temPerfil(usuario, "Administrador", "Gestor");
   const me = await api.me();
 
   if (!ehAdmin) {
@@ -62,9 +64,16 @@ export default async function DetalheCobrancaPage({
             <Linha
               rotulo="Pagamento"
               valor={
-                cobranca.temPagamento
-                  ? `Pago em ${formatarData(cobranca.dataPagamento)} (${formatarMoeda(cobranca.valorPago)})`
-                  : "Pendente"
+                cobranca.temPagamento ? (
+                  <span className="inline-flex flex-col items-end gap-1">
+                    <StatusBadge status="Pago" />
+                    <span className="text-xs font-normal text-muted-foreground">
+                      {formatarData(cobranca.dataPagamento)} · {formatarMoeda(cobranca.valorPago)}
+                    </span>
+                  </span>
+                ) : (
+                  <StatusBadge status="Pendente" />
+                )
               }
             />
           </dl>
@@ -146,6 +155,15 @@ export default async function DetalheCobrancaPage({
             <p className="text-sm text-muted-foreground">Nenhum boleto vinculado a esta cobrança.</p>
           )}
         </section>
+
+        {podeGerenciar ? (
+          <AcoesCobranca
+            cobrancaId={cobranca.id}
+            competencia={cobranca.competencia}
+            valorFaturado={cobranca.valorFaturado}
+            temPagamento={cobranca.temPagamento}
+          />
+        ) : null}
       </div>
     </div>
   );

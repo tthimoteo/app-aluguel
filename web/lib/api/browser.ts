@@ -223,6 +223,16 @@ export const bff = {
     diaVencimento: number;
     emitirNfse: boolean;
   }) => bffFetch<CobrancaDetalhe>("/api/cobrancas", { method: "POST", body: JSON.stringify(dados) }),
+  registrarPagamentoCobranca: (
+    id: string,
+    dados?: { dataPagamento?: string | null; valorPago?: number | null },
+  ) =>
+    bffFetch<CobrancaDetalhe>(`/api/cobrancas/${id}/pagamento`, {
+      method: "POST",
+      body: JSON.stringify(dados ?? {}),
+    }),
+  removerCobranca: (id: string) =>
+    bffFetch<void>(`/api/cobrancas/${id}`, { method: "DELETE" }),
   enviarCertificado: async (clienteId: string, arquivo: File, senha: string) => {
     const form = new FormData();
     form.append("arquivo", arquivo);

@@ -4,6 +4,8 @@ using Aluguel.Application.Cobrancas.BaixarArquivoCobranca;
 using Aluguel.Application.Cobrancas.GerarCobranca;
 using Aluguel.Application.Cobrancas.ListarCobrancas;
 using Aluguel.Application.Cobrancas.ObterCobranca;
+using Aluguel.Application.Cobrancas.RegistrarPagamentoCobranca;
+using Aluguel.Application.Cobrancas.RemoverCobranca;
 using MediatR;
 
 namespace Aluguel.Api.Endpoints;
@@ -20,6 +22,10 @@ public static class CobrancaEndpoints
         decimal? ValorIptu = null,
         int DiaVencimento = 10,
         bool EmitirNfse = true);
+
+    public sealed record RegistrarPagamentoRequest(
+        DateOnly? DataPagamento = null,
+        decimal? ValorPago = null);
 
     public static IEndpointRouteBuilder MapCobrancaEndpoints(this IEndpointRouteBuilder app)
     {
@@ -70,6 +76,42 @@ public static class CobrancaEndpoints
             return dto is null ? Results.NotFound() : Results.Ok(dto);
         })
         .WithName("ObterCobranca");
+
+        grupo.MapPost("/{id:guid}/pagamento", async (
+            Guid id, RegistrarPagamentoRequest? req, ISender sender, CancellationToken ct) =>
+        {
+            try
+            {
+                var dto = await sender.Send(new RegistrarPagamentoCobrancaCommand(
+                    id, req?.DataPagamento, req?.ValorPago), ct);
+                return Results.Ok(dto);
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.BadRequest(new { erro = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new { erro = ex.Message });
+            }
+        })
+        .WithName("RegistrarPagamentoCobranca")
+        .RequireAuthorization(Politicas.GerenciaCadastros);
+
+        grupo.MapDelete("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
+        {
+            try
+            {
+                var removido = await sender.Send(new RemoverCobrancaCommand(id), ct);
+                return removido ? Results.NoContent() : Results.NotFound();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new { erro = ex.Message });
+            }
+        })
+        .WithName("RemoverCobranca")
+        .RequireAuthorization(Politicas.GerenciaCadastros);
 
         grupo.MapGet("/{id:guid}/nfse.xml", async (Guid id, ISender sender, CancellationToken ct) =>
             await Baixar(id, TipoDownloadCobranca.NfseXml, sender, ct))
