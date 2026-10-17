@@ -1,4 +1,12 @@
-import type { Contrato, Imovel, Inquilino, Usuario } from "@/lib/api/types";
+import type {
+  CertificadoDigital,
+  Cliente,
+  CobrancaDetalhe,
+  Contrato,
+  Imovel,
+  Inquilino,
+  Usuario,
+} from "@/lib/api/types";
 import type { EnderecoViaCep } from "@/lib/cep";
 import { mensagemApiErro } from "@/lib/api/erro";
 
@@ -90,6 +98,19 @@ export type AtualizacaoImovelInput = {
   endereco?: NovoImovelInput["endereco"];
 };
 
+export type CobrancaImovelInput = {
+  competenciaInicial?: string | null;
+  propositoLocacao?:
+    | "Comercial"
+    | "Residencial"
+    | "AdministracaoDeImoveis"
+    | "IntermediacaoImobiliaria"
+    | null;
+  diaVencimentoCobranca?: number | null;
+  despesasCondominiais?: number | null;
+  valorIptu?: number | null;
+};
+
 export type NovoInquilinoInput = {
   clienteId: string;
   imovelId?: string | null;
@@ -154,6 +175,8 @@ export const bff = {
     bffFetch<Imovel>("/api/imoveis", { method: "POST", body: JSON.stringify(dados) }),
   atualizarImovel: (id: string, dados: AtualizacaoImovelInput) =>
     bffFetch<Imovel>(`/api/imoveis/${id}`, { method: "PUT", body: JSON.stringify(dados) }),
+  definirCobrancaImovel: (id: string, dados: CobrancaImovelInput) =>
+    bffFetch<Imovel>(`/api/imoveis/${id}/cobranca`, { method: "PUT", body: JSON.stringify(dados) }),
   consultarCep: (cep: string) => bffFetch<EnderecoViaCep>(`/api/cep/${encodeURIComponent(cep)}`),
   criarInquilino: (dados: NovoInquilinoInput) =>
     bffFetch<Inquilino>("/api/inquilinos", { method: "POST", body: JSON.stringify(dados) }),
@@ -165,6 +188,21 @@ export const bff = {
     bffFetch<Contrato>("/api/contratos", { method: "POST", body: JSON.stringify(dados) }),
   atualizarContrato: (id: string, dados: AtualizacaoContratoInput) =>
     bffFetch<Contrato>(`/api/contratos/${id}`, { method: "PUT", body: JSON.stringify(dados) }),
+  anexarContrato: async (id: string, arquivo: File) => {
+    const form = new FormData();
+    form.append("arquivo", arquivo);
+    const res = await fetch(`/api/contratos/${id}/anexo`, {
+      method: "POST",
+      body: form,
+      cache: "no-store",
+    });
+    const texto = await res.text();
+    const body = texto ? (JSON.parse(texto) as unknown) : null;
+    if (!res.ok) {
+      throw new BffError(res.status, mensagemApiErro(body));
+    }
+    return body as Contrato;
+  },
   encerrarContrato: (id: string) =>
     bffFetch<Contrato>(`/api/contratos/${id}/encerrar`, { method: "POST" }),
   selecionarCliente: (clienteId: string) =>
@@ -172,4 +210,67 @@ export const bff = {
       method: "POST",
       body: JSON.stringify({ clienteId }),
     }),
+  atualizarCliente: (id: string, dados: AtualizacaoClienteInput) =>
+    bffFetch<Cliente>(`/api/clientes/${id}`, { method: "PUT", body: JSON.stringify(dados) }),
+  gerarCobranca: (dados: {
+    imovelId: string;
+    competencia: string;
+    valorAluguel: number;
+    incluirCondominio: boolean;
+    valorCondominio?: number | null;
+    incluirIptu: boolean;
+    valorIptu?: number | null;
+    diaVencimento: number;
+    emitirNfse: boolean;
+  }) => bffFetch<CobrancaDetalhe>("/api/cobrancas", { method: "POST", body: JSON.stringify(dados) }),
+  registrarPagamentoCobranca: (
+    id: string,
+    dados?: { dataPagamento?: string | null; valorPago?: number | null },
+  ) =>
+    bffFetch<CobrancaDetalhe>(`/api/cobrancas/${id}/pagamento`, {
+      method: "POST",
+      body: JSON.stringify(dados ?? {}),
+    }),
+  removerCobranca: (id: string) =>
+    bffFetch<void>(`/api/cobrancas/${id}`, { method: "DELETE" }),
+  enviarCertificado: async (clienteId: string, arquivo: File, senha: string) => {
+    const form = new FormData();
+    form.append("arquivo", arquivo);
+    form.append("senha", senha);
+    const res = await fetch(`/api/clientes/${clienteId}/certificado`, {
+      method: "POST",
+      body: form,
+      cache: "no-store",
+    });
+    const texto = await res.text();
+    const body = texto ? (JSON.parse(texto) as unknown) : null;
+    if (!res.ok) {
+      throw new BffError(res.status, mensagemApiErro(body));
+    }
+    return body as CertificadoDigital;
+  },
+};
+
+export type AtualizacaoClienteInput = {
+  planoId?: string | null;
+  status?: "Ativo" | "Inativo" | "Bloqueado" | null;
+  nome?: string | null;
+  dataNascimento?: string | null;
+  razaoSocial?: string | null;
+  nomeFantasia?: string | null;
+  inscricaoMunicipal?: string | null;
+  cnaePrincipal?: string | null;
+  codigoServico?: string | null;
+  regimeTributario?: string | null;
+  telefone?: string | null;
+  email?: string | null;
+  endereco?: {
+    logradouro?: string | null;
+    numero?: string | null;
+    complemento?: string | null;
+    bairro?: string | null;
+    cidade?: string | null;
+    uf?: string | null;
+    cep?: string | null;
+  } | null;
 };

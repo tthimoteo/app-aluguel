@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
 import { CardField, DataList, DesktopTable, MobileCard } from "@/components/data/data-list";
 import { EmptyState } from "@/components/data/empty-state";
 import { PageHeader } from "@/components/data/page-header";
@@ -6,7 +8,7 @@ import { StatusBadge } from "@/components/data/status-badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api } from "@/lib/api/server";
 import { requireSession, temPerfil } from "@/lib/auth/session";
-import { redirect } from "next/navigation";
+import { formatarCpfCnpj } from "@/lib/format";
 
 export default async function ClientesPage({
   searchParams,
@@ -44,13 +46,31 @@ export default async function ClientesPage({
                 </TableHeader>
                 <TableBody>
                   {pagina.itens.map((c) => (
-                    <TableRow key={c.id}>
-                      <TableCell className="font-medium">{c.nomeExibicao}</TableCell>
-                      <TableCell>{c.tipoPessoa}</TableCell>
-                      <TableCell>{c.cpf ?? c.cnpj ?? "—"}</TableCell>
-                      <TableCell>{c.email ?? "—"}</TableCell>
+                    <TableRow key={c.id} className="cursor-pointer hover:bg-muted/40">
+                      <TableCell className="font-medium">
+                        <Link href={`/clientes/${c.id}`} className="text-primary hover:underline">
+                          {c.nomeExibicao}
+                        </Link>
+                      </TableCell>
                       <TableCell>
-                        <StatusBadge status={c.status} />
+                        <Link href={`/clientes/${c.id}`} className="block">
+                          {c.tipoPessoa}
+                        </Link>
+                      </TableCell>
+                      <TableCell>
+                        <Link href={`/clientes/${c.id}`} className="block">
+                          {formatarCpfCnpj(c.cpf ?? c.cnpj)}
+                        </Link>
+                      </TableCell>
+                      <TableCell>
+                        <Link href={`/clientes/${c.id}`} className="block">
+                          {c.email ?? "—"}
+                        </Link>
+                      </TableCell>
+                      <TableCell>
+                        <Link href={`/clientes/${c.id}`} className="block">
+                          <StatusBadge status={c.status} />
+                        </Link>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -59,15 +79,17 @@ export default async function ClientesPage({
             </DesktopTable>
           }
           mobile={pagina.itens.map((c) => (
-            <MobileCard key={c.id}>
-              <p className="mb-2 font-semibold">{c.nomeExibicao}</p>
-              <CardField label="Tipo">{c.tipoPessoa}</CardField>
-              <CardField label="Documento">{c.cpf ?? c.cnpj ?? "—"}</CardField>
-              <CardField label="E-mail">{c.email ?? "—"}</CardField>
-              <CardField label="Status">
-                <StatusBadge status={c.status} />
-              </CardField>
-            </MobileCard>
+            <Link key={c.id} href={`/clientes/${c.id}`} className="block">
+              <MobileCard>
+                <p className="mb-2 font-semibold text-primary">{c.nomeExibicao}</p>
+                <CardField label="Tipo">{c.tipoPessoa}</CardField>
+                <CardField label="Documento">{formatarCpfCnpj(c.cpf ?? c.cnpj)}</CardField>
+                <CardField label="E-mail">{c.email ?? "—"}</CardField>
+                <CardField label="Status">
+                  <StatusBadge status={c.status} />
+                </CardField>
+              </MobileCard>
+            </Link>
           ))}
         />
       )}

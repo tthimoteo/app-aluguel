@@ -95,4 +95,21 @@ public class ContratoTests
         c.MultaAtrasoPct.Should().Be(2m);
         c.AnexoPath.Should().Be("contracts/ct-001.pdf");
     }
+
+    [Fact]
+    public void Atualizar_sem_anexo_preserva_path_existente()
+    {
+        var c = NovoAtivo();
+        c.DefinirAnexo("contracts/ct-001.pdf");
+        c.Atualizar(null, 10, 2500m, null, null, null);
+        c.AnexoPath.Should().Be("contracts/ct-001.pdf");
+    }
+
+    [Fact]
+    public void DefinirAnexo_grava_path()
+    {
+        var c = NovoAtivo();
+        c.DefinirAnexo("contracts/tenant/cliente/ct.pdf");
+        c.AnexoPath.Should().Be("contracts/tenant/cliente/ct.pdf");
+    }
 }

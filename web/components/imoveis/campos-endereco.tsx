@@ -11,7 +11,7 @@ export const UFS = [
 ] as const;
 
 export const selectClass =
-  "h-10 w-full rounded-[4px] border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/20 dark:bg-input/30";
+  "h-10 w-full rounded-[4px] border border-input bg-transparent px-3 text-sm text-foreground outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/20 dark:bg-input/30 dark:scheme-dark";
 
 const fieldInputClass =
   "h-10 w-full min-w-0 rounded-[4px] border border-input bg-transparent px-3 py-2 text-base outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/20 md:text-sm";

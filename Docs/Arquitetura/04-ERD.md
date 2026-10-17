@@ -121,6 +121,11 @@ erDiagram
         varchar tipo
         varchar numero_iptu
         varchar numero_matricula
+        char competencia_inicial
+        varchar proposito_locacao
+        int dia_vencimento_cobranca
+        numeric despesas_condominiais
+        numeric valor_iptu
         varchar status
     }
     INQUILINO {

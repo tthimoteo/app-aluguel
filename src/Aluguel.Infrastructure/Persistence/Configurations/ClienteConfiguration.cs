@@ -20,6 +20,8 @@ public class ClienteConfiguration : IEntityTypeConfiguration<Cliente>
         b.Property(x => x.Cnpj).HasMaxLength(14);
         b.Property(x => x.InscricaoMunicipal).HasMaxLength(30);
         b.Property(x => x.CnaePrincipal).HasMaxLength(10);
+        b.Property(x => x.CodigoServico).HasMaxLength(20);
+        b.Property(x => x.RegimeTributario).HasConversion<string>().HasMaxLength(30);
         b.Property(x => x.Telefone).HasMaxLength(20);
         b.Property(x => x.Email).HasMaxLength(150);
 

@@ -9,7 +9,7 @@ public class Cliente : AggregateRoot, ITenantOwned, IAuditable, ISoftDeletable
     public Guid TenantId { get; private set; }
     public TipoPessoa TipoPessoa { get; private set; }
     public Guid? PlanoId { get; private set; }
-    public StatusCliente Status { get; private set; } = StatusCliente.Trial;
+    public StatusCliente Status { get; private set; } = StatusCliente.Ativo;
 
     // Pessoa Física
     public string? Nome { get; private set; }
@@ -22,6 +22,9 @@ public class Cliente : AggregateRoot, ITenantOwned, IAuditable, ISoftDeletable
     public string? Cnpj { get; private set; }
     public string? InscricaoMunicipal { get; private set; }
     public string? CnaePrincipal { get; private set; }
+    /// <summary>Código de serviço municipal / LC 116 usado na emissão de NFS-e.</summary>
+    public string? CodigoServico { get; private set; }
+    public RegimeTributario? RegimeTributario { get; private set; }
 
     // Contato + endereço
     public string? Telefone { get; private set; }
@@ -85,6 +88,15 @@ public class Cliente : AggregateRoot, ITenantOwned, IAuditable, ISoftDeletable
         Touch();
     }
 
+    /// <summary>Define a situação operacional do cliente (Ativo, Inativo ou Bloqueado).</summary>
+    public void DefinirStatus(StatusCliente status)
+    {
+        if (!Enum.IsDefined(status))
+            throw new ArgumentOutOfRangeException(nameof(status), "Status do cliente inválido.");
+        Status = status;
+        Touch();
+    }
+
     /// <summary>Atualiza os dados cadastrais de um cliente Pessoa Física (CPF e tipo são imutáveis).</summary>
     public void AtualizarDadosPessoaFisica(string nome, DateOnly? dataNascimento,
         string? telefone, string? email, Endereco? endereco)
@@ -118,6 +130,18 @@ public class Cliente : AggregateRoot, ITenantOwned, IAuditable, ISoftDeletable
         Telefone = telefone;
         Email = email;
         if (endereco is not null) Endereco = endereco;
+        Touch();
+    }
+
+    /// <summary>
+    /// Dados fiscais do emitente quando o plano permite NFS-e (CNAE, código de serviço e regime).
+    /// Aplicável a PF e PJ.
+    /// </summary>
+    public void DefinirDadosFiscaisNfse(string? cnaePrincipal, string? codigoServico, RegimeTributario? regimeTributario)
+    {
+        CnaePrincipal = string.IsNullOrWhiteSpace(cnaePrincipal) ? null : cnaePrincipal.Trim();
+        CodigoServico = string.IsNullOrWhiteSpace(codigoServico) ? null : codigoServico.Trim();
+        this.RegimeTributario = regimeTributario;
         Touch();
     }
 

@@ -139,3 +139,83 @@ export function rotuloStatus(status: string | null | undefined): string {
   const chave = status.replace(/[\s_-]/g, "").toLowerCase();
   return ROTULOS_STATUS[chave] ?? status;
 }
+
+/**
+ * Máscara de moeda BRL durante a digitação.
+ * Interpreta apenas dígitos como centavos (ex.: "2000" → "R$ 20,00").
+ */
+export function mascaraMoeda(valor: string): string {
+  const digitos = soDigitos(valor);
+  if (!digitos) return "";
+  return moeda.format(Number(digitos) / 100);
+}
+
+/** Converte texto mascarado de moeda (R$ …) para número. Retorna NaN se vazio/inválido. */
+export function parseMoeda(valor: string): number {
+  const digitos = soDigitos(valor);
+  if (!digitos) return Number.NaN;
+  return Number(digitos) / 100;
+}
+
+/** Valor numérico → texto mascarado para input de moeda. */
+export function moedaParaInput(valor: number | null | undefined): string {
+  if (valor == null || Number.isNaN(valor)) return "";
+  return moeda.format(valor);
+}
+
+/**
+ * Máscara de percentual durante a digitação: só dígitos e no máximo 2 casas decimais.
+ * Aceita vírgula ou ponto; normaliza para vírgula (pt-BR).
+ */
+export function mascaraPercentual(valor: string): string {
+  let s = valor.replace(/[^\d.,]/g, "").replace(/\./g, ",");
+  const primeiraVirgula = s.indexOf(",");
+  if (primeiraVirgula === -1) return s;
+  const inteiro = s.slice(0, primeiraVirgula).replace(/,/g, "");
+  const decimais = s.slice(primeiraVirgula + 1).replace(/,/g, "").slice(0, 2);
+  return `${inteiro},${decimais}`;
+}
+
+/** Converte percentual mascarado para number; vazio → null. */
+export function parsePercentual(valor: string): number | null {
+  const s = valor.trim().replace(",", ".");
+  if (!s) return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Valida percentual preenchido: numérico, no máximo 2 casas decimais e maior que zero.
+ * Campo vazio é considerado válido (opcional).
+ */
+export function percentualValido(valor: string): boolean {
+  const s = valor.trim();
+  if (!s) return true;
+  if (!/^\d+([.,]\d{1,2})?$/.test(s)) return false;
+  const n = parsePercentual(s);
+  return n != null && n > 0;
+}
+
+/** Número → texto para input de percentual (vírgula pt-BR). */
+export function percentualParaInput(valor: number | null | undefined): string {
+  if (valor == null || Number.isNaN(valor)) return "";
+  return String(valor).replace(".", ",");
+}
+
+/**
+ * Máscara de competência MM/AAAA durante a digitação.
+ * Aceita só dígitos e insere a barra após o mês.
+ */
+export function mascaraCompetencia(valor: string): string {
+  const digitos = soDigitos(valor).slice(0, 6);
+  if (digitos.length <= 2) return digitos;
+  return `${digitos.slice(0, 2)}/${digitos.slice(2)}`;
+}
+
+/** Valida competência no formato MM/AAAA (mês 01–12). Vazio = opcional/ok. */
+export function competenciaValida(valor: string): boolean {
+  const s = valor.trim();
+  if (!s) return true;
+  if (!/^(0[1-9]|1[0-2])\/\d{4}$/.test(s)) return false;
+  return true;
+}

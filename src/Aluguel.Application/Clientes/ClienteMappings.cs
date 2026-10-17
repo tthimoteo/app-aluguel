@@ -19,6 +19,8 @@ internal static class ClienteMappings
         c.Cnpj,
         c.InscricaoMunicipal,
         c.CnaePrincipal,
+        c.CodigoServico,
+        c.RegimeTributario?.ToString(),
         c.Telefone,
         c.Email,
         new EnderecoDto(

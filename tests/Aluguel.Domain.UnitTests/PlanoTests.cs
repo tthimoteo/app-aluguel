@@ -50,4 +50,25 @@ public class PlanoTests
         pro.PermiteMaisUsuarios(1000).Should().BeTrue();
         pro.MaxUsuarios.Should().BeNull();
     }
+
+    [Theory]
+    [InlineData(0, true)]
+    [InlineData(3, true)]
+    [InlineData(4, false)]
+    public void SuportaUtilizacaoImoveis_para_downgrade(int totalAtual, bool esperado) =>
+        Basico().SuportaUtilizacaoImoveis(totalAtual).Should().Be(esperado);
+
+    [Theory]
+    [InlineData(0, true)]
+    [InlineData(1, true)]
+    [InlineData(2, false)]
+    public void SuportaUtilizacaoUsuarios_para_downgrade(int totalAtual, bool esperado) =>
+        Basico().SuportaUtilizacaoUsuarios(totalAtual).Should().Be(esperado);
+
+    [Fact]
+    public void PermiteModuloCobranca_segue_flag_de_nfse()
+    {
+        Basico().PermiteModuloCobranca.Should().BeFalse();
+        Pro().PermiteModuloCobranca.Should().BeTrue();
+    }
 }

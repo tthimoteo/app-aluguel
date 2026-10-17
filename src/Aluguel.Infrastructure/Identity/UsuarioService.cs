@@ -114,6 +114,9 @@ public class UsuarioService(UserManager<AppUser> userManager, AppDbContext db, I
             jaNoCliente);
     }
 
+    public Task<int> ContarUsuariosAtivosAsync(Guid clienteId, CancellationToken ct = default) =>
+        ContarAtivosAsync(clienteId, ct);
+
     public async Task<bool> PodeAdicionarUsuarioAsync(Guid clienteId, CancellationToken ct = default)
     {
         var plano = await ObterPlanoDoClienteAsync(clienteId, ct);

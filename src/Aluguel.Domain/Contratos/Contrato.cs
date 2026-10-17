@@ -58,7 +58,19 @@ public class Contrato : AggregateRoot, ITenantOwned, IAuditable
         ValorAluguel = valorAluguel;
         JurosAtrasoPct = jurosAtrasoPct;
         MultaAtrasoPct = multaAtrasoPct;
-        AnexoPath = anexoPath;
+        if (anexoPath is not null)
+            AnexoPath = string.IsNullOrWhiteSpace(anexoPath) ? null : anexoPath.Trim();
+        Touch();
+    }
+
+    /// <summary>Define o caminho do PDF do contrato no storage (bucket <c>contracts</c>). Somente Ativo.</summary>
+    public void DefinirAnexo(string anexoPath)
+    {
+        if (Status != StatusContrato.Ativo)
+            throw new InvalidOperationException("Somente contratos ativos podem receber anexo.");
+        if (string.IsNullOrWhiteSpace(anexoPath))
+            throw new ArgumentException("Caminho do anexo é obrigatório.", nameof(anexoPath));
+        AnexoPath = anexoPath.Trim();
         Touch();
     }
 

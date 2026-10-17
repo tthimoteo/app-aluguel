@@ -14,6 +14,11 @@ internal static class ImovelMappings
         i.NumeroIptu,
         i.NumeroMatricula,
         i.Status.ToString(),
+        i.CompetenciaInicial,
+        i.PropositoLocacao?.ToString(),
+        i.DiaVencimentoCobranca,
+        i.DespesasCondominiais,
+        i.ValorIptu,
         new EnderecoDto(
             i.Endereco.Logradouro, i.Endereco.Numero, i.Endereco.Complemento,
             i.Endereco.Bairro, i.Endereco.Cidade, i.Endereco.Uf, i.Endereco.Cep),

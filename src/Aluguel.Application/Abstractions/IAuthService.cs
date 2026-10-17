@@ -11,7 +11,13 @@ public record UsuarioAutenticado(
     IReadOnlyList<VinculoClienteDto> Clientes);
 
 /// <summary>Cliente no qual o usuário autenticado pode atuar, com o perfil da vinculação.</summary>
-public record VinculoClienteDto(Guid ClienteId, string Nome, string Perfil, string Status);
+public record VinculoClienteDto(
+    Guid ClienteId,
+    string Nome,
+    string Perfil,
+    string Status,
+    /// <summary>Plano do cliente permite NFS-e e boletos (módulo Cobrança).</summary>
+    bool PermiteCobranca = false);
 
 /// <summary>Par de tokens (access + refresh) e dados do usuário.</summary>
 public record TokensAutenticacao(

@@ -1,4 +1,5 @@
 using Aluguel.Application.Abstractions;
+using Aluguel.Domain.Assinaturas;
 using Aluguel.Domain.Clientes;
 using Aluguel.Domain.Common;
 using Aluguel.Domain.Contratos;
@@ -24,7 +25,10 @@ public sealed class FakeImovelRepository : IImovelRepository
 
     public Task<int> ContarAsync(Guid? clienteId, string? termo, TipoImovel? tipo,
         StatusAtivoInativo? status, CancellationToken ct = default) =>
-        Task.FromResult(Itens.Count(i => clienteId == null || i.ClienteId == clienteId));
+        Task.FromResult(Itens.Count(i =>
+            (clienteId == null || i.ClienteId == clienteId)
+            && (status == null || i.Status == status)
+            && (tipo == null || i.Tipo == tipo)));
 
     public Task<bool> PodeAdicionarImovelAsync(Guid clienteId, CancellationToken ct = default) =>
         Task.FromResult(PodeAdicionar);
@@ -107,4 +111,15 @@ public sealed class FakeContratoRepository : IContratoRepository
         SalvouVezes++;
         return Task.FromResult(1);
     }
+}
+
+public sealed class FakePlanoRepository : IPlanoRepository
+{
+    public List<Plano> Itens { get; } = [];
+
+    public Task<Plano?> ObterPorIdAsync(Guid id, CancellationToken ct = default) =>
+        Task.FromResult(Itens.FirstOrDefault(p => p.Id == id));
+
+    public Task<IReadOnlyList<Plano>> ListarAtivosAsync(CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<Plano>>(Itens.Where(p => p.Ativo).ToList());
 }

@@ -28,7 +28,8 @@ public interface IDomainEvent { }
 
 ```csharp
 public enum TipoPessoa { PF = 1, PJ = 2 }
-public enum StatusCliente { Trial = 1, PendentePagamento = 2, Ativa = 3, Suspensa = 4, Cancelada = 5 }
+// Situação operacional do cliente (Admin). Ciclo comercial: StatusAssinatura.
+public enum StatusCliente { Ativo = 1, Inativo = 2, Bloqueado = 3 }
 
 // Usuário do cliente (§6)
 public enum PerfilUsuario { Gestor = 1, Analista = 2, AdminSistema = 9 }
@@ -110,7 +111,7 @@ public class Cliente : AggregateRoot, ITenantOwned, IAuditable, ISoftDeletable
     public Guid TenantId { get; private set; }
     public TipoPessoa TipoPessoa { get; private set; }
     public Guid? PlanoId { get; private set; }
-    public StatusCliente Status { get; private set; } = StatusCliente.Trial;
+    public StatusCliente Status { get; private set; } = StatusCliente.Ativo;
     // PF
     public string? Nome { get; private set; }
     public string? Cpf { get; private set; }
@@ -121,6 +122,8 @@ public class Cliente : AggregateRoot, ITenantOwned, IAuditable, ISoftDeletable
     public string? Cnpj { get; private set; }
     public string? InscricaoMunicipal { get; private set; }
     public string? CnaePrincipal { get; private set; }
+    public string? CodigoServico { get; private set; }       // NFS-e (LC 116 / municipal)
+    public RegimeTributario? RegimeTributario { get; private set; }
     public string? Telefone { get; private set; }
     public string? Email { get; private set; }
     public Endereco Endereco { get; private set; } = new(null,null,null,null,null,null,null);
@@ -191,9 +194,17 @@ public class Imovel : Entity, ITenantOwned, ISoftDeletable
     public Endereco Endereco { get; private set; } = new(null,null,null,null,null,null,null);
     public string? NumeroIptu { get; private set; }
     public string? NumeroMatricula { get; private set; }
+    // Cadastro de cobrança (ficha do imóvel)
+    public string? CompetenciaInicial { get; private set; }       // MM/AAAA
+    public PropositoLocacao? PropositoLocacao { get; private set; }
+    public int? DiaVencimentoCobranca { get; private set; }
+    public decimal? DespesasCondominiais { get; private set; }
+    public decimal? ValorIptu { get; private set; }               // monetário (≠ NumeroIptu)
     public StatusImovel Status { get; private set; } = StatusImovel.Ativo;
     public DateTimeOffset? DeletedAt { get; private set; }
     private Imovel() { }
+    public void DefinirCobranca(string? competenciaInicial, PropositoLocacao? proposito,
+        int? diaVencimento, decimal? despesasCondominiais, decimal? valorIptu) { /* … */ }
 }
 
 public class Inquilino : Entity, ITenantOwned, ISoftDeletable

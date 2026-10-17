@@ -168,10 +168,11 @@ O usuário "Gestor" poderá cadastrar outros usuários conforme a permissão do 
 - Consultar histórico de emissão de NFS-e e valores de cobrança dos aluguéis.
 
 **Perfil "Analista"** permite:
-- Consultar informações de imóveis e inquilinos;
+- Consultar informações de imóveis, inquilinos e contratos (incluindo históricos e anexo do contrato);
 - Emitir NFS-e para os imóveis;
 - Consultar histórico de emissão de NFS-e e valores de cobrança dos aluguéis;
 - Cancelar NFS-e.
+- Não inclui criar, editar ou remover imóveis, inquilinos, contratos ou usuários.
 
 ## 7. Cadastro de imóvel
 

@@ -5,6 +5,57 @@ export type VinculoCliente = {
   nome: string;
   perfil: string;
   status: string;
+  /** Plano permite NFS-e e boletos (módulo Cobrança). */
+  permiteCobranca?: boolean;
+};
+
+export type CobrancaListItem = {
+  id: string;
+  clienteId: string;
+  clienteNome: string;
+  imovelId: string;
+  imovelNome: string;
+  competencia: string;
+  valorFaturado: number;
+  statusNfse: string;
+  temPagamento: boolean;
+  dataPagamento: string | null;
+  temXml: boolean;
+  temPdfNfse: boolean;
+  temBoletoPdf: boolean;
+};
+
+export type CobrancaDetalhe = {
+  id: string;
+  clienteId: string;
+  clienteNome: string;
+  imovelId: string;
+  imovelNome: string;
+  inquilinoId: string | null;
+  inquilinoNome: string | null;
+  competencia: string;
+  numeroNfse: number | null;
+  serie: string | null;
+  chaveAcesso: string | null;
+  statusNfse: string;
+  valorServico: number;
+  desconto: number;
+  multa: number;
+  juros: number;
+  valorFaturado: number;
+  dataEmissao: string | null;
+  temPagamento: boolean;
+  dataPagamento: string | null;
+  valorPago: number | null;
+  temXml: boolean;
+  temPdfNfse: boolean;
+  temBoletoPdf: boolean;
+  boletoId: string | null;
+  nossoNumero: string | null;
+  linhaDigitavel: string | null;
+  dataVencimentoBoleto: string | null;
+  valorBoleto: number | null;
+  statusBoleto: string | null;
 };
 
 export type UsuarioAutenticado = {
@@ -53,6 +104,22 @@ export type Plano = {
   valorMensal: number | null;
 };
 
+export type CertificadoDigital = {
+  id: string;
+  clienteId: string;
+  thumbprint: string;
+  validade: string;
+  ativo: boolean;
+  vencido: boolean;
+  createdAt: string;
+};
+
+export type RegimeTributario =
+  | "SimplesNacional"
+  | "LucroPresumido"
+  | "LucroReal"
+  | "Mei";
+
 export type Cliente = {
   id: string;
   tipoPessoa: string;
@@ -62,13 +129,24 @@ export type Cliente = {
   nomeExibicao: string;
   nome: string | null;
   cpf: string | null;
+  dataNascimento: string | null;
   razaoSocial: string | null;
   nomeFantasia: string | null;
   cnpj: string | null;
+  inscricaoMunicipal: string | null;
+  cnaePrincipal: string | null;
+  codigoServico: string | null;
+  regimeTributario: RegimeTributario | string | null;
   telefone: string | null;
   email: string | null;
   endereco: Endereco;
 };
+
+export type PropositoLocacao =
+  | "Comercial"
+  | "Residencial"
+  | "AdministracaoDeImoveis"
+  | "IntermediacaoImobiliaria";
 
 export type Imovel = {
   id: string;
@@ -79,7 +157,14 @@ export type Imovel = {
   numeroIptu: string | null;
   numeroMatricula: string | null;
   status: string;
+  competenciaInicial: string | null;
+  propositoLocacao: PropositoLocacao | string | null;
+  diaVencimentoCobranca: number | null;
+  despesasCondominiais: number | null;
+  valorIptu: number | null;
   endereco: Endereco;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type Inquilino = {
@@ -111,6 +196,7 @@ export type Contrato = {
   valorAluguel: number;
   jurosAtrasoPct: number | null;
   multaAtrasoPct: number | null;
+  anexoPath: string | null;
 };
 
 export type Usuario = {
