@@ -18,6 +18,9 @@ public interface ICobrancaRepository
 
     Task<DocumentoFiscal?> ObterDocumentoAsync(Guid nfseId, TipoDocumentoFiscal tipo, CancellationToken ct = default);
 
+    /// <summary>CASO 6/7/8: já existe faturamento não cancelado para o imóvel/competência?</summary>
+    Task<bool> ExisteCobrancaNaoCanceladaAsync(Guid imovelId, string competencia, CancellationToken ct = default);
+
     void AdicionarNfse(NotaFiscalServico nfse);
     void AdicionarDocumento(DocumentoFiscal documento);
     void AdicionarBoleto(Domain.Financeiro.Boleto boleto);

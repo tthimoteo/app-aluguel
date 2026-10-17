@@ -1,4 +1,12 @@
-import type { CertificadoDigital, Cliente, Contrato, Imovel, Inquilino, Usuario } from "@/lib/api/types";
+import type {
+  CertificadoDigital,
+  Cliente,
+  CobrancaDetalhe,
+  Contrato,
+  Imovel,
+  Inquilino,
+  Usuario,
+} from "@/lib/api/types";
 import type { EnderecoViaCep } from "@/lib/cep";
 import { mensagemApiErro } from "@/lib/api/erro";
 
@@ -204,6 +212,8 @@ export const bff = {
     }),
   atualizarCliente: (id: string, dados: AtualizacaoClienteInput) =>
     bffFetch<Cliente>(`/api/clientes/${id}`, { method: "PUT", body: JSON.stringify(dados) }),
+  gerarCobranca: (dados: { imovelId: string; competencia: string }) =>
+    bffFetch<CobrancaDetalhe>("/api/cobrancas", { method: "POST", body: JSON.stringify(dados) }),
   enviarCertificado: async (clienteId: string, arquivo: File, senha: string) => {
     const form = new FormData();
     form.append("arquivo", arquivo);

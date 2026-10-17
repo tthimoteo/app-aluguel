@@ -161,6 +161,13 @@ public class CobrancaRepository(AppDbContext db) : ICobrancaRepository
     public Task<DocumentoFiscal?> ObterDocumentoAsync(Guid nfseId, TipoDocumentoFiscal tipo, CancellationToken ct = default) =>
         db.DocumentosFiscais.FirstOrDefaultAsync(d => d.NfseId == nfseId && d.Tipo == tipo, ct);
 
+    public Task<bool> ExisteCobrancaNaoCanceladaAsync(Guid imovelId, string competencia, CancellationToken ct = default) =>
+        db.NotasFiscais.AnyAsync(
+            n => n.ImovelId == imovelId
+                 && n.Competencia == competencia
+                 && n.Status != StatusNfse.Cancelada,
+            ct);
+
     public void AdicionarNfse(NotaFiscalServico nfse) => db.NotasFiscais.Add(nfse);
     public void AdicionarDocumento(DocumentoFiscal documento) => db.DocumentosFiscais.Add(documento);
     public void AdicionarBoleto(Boleto boleto) => db.Boletos.Add(boleto);

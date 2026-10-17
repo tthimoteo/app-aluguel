@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/data/empty-state";
 import { PageHeader } from "@/components/data/page-header";
 import { StatusBadge } from "@/components/data/status-badge";
 import { FiltrosCobranca } from "@/components/cobrancas/filtros-cobranca";
+import { GerarCobrancaDialog, type ImovelParaCobranca } from "@/components/cobrancas/gerar-cobranca-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ApiError, api } from "@/lib/api/server";
 import { requireSession, temPerfil } from "@/lib/auth/session";
@@ -49,18 +50,44 @@ export default async function CobrancasPage({
     throw e;
   }
 
-  const [imoveisPagina, clientesPagina] = await Promise.all([
+  const podeGerar = temPerfil(usuario, "Administrador", "Gestor");
+
+  const [imoveisPagina, clientesPagina, contratosPagina] = await Promise.all([
     api.imoveis({ clienteId: clienteFiltro, take: 100 }).catch(() => ({ itens: [], total: 0, skip: 0, take: 0 })),
     ehAdmin
       ? api.clientes({ take: 100 }).catch(() => ({ itens: [], total: 0, skip: 0, take: 0 }))
       : Promise.resolve({ itens: [], total: 0, skip: 0, take: 0 }),
+    api
+      .contratos({ clienteId: clienteFiltro, status: "Ativo", take: 100 })
+      .catch(() => ({ itens: [], total: 0, skip: 0, take: 0 })),
   ]);
+
+  const contratosPorImovel = new Map(
+    contratosPagina.itens.map((c) => [c.imovelId, c] as const),
+  );
+  const imoveisParaGerar: ImovelParaCobranca[] = imoveisPagina.itens
+    .filter((i) => i.status === "Ativo")
+    .map((i) => {
+      const contrato = contratosPorImovel.get(i.id);
+      return {
+        id: i.id,
+        nome: i.nome,
+        competenciaInicial: i.competenciaInicial,
+        diaVencimentoCobranca: i.diaVencimentoCobranca,
+        despesasCondominiais: i.despesasCondominiais,
+        valorIptu: i.valorIptu,
+        valorAluguel: contrato?.valorAluguel ?? null,
+        diaVencimentoContrato: contrato?.diaVencimento ?? null,
+        temContratoAtivo: Boolean(contrato),
+      };
+    });
 
   return (
     <div>
       <PageHeader
         titulo="Cobrança"
         descricao="Histórico de cobranças por competência. Consulte NFS-e (XML/PDF) e boleto quando disponíveis."
+        acao={podeGerar ? <GerarCobrancaDialog imoveis={imoveisParaGerar} /> : null}
       />
       <FiltrosCobranca
         competencia={competencia}

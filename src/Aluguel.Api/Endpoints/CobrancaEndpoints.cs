@@ -1,5 +1,7 @@
+using Aluguel.Application.Autorizacao;
 using Aluguel.Application.Cobrancas;
 using Aluguel.Application.Cobrancas.BaixarArquivoCobranca;
+using Aluguel.Application.Cobrancas.GerarCobranca;
 using Aluguel.Application.Cobrancas.ListarCobrancas;
 using Aluguel.Application.Cobrancas.ObterCobranca;
 using MediatR;
@@ -8,6 +10,8 @@ namespace Aluguel.Api.Endpoints;
 
 public static class CobrancaEndpoints
 {
+    public sealed record GerarCobrancaRequest(Guid ImovelId, string Competencia);
+
     public static IEndpointRouteBuilder MapCobrancaEndpoints(this IEndpointRouteBuilder app)
     {
         var grupo = app.MapGroup("/api/cobrancas")
@@ -22,6 +26,25 @@ public static class CobrancaEndpoints
             return Results.Ok(pagina);
         })
         .WithName("ListarCobrancas");
+
+        grupo.MapPost("/", async (GerarCobrancaRequest req, ISender sender, CancellationToken ct) =>
+        {
+            try
+            {
+                var dto = await sender.Send(new GerarCobrancaCommand(req.ImovelId, req.Competencia), ct);
+                return Results.Created($"/api/cobrancas/{dto.Id}", dto);
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.BadRequest(new { erro = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new { erro = ex.Message });
+            }
+        })
+        .WithName("GerarCobranca")
+        .RequireAuthorization(Politicas.GerenciaCadastros);
 
         grupo.MapGet("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
         {
