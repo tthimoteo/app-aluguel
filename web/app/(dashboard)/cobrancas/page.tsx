@@ -50,7 +50,7 @@ export default async function CobrancasPage({
     throw e;
   }
 
-  const podeGerar = temPerfil(usuario, "Administrador", "Gestor");
+  const podeGerar = temPerfil(usuario, "Administrador", "Gestor", "Analista");
 
   const [imoveisPagina, clientesPagina, contratosPagina] = await Promise.all([
     api.imoveis({ clienteId: clienteFiltro, take: 100 }).catch(() => ({ itens: [], total: 0, skip: 0, take: 0 })),

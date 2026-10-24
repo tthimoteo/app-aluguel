@@ -68,7 +68,7 @@ public static class CobrancaEndpoints
             }
         })
         .WithName("GerarCobranca")
-        .RequireAuthorization(Politicas.GerenciaCadastros);
+        .RequireAuthorization(Politicas.OperaCobranca);
 
         grupo.MapGet("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
         {
@@ -96,7 +96,7 @@ public static class CobrancaEndpoints
             }
         })
         .WithName("RegistrarPagamentoCobranca")
-        .RequireAuthorization(Politicas.GerenciaCadastros);
+        .RequireAuthorization(Politicas.OperaCobranca);
 
         grupo.MapDelete("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
         {
@@ -111,7 +111,7 @@ public static class CobrancaEndpoints
             }
         })
         .WithName("RemoverCobranca")
-        .RequireAuthorization(Politicas.GerenciaCadastros);
+        .RequireAuthorization(Politicas.OperaCobranca);
 
         grupo.MapGet("/{id:guid}/nfse.xml", async (Guid id, ISender sender, CancellationToken ct) =>
             await Baixar(id, TipoDownloadCobranca.NfseXml, sender, ct))
