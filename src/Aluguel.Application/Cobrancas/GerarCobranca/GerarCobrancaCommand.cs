@@ -92,7 +92,7 @@ public sealed class GerarCobrancaCommandHandler(
             ?? throw new InvalidOperationException(
                 "É necessário um contrato ativo no imóvel para gerar a cobrança.");
 
-        var vencimento = CalcularVencimento(competencia, request.DiaVencimento);
+        var vencimento = CobrancaVencimento.Calcular(competencia, request.DiaVencimento);
         var agora = DateTimeOffset.UtcNow;
         var emissorId = currentUser.UserId ?? Guid.Empty;
 
@@ -171,11 +171,4 @@ public sealed class GerarCobrancaCommandHandler(
         return cmp != 0 ? cmp : mesA.CompareTo(mesB);
     }
 
-    private static DateOnly CalcularVencimento(string competencia, int dia)
-    {
-        var mes = int.Parse(competencia.AsSpan(0, 2), CultureInfo.InvariantCulture);
-        var ano = int.Parse(competencia.AsSpan(3, 4), CultureInfo.InvariantCulture);
-        var diaOk = Math.Clamp(dia, 1, DateTime.DaysInMonth(ano, mes));
-        return new DateOnly(ano, mes, diaOk);
-    }
 }
