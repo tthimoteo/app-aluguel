@@ -13,12 +13,49 @@ Rastreabilidade: especificação §11 (faturamento / NFS-e); sprints em `09-Plan
 > A emissão (POST DPS → NFS-e) é feita na **SEFIN Nacional**, com certificado A1 do contribuinte (mTLS).  
 > O link ADN `/contribuintes` serve para **consulta** (NSU, eventos), não para gerar a nota.
 
-## Fluxo de emissão (alvo)
+## Fluxo de emissão (implementado)
 
-1. Prestador (cliente PJ/PF com plano NFS-e) tem certificado A1 cadastrado.
-2. App monta o XML da **DPS**, assina com o A1, compacta (GZIP) e envia em Base64 via `POST /nfse` na SEFIN.
-3. SEFIN valida e devolve XML da NFS-e ou rejeição.
-4. App persiste `NotaFiscalServico` (Emitida), `DocumentoFiscal` (XML/PDF/DANFSe) e gera boleto quando aplicável.
+1. Prestador (cliente PJ/PF com plano NFS-e) tem certificado A1, IM, código de serviço e endereço.
+2. Em `GerarCobranca` com `EmitirNfse=true`, o app carrega o PFX (`certificates` + `ISecretProtector`), monta a **DPS** (layout v1.01), assina com XMLDSig (RSA-SHA256), compacta (GZIP) e envia Base64 via `POST /nfse` na SEFIN (`dpsXmlGZipB64`).
+3. SEFIN valida e devolve `chaveAcesso` + `nfseXmlGZipB64` (ou lista `erros`).
+4. App persiste `NotaFiscalServico` (Emitida), `DocumentoFiscal` (XML autorizado) e gera boleto.
+
+Adapter: `INfseNacionalProvider` → `SefinNfseNacionalProvider` (ou `MockNfseNacionalProvider` quando `Nfse:Ambiente=Mock`).
+
+### Configuração (`Nfse`)
+
+| Chave | Descrição |
+|---|---|
+| `Ambiente` | `Mock` \| `ProducaoRestrita` \| `Producao` |
+| `VerAplic` | Identificador no XML (máx. 20) |
+| `SeriePadrao` | Série da DPS |
+| `CodigoMunicipioIbgePadrao` | IBGE fallback (São Paulo = `3550308`) |
+| `CodigoTributacaoNacionalPadrao` | `cTribNac` (6 dígitos) quando o código do cliente for municipal |
+| `PercentualTotTribSn` | `pTotTribSN` para optantes do Simples |
+| `FinNfse` | Finalidade (`0` = regular); obrigatório em `infDPS` (NT 009) |
+| `IncluirIbsCbs` | Inclui grupo `IBSCBS` (exige NBS/cIndOp válidos) |
+| `EnviarImPrestador` | Envia `prest/IM` (E0120 se CNC municipal incompleto) |
+| `CodigoNbsPadrao` | NBS 9 dígitos quando `IncluirIbsCbs=true` |
+| `CodigoIndicadorOperacaoIbsCbs` | `cIndOp` (opcional pós-20/10/2026) |
+| `CstIbsCbs` / `ClassificacaoTributariaIbsCbs` | Tributação IBS/CBS |
+
+Em **Development**, o padrão é `ProducaoRestrita`. Em outros ambientes, `Mock` (CI sem mTLS).
+
+### Layout DPS (produção restrita desde 20/10/2026)
+
+A SEFIN homologa o leiaute da **NT 009**: `finNFSe` fica em `infDPS` (antes de `cLocEmi`), não dentro de `IBSCBS`. CST e `cClassTrib` sobem para `IBSCBS/valores/trib`.
+
+### Homologação — rejeições típicas (pipeline ok)
+
+| Código | Significado | Ação |
+|---|---|---|
+| E0015 | Competência futura vs `dhEmi` | Emitir só no mês da competência (ou anterior) |
+| E0120 | IM sem CNC complementar | `EnviarImPrestador=false` até cadastrar no CNC |
+| E0312 | `cTribNac` não administrado pelo município | Ajustar código nacional conveniado em SP / município |
+| E0207 | CPF do tomador inexistente na RFB | Usar documento real do inquilino |
+| E0322 | IBS/CBS sem NBS | Informar `cNBS` ou desligar `IncluirIbsCbs` |
+
+O adapter autentica (mTLS A1), assina a DPS e fala com a SEFIN; autorização plena depende do CNC, lista de serviços do município e documentos do tomador.
 
 ## Cliente Demo (sandbox)
 
@@ -32,4 +69,4 @@ Para testes locais/homologação, o seed Development garante o emitente:
 | Razão social | `T THIMOTEO CONSULTORIA E SERVICOS DE ENGENHARIA LTDA` |
 | Nome fantasia | `Cliente Demo` |
 
-O certificado A1 já pode ser enviado pela tela Minha Conta / Admin do cliente.
+Pré-requisitos cadastrais (já preenchíveis pela UI): inscrição municipal, endereço completo, código de serviço, regime tributário e certificado A1 ativo.

@@ -1,5 +1,6 @@
 using Aluguel.Application.Abstractions;
 using Aluguel.Infrastructure.Identity;
+using Aluguel.Infrastructure.Integrations.NfseNacional;
 using Aluguel.Infrastructure.Persistence;
 using Aluguel.Infrastructure.Persistence.Repositories;
 using Aluguel.Infrastructure.Security;
@@ -47,6 +48,32 @@ public static class DependencyInjection
 
         services.AddSingleton<IFileStorage, LocalFileStorage>();
         services.AddSingleton<ISecretProtector, AesSecretProtector>();
+
+        services.Configure<NfseOptions>(opts =>
+        {
+            var s = configuration.GetSection(NfseOptions.SectionName);
+            if (s["Ambiente"] is { Length: > 0 } amb) opts.Ambiente = amb;
+            if (s["VerAplic"] is { Length: > 0 } ver) opts.VerAplic = ver;
+            if (s["SeriePadrao"] is { Length: > 0 } ser) opts.SeriePadrao = ser;
+            if (s["CodigoMunicipioIbgePadrao"] is { Length: > 0 } mun) opts.CodigoMunicipioIbgePadrao = mun;
+            if (s["CodigoTributacaoNacionalPadrao"] is { Length: > 0 } trib) opts.CodigoTributacaoNacionalPadrao = trib;
+            if (decimal.TryParse(s["PercentualTotTribSn"], System.Globalization.NumberStyles.Number,
+                    System.Globalization.CultureInfo.InvariantCulture, out var p))
+                opts.PercentualTotTribSn = p;
+            if (s["FinNfse"] is { Length: > 0 } fin) opts.FinNfse = fin;
+            if (s["CodigoIndicadorOperacaoIbsCbs"] is { } ind)
+                opts.CodigoIndicadorOperacaoIbsCbs = string.IsNullOrWhiteSpace(ind) ? null : ind;
+            if (s["CstIbsCbs"] is { Length: > 0 } cst) opts.CstIbsCbs = cst;
+            if (s["ClassificacaoTributariaIbsCbs"] is { Length: > 0 } cls) opts.ClassificacaoTributariaIbsCbs = cls;
+            if (bool.TryParse(s["IncluirIbsCbs"], out var ibs)) opts.IncluirIbsCbs = ibs;
+            if (s["CodigoNbsPadrao"] is { Length: > 0 } nbs) opts.CodigoNbsPadrao = nbs;
+            if (bool.TryParse(s["EnviarImPrestador"], out var im)) opts.EnviarImPrestador = im;
+        });
+        var nfseAmbiente = configuration[$"{NfseOptions.SectionName}:Ambiente"] ?? "Mock";
+        if (string.Equals(nfseAmbiente, "Mock", StringComparison.OrdinalIgnoreCase))
+            services.AddScoped<INfseNacionalProvider, MockNfseNacionalProvider>();
+        else
+            services.AddScoped<INfseNacionalProvider, SefinNfseNacionalProvider>();
 
         return services;
     }

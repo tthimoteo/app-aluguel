@@ -3,7 +3,9 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Aluguel.Application.Abstractions;
 using Aluguel.Application.Cobrancas.BaixarArquivoCobranca;
+using Aluguel.Application.Clientes.EnviarCertificadoCliente;
 using Aluguel.Application.Common.Acesso;
+using Aluguel.Domain.Clientes;
 using Aluguel.Domain.Contratos;
 using Aluguel.Domain.Financeiro;
 using Aluguel.Domain.Fiscal;
@@ -13,6 +15,7 @@ namespace Aluguel.Application.Cobrancas.GerarCobranca;
 
 /// <summary>
 /// Gera cobrança de uma competência a partir do imóvel/contrato, com valores e flags editáveis na UI.
+/// Quando <c>EmitirNfse</c>, chama <see cref="INfseNacionalProvider"/> (SEFIN ou mock).
 /// </summary>
 public sealed record GerarCobrancaCommand(
     Guid ImovelId,
@@ -31,7 +34,11 @@ public sealed class GerarCobrancaCommandHandler(
     ICobrancaRepository cobrancas,
     IClienteRepository clientes,
     IPlanoRepository planos,
+    IInquilinoRepository inquilinos,
+    ICertificadoDigitalRepository certificados,
+    INfseNacionalProvider nfseProvider,
     IFileStorage storage,
+    ISecretProtector protector,
     ICurrentUser currentUser)
     : IRequestHandler<GerarCobrancaCommand, CobrancaDetalheDto>
 {
@@ -92,7 +99,7 @@ public sealed class GerarCobrancaCommandHandler(
             ?? throw new InvalidOperationException(
                 "É necessário um contrato ativo no imóvel para gerar a cobrança.");
 
-        var vencimento = CalcularVencimento(competencia, request.DiaVencimento);
+        var vencimento = CobrancaVencimento.Calcular(competencia, request.DiaVencimento);
         var agora = DateTimeOffset.UtcNow;
         var emissorId = currentUser.UserId ?? Guid.Empty;
 
@@ -107,17 +114,32 @@ public sealed class GerarCobrancaCommandHandler(
 
         cobrancas.AdicionarNfse(nfse);
 
-        var numero = Math.Abs(BitConverter.ToInt64(nfse.Id.ToByteArray(), 0) % 900_000) + 100_000;
+        var numeroFallback = Math.Abs(BitConverter.ToInt64(nfse.Id.ToByteArray(), 0) % 900_000) + 100_000;
+        long numero = numeroFallback;
 
         if (request.EmitirNfse)
         {
-            nfse.MarcarEmitida(numero, "1",
-                $"NFe{numero}{competencia.Replace("/", "", StringComparison.Ordinal)}",
-                emissorId, agora);
+            GarantirCompetenciaNaoFuturaParaEmissao(competencia);
 
-            var xmlBytes = Encoding.UTF8.GetBytes(
-                $"""<?xml version="1.0" encoding="UTF-8"?><NFSe><Numero>{numero}</Numero><Competencia>{competencia}</Competencia><Valor>{F(valorTotal)}</Valor><Aluguel>{F(request.ValorAluguel)}</Aluguel><Condominio>{F(condo)}</Condominio><Iptu>{F(iptu)}</Iptu></NFSe>""");
-            var pdfBytes = Encoding.UTF8.GetBytes($"%PDF-1.4\n% NFS-e {numero} competencia {competencia}\n");
+            var emissao = await EmitirNfseNacionalAsync(
+                nfse, imovel.ClienteId, contrato.InquilinoId, competencia, valorTotal,
+                request.ValorAluguel, condo, iptu, cancellationToken);
+
+            if (!emissao.Sucesso || emissao.XmlNfse is null || string.IsNullOrWhiteSpace(emissao.ChaveAcesso))
+                throw new InvalidOperationException(
+                    emissao.MensagemErro ?? "Falha ao emitir NFS-e na API Nacional.");
+
+            numero = emissao.Numero ?? numeroFallback;
+            nfse.MarcarEmitida(
+                numero,
+                string.IsNullOrWhiteSpace(emissao.Serie) ? "1" : emissao.Serie!,
+                emissao.ChaveAcesso!,
+                emissorId,
+                agora);
+
+            var xmlBytes = emissao.XmlNfse;
+            var pdfBytes = Encoding.UTF8.GetBytes(
+                $"%PDF-1.4\n% NFS-e chave {emissao.ChaveAcesso} competencia {competencia}\n");
 
             var xmlRel = $"{imovel.TenantId:D}/{nfse.Id:D}.xml";
             var pdfRel = $"{imovel.TenantId:D}/{nfse.Id:D}.pdf";
@@ -157,6 +179,162 @@ public sealed class GerarCobrancaCommandHandler(
         return (await cobrancas.ObterDetalheAsync(nfse.Id, cancellationToken))!;
     }
 
+    private async Task<NfseEmissaoResultado> EmitirNfseNacionalAsync(
+        NotaFiscalServico nfse,
+        Guid clienteId,
+        Guid inquilinoId,
+        string competencia,
+        decimal valorTotal,
+        decimal valorAluguel,
+        decimal condo,
+        decimal iptu,
+        CancellationToken ct)
+    {
+        var cliente = await clientes.ObterPorIdAsync(clienteId, ct)
+            ?? throw new InvalidOperationException("Cliente emitente não encontrado.");
+
+        if (string.IsNullOrWhiteSpace(cliente.CodigoServico))
+            throw new InvalidOperationException(
+                "Cadastre o código de serviço (dados fiscais NFS-e) do cliente antes de emitir.");
+
+        if (string.IsNullOrWhiteSpace(cliente.InscricaoMunicipal))
+            throw new InvalidOperationException(
+                "Cadastre a inscrição municipal do cliente antes de emitir a NFS-e.");
+
+        var cert = await certificados.ObterAtivoPorClienteAsync(clienteId, ct)
+            ?? throw new InvalidOperationException(
+                "Envie o certificado digital A1 do cliente antes de emitir a NFS-e.");
+
+        if (cert.Validade < DateTimeOffset.UtcNow)
+            throw new InvalidOperationException("O certificado digital A1 do cliente está vencido.");
+
+        var inquilino = await inquilinos.ObterPorIdAsync(inquilinoId, ct)
+            ?? throw new InvalidOperationException("Inquilino (tomador) da cobrança não encontrado.");
+
+        await using var pfxStream = await storage.DownloadAsync(
+            EnviarCertificadoClienteCommandHandler.Bucket, cert.StoragePath, ct);
+        await using var pfxBuffer = new MemoryStream();
+        await pfxStream.CopyToAsync(pfxBuffer, ct);
+        var pfxBytes = pfxBuffer.ToArray();
+        if (pfxBytes.Length == 0)
+            throw new InvalidOperationException("Arquivo do certificado A1 está vazio no storage.");
+
+        string senha;
+        try
+        {
+            senha = protector.Unprotect(cert.SenhaCifrada);
+        }
+        catch (Exception)
+        {
+            throw new InvalidOperationException("Não foi possível recuperar a senha do certificado A1.");
+        }
+
+        var cMunPrest = ResolverMunicipio(cliente.Endereco.Cidade, cliente.Endereco.Uf);
+        var cMunToma = ResolverMunicipio(inquilino.Endereco.Cidade, inquilino.Endereco.Uf) ?? cMunPrest;
+
+        var desc = MontarDescricaoServico(competencia, valorAluguel, condo, iptu);
+        var docPrest = cliente.TipoPessoa == TipoPessoa.PJ ? cliente.Cnpj! : cliente.Cpf!;
+        var regime = cliente.RegimeTributario?.ToString();
+
+        var pedido = new NfseEmissaoPedido(
+            nfse.Id,
+            competencia,
+            valorTotal,
+            desc,
+            new NfsePartePrestador(
+                Documento: docPrest,
+                PessoaJuridica: cliente.TipoPessoa == TipoPessoa.PJ,
+                InscricaoMunicipal: cliente.InscricaoMunicipal,
+                RazaoSocial: cliente.TipoPessoa == TipoPessoa.PJ ? cliente.RazaoSocial : cliente.Nome,
+                Telefone: cliente.Telefone,
+                Email: cliente.Email,
+                CodigoServico: cliente.CodigoServico,
+                RegimeTributario: regime,
+                CodigoMunicipioIbge: cMunPrest,
+                Cep: cliente.Endereco.Cep,
+                Logradouro: cliente.Endereco.Logradouro,
+                Numero: cliente.Endereco.Numero,
+                Complemento: cliente.Endereco.Complemento,
+                Bairro: cliente.Endereco.Bairro),
+            new NfseParteTomador(
+                Documento: inquilino.Documento,
+                PessoaJuridica: inquilino.TipoPessoa == TipoPessoa.PJ,
+                Nome: inquilino.Nome,
+                InscricaoMunicipal: inquilino.InscricaoMunicipal,
+                Telefone: inquilino.Telefone,
+                Email: inquilino.Email,
+                CodigoMunicipioIbge: cMunToma,
+                Cep: inquilino.Endereco.Cep,
+                Logradouro: inquilino.Endereco.Logradouro,
+                Numero: inquilino.Endereco.Numero,
+                Complemento: inquilino.Endereco.Complemento,
+                Bairro: inquilino.Endereco.Bairro),
+            pfxBytes,
+            senha);
+
+        return await nfseProvider.EmitirAsync(pedido, ct);
+    }
+
+    /// <summary>
+    /// IBGE do município: usa cidade/UF conhecidos; senão São Paulo (padrão sandbox Demo).
+    /// A Infrastructure resolve o mapa completo; aqui só validamos presença mínima.
+    /// </summary>
+    private static string ResolverMunicipio(string? cidade, string? uf)
+    {
+        if (string.IsNullOrWhiteSpace(cidade) || string.IsNullOrWhiteSpace(uf))
+            return "3550308";
+
+        var c = cidade.Trim().ToLowerInvariant();
+        var u = uf.Trim().ToUpperInvariant();
+        if (u == "SP" && (c is "sao paulo" or "são paulo"))
+            return "3550308";
+        if (u == "MG" && c == "belo horizonte")
+            return "3106200";
+        if (u == "RJ" && c == "rio de janeiro")
+            return "3304557";
+
+        // Fallback alinhado a Nfse:CodigoMunicipioIbgePadrao (São Paulo).
+        return "3550308";
+    }
+
+    private static string MontarDescricaoServico(
+        string competencia, decimal aluguel, decimal condo, decimal iptu)
+    {
+        var partes = new List<string> { $"Aluguel competência {competencia}: R$ {F(aluguel)}" };
+        if (condo > 0) partes.Add($"Condomínio: R$ {F(condo)}");
+        if (iptu > 0) partes.Add($"IPTU: R$ {F(iptu)}");
+        return string.Join("; ", partes);
+    }
+
+    /// <summary>
+    /// SEFIN E0015: <c>dCompet</c> não pode ser posterior a <c>dhEmi</c>.
+    /// Usa o 1º dia da competência vs. hoje em America/Sao_Paulo.
+    /// </summary>
+    private static void GarantirCompetenciaNaoFuturaParaEmissao(string competencia)
+    {
+        var mes = int.Parse(competencia.AsSpan(0, 2), CultureInfo.InvariantCulture);
+        var ano = int.Parse(competencia.AsSpan(3, 4), CultureInfo.InvariantCulture);
+        var dCompet = new DateOnly(ano, mes, 1);
+        var hoje = DateOnly.FromDateTime(ObterAgoraSaoPaulo().DateTime);
+        if (dCompet > hoje)
+            throw new InvalidOperationException(
+                $"Não é possível emitir NFS-e para competência futura ({competencia}). " +
+                "A data de competência (1º dia do mês) não pode ser posterior à data de emissão.");
+    }
+
+    private static DateTimeOffset ObterAgoraSaoPaulo()
+    {
+        try
+        {
+            var tz = TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo");
+            return TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, tz);
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            return DateTimeOffset.UtcNow.ToOffset(TimeSpan.FromHours(-3));
+        }
+    }
+
     private static string F(decimal v) => v.ToString("F2", CultureInfo.InvariantCulture);
 
     private static int CompararCompetencia(string a, string b)
@@ -169,13 +347,5 @@ public sealed class GerarCobrancaCommandHandler(
         var (anoB, mesB) = Parse(b);
         var cmp = anoA.CompareTo(anoB);
         return cmp != 0 ? cmp : mesA.CompareTo(mesB);
-    }
-
-    private static DateOnly CalcularVencimento(string competencia, int dia)
-    {
-        var mes = int.Parse(competencia.AsSpan(0, 2), CultureInfo.InvariantCulture);
-        var ano = int.Parse(competencia.AsSpan(3, 4), CultureInfo.InvariantCulture);
-        var diaOk = Math.Clamp(dia, 1, DateTime.DaysInMonth(ano, mes));
-        return new DateOnly(ano, mes, diaOk);
     }
 }
