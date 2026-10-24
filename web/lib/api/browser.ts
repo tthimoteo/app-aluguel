@@ -261,6 +261,8 @@ export type AtualizacaoClienteInput = {
   inscricaoMunicipal?: string | null;
   cnaePrincipal?: string | null;
   codigoServico?: string | null;
+  codigoIndicadorOperacao?: string | null;
+  classificacaoTributaria?: string | null;
   regimeTributario?: string | null;
   telefone?: string | null;
   email?: string | null;

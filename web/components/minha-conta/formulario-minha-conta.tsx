@@ -35,6 +35,22 @@ const REGIMES = [
   { valor: "Mei", rotulo: "MEI" },
 ] as const;
 
+/** Padrão Lucrare para emissão NFS-e (SEFIN Nacional). */
+const NFSE_PADRAO = {
+  cTribNac: "990301",
+  cIndOp: "020201",
+  cClassTrib: "200027",
+} as const;
+
+function validarCodigoNfse6(valor: string, rotulo: string, padrao: string): string | null {
+  const digitos = valor.replace(/\D/g, "");
+  if (!digitos) return null;
+  if (digitos.length !== 6) {
+    return `${rotulo} deve ter 6 dígitos (padrão Lucrare: ${padrao}).`;
+  }
+  return null;
+}
+
 export function FormularioMinhaConta({
   me,
   cliente: clienteInicial,
@@ -62,7 +78,15 @@ export function FormularioMinhaConta({
   const [email, setEmail] = useState(clienteInicial.email ?? "");
   const [telefone, setTelefone] = useState(clienteInicial.telefone ? mascaraTelefone(clienteInicial.telefone) : "");
   const [cnaePrincipal, setCnaePrincipal] = useState(clienteInicial.cnaePrincipal ?? "");
-  const [codigoServico, setCodigoServico] = useState(clienteInicial.codigoServico ?? "");
+  const [codigoServico, setCodigoServico] = useState(
+    clienteInicial.codigoServico ?? NFSE_PADRAO.cTribNac,
+  );
+  const [codigoIndicadorOperacao, setCodigoIndicadorOperacao] = useState(
+    clienteInicial.codigoIndicadorOperacao ?? NFSE_PADRAO.cIndOp,
+  );
+  const [classificacaoTributaria, setClassificacaoTributaria] = useState(
+    clienteInicial.classificacaoTributaria ?? NFSE_PADRAO.cClassTrib,
+  );
   const [regimeTributario, setRegimeTributario] = useState(clienteInicial.regimeTributario ?? "");
   const [statusCliente, setStatusCliente] = useState<"Ativo" | "Inativo" | "Bloqueado">(
     clienteInicial.status === "Inativo" || clienteInicial.status === "Bloqueado"
@@ -87,7 +111,9 @@ export function FormularioMinhaConta({
     setEmail(c.email ?? "");
     setTelefone(c.telefone ? mascaraTelefone(c.telefone) : "");
     setCnaePrincipal(c.cnaePrincipal ?? "");
-    setCodigoServico(c.codigoServico ?? "");
+    setCodigoServico(c.codigoServico ?? NFSE_PADRAO.cTribNac);
+    setCodigoIndicadorOperacao(c.codigoIndicadorOperacao ?? NFSE_PADRAO.cIndOp);
+    setClassificacaoTributaria(c.classificacaoTributaria ?? NFSE_PADRAO.cClassTrib);
     setRegimeTributario(c.regimeTributario ?? "");
     setEndereco(enderecoDeApi(c.endereco));
     if (c.status === "Inativo" || c.status === "Bloqueado" || c.status === "Ativo") {
@@ -105,6 +131,19 @@ export function FormularioMinhaConta({
   async function onSubmit(ev: FormEvent<HTMLFormElement>) {
     ev.preventDefault();
     setErro(null);
+
+    if (mostraNfse) {
+      const erroFiscal =
+        validarCodigoNfse6(codigoServico, "cTribNac", NFSE_PADRAO.cTribNac) ??
+        validarCodigoNfse6(codigoIndicadorOperacao, "cIndOp", NFSE_PADRAO.cIndOp) ??
+        validarCodigoNfse6(classificacaoTributaria, "cClassTrib", NFSE_PADRAO.cClassTrib);
+      if (erroFiscal) {
+        setErro(erroFiscal);
+        toast.error(erroFiscal);
+        return;
+      }
+    }
+
     setPending(true);
 
     const dados: AtualizacaoClienteInput = {
@@ -113,7 +152,13 @@ export function FormularioMinhaConta({
       email: email.trim() || null,
       endereco: enderecoParaApi(endereco),
       cnaePrincipal: mostraNfse ? cnaePrincipal.trim() || null : cliente.cnaePrincipal,
-      codigoServico: mostraNfse ? codigoServico.trim() || null : cliente.codigoServico,
+      codigoServico: mostraNfse ? codigoServico.replace(/\D/g, "") || null : cliente.codigoServico,
+      codigoIndicadorOperacao: mostraNfse
+        ? codigoIndicadorOperacao.replace(/\D/g, "") || null
+        : cliente.codigoIndicadorOperacao,
+      classificacaoTributaria: mostraNfse
+        ? classificacaoTributaria.replace(/\D/g, "") || null
+        : cliente.classificacaoTributaria,
       regimeTributario: mostraNfse ? regimeTributario.trim() || null : cliente.regimeTributario,
     };
     if (ehAdmin) dados.status = statusCliente;
@@ -183,6 +228,8 @@ export function FormularioMinhaConta({
         inscricaoMunicipal: cliente.inscricaoMunicipal,
         cnaePrincipal: cliente.cnaePrincipal,
         codigoServico: cliente.codigoServico,
+        codigoIndicadorOperacao: cliente.codigoIndicadorOperacao,
+        classificacaoTributaria: cliente.classificacaoTributaria,
         regimeTributario: cliente.regimeTributario,
         telefone: cliente.telefone,
         email: cliente.email,
@@ -402,7 +449,7 @@ export function FormularioMinhaConta({
               Exigidos pelo plano {planoVigente?.nome} (emissão de NFS-e habilitada). A senha do certificado nunca é
               exibida após o envio.
             </p>
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <Campo rotulo="CNAE" htmlFor="cnaePrincipal">
                 <Input
                   id="cnaePrincipal"
@@ -413,13 +460,43 @@ export function FormularioMinhaConta({
                   className="h-10 rounded-[4px]"
                 />
               </Campo>
-              <Campo rotulo="Código de Serviço" htmlFor="codigoServico">
+              <Campo rotulo="cTribNac (tributação nacional)" htmlFor="codigoServico">
                 <Input
                   id="codigoServico"
                   name="codigoServico"
-                  placeholder="Ex.: 07.02"
+                  inputMode="numeric"
+                  maxLength={6}
+                  placeholder={NFSE_PADRAO.cTribNac}
                   value={codigoServico}
-                  onChange={(e) => setCodigoServico(e.target.value)}
+                  onChange={(e) => setCodigoServico(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  className="h-10 rounded-[4px]"
+                />
+              </Campo>
+              <Campo rotulo="cIndOp (indicação da operação)" htmlFor="codigoIndicadorOperacao">
+                <Input
+                  id="codigoIndicadorOperacao"
+                  name="codigoIndicadorOperacao"
+                  inputMode="numeric"
+                  maxLength={6}
+                  placeholder={NFSE_PADRAO.cIndOp}
+                  value={codigoIndicadorOperacao}
+                  onChange={(e) =>
+                    setCodigoIndicadorOperacao(e.target.value.replace(/\D/g, "").slice(0, 6))
+                  }
+                  className="h-10 rounded-[4px]"
+                />
+              </Campo>
+              <Campo rotulo="cClassTrib (classificação tributária)" htmlFor="classificacaoTributaria">
+                <Input
+                  id="classificacaoTributaria"
+                  name="classificacaoTributaria"
+                  inputMode="numeric"
+                  maxLength={6}
+                  placeholder={NFSE_PADRAO.cClassTrib}
+                  value={classificacaoTributaria}
+                  onChange={(e) =>
+                    setClassificacaoTributaria(e.target.value.replace(/\D/g, "").slice(0, 6))
+                  }
                   className="h-10 rounded-[4px]"
                 />
               </Campo>
@@ -440,6 +517,10 @@ export function FormularioMinhaConta({
                 </select>
               </Campo>
             </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Padrão Lucrare: cTribNac {NFSE_PADRAO.cTribNac} · cIndOp {NFSE_PADRAO.cIndOp} ·
+              cClassTrib {NFSE_PADRAO.cClassTrib} (6 dígitos cada).
+            </p>
 
             <div className="mt-5 rounded-[4px] border border-border bg-[#F8F9FA] p-4 dark:bg-muted/40">
               <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">

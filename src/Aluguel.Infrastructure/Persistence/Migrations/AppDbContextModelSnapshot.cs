@@ -435,6 +435,11 @@ namespace Aluguel.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<string>("ClassificacaoTributaria")
+                        .HasMaxLength(6)
+                        .HasColumnType("character varying(6)")
+                        .HasColumnName("classificacao_tributaria");
+
                     b.Property<string>("CnaePrincipal")
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)")
@@ -444,6 +449,11 @@ namespace Aluguel.Infrastructure.Persistence.Migrations
                         .HasMaxLength(14)
                         .HasColumnType("character varying(14)")
                         .HasColumnName("cnpj");
+
+                    b.Property<string>("CodigoIndicadorOperacao")
+                        .HasMaxLength(6)
+                        .HasColumnType("character varying(6)")
+                        .HasColumnName("codigo_indicador_operacao");
 
                     b.Property<string>("CodigoServico")
                         .HasMaxLength(20)

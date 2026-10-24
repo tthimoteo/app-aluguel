@@ -78,6 +78,21 @@ public static class IdentitySeeder
             await db.SaveChangesAsync();
         }
 
+        // Códigos fiscais padrão Lucrare para emissão SEFIN (cTribNac / cIndOp / cClassTrib).
+        if (cliente.CodigoServico != Domain.Fiscal.NfseCodigosPadrao.CodigoTributacaoNacional
+            || cliente.CodigoIndicadorOperacao != Domain.Fiscal.NfseCodigosPadrao.CodigoIndicadorOperacao
+            || cliente.ClassificacaoTributaria != Domain.Fiscal.NfseCodigosPadrao.ClassificacaoTributaria
+            || cliente.RegimeTributario != RegimeTributario.SimplesNacional)
+        {
+            cliente.DefinirDadosFiscaisNfse(
+                cliente.CnaePrincipal ?? "82.19.9-99",
+                Domain.Fiscal.NfseCodigosPadrao.CodigoTributacaoNacional,
+                RegimeTributario.SimplesNacional,
+                Domain.Fiscal.NfseCodigosPadrao.CodigoIndicadorOperacao,
+                Domain.Fiscal.NfseCodigosPadrao.ClassificacaoTributaria);
+            await db.SaveChangesAsync();
+        }
+
         var extra = await db.Clientes.FirstOrDefaultAsync(c => c.TenantId == tenant.Id && c.Cpf == "11144477735");
         if (extra is null)
         {

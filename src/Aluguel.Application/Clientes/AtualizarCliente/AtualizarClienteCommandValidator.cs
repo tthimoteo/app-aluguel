@@ -17,7 +17,15 @@ public sealed class AtualizarClienteCommandValidator : AbstractValidator<Atualiz
         RuleFor(x => x.NomeFantasia).MaximumLength(150);
         RuleFor(x => x.InscricaoMunicipal).MaximumLength(30);
         RuleFor(x => x.CnaePrincipal).MaximumLength(10);
-        RuleFor(x => x.CodigoServico).MaximumLength(20);
+        RuleFor(x => x.CodigoServico)
+            .Must(c => string.IsNullOrWhiteSpace(c) || NfseCodigoFiscal.EhCodigoTributacaoNacional(c))
+            .WithMessage(NfseCodigoFiscal.MensagemCTribNac);
+        RuleFor(x => x.CodigoIndicadorOperacao)
+            .Must(c => string.IsNullOrWhiteSpace(c) || NfseCodigoFiscal.EhCodigoIndicadorOperacao(c))
+            .WithMessage(NfseCodigoFiscal.MensagemCIndOp);
+        RuleFor(x => x.ClassificacaoTributaria)
+            .Must(c => string.IsNullOrWhiteSpace(c) || NfseCodigoFiscal.EhClassificacaoTributaria(c))
+            .WithMessage(NfseCodigoFiscal.MensagemCClassTrib);
         RuleFor(x => x.RegimeTributario)
             .Must(r => string.IsNullOrWhiteSpace(r)
                        || Enum.TryParse<Domain.Clientes.RegimeTributario>(r, ignoreCase: true, out _))

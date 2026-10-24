@@ -26,6 +26,8 @@ public sealed record ClienteDto(
     string? InscricaoMunicipal,
     string? CnaePrincipal,
     string? CodigoServico,
+    string? CodigoIndicadorOperacao,
+    string? ClassificacaoTributaria,
     string? RegimeTributario,
     string? Telefone,
     string? Email,

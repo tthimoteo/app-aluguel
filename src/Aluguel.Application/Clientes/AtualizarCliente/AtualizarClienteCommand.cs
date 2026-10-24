@@ -17,6 +17,8 @@ public sealed record AtualizarClienteCommand(
     string? InscricaoMunicipal,
     string? CnaePrincipal,
     string? CodigoServico,
+    string? CodigoIndicadorOperacao,
+    string? ClassificacaoTributaria,
     string? RegimeTributario,
     string? Telefone,
     string? Email,
@@ -55,7 +57,12 @@ public sealed class AtualizarClienteCommandHandler(
 
         // CNAE/serviço/regime: PF também precisa quando o plano permite NFS-e.
         // Em PJ, CnaePrincipal já pode ter sido setado em AtualizarDadosPessoaJuridica — reaplicamos de forma unificada.
-        cliente.DefinirDadosFiscaisNfse(request.CnaePrincipal, request.CodigoServico, regime);
+        cliente.DefinirDadosFiscaisNfse(
+            request.CnaePrincipal,
+            request.CodigoServico,
+            regime,
+            request.CodigoIndicadorOperacao,
+            request.ClassificacaoTributaria);
 
         if (request.PlanoId is not null && request.PlanoId != cliente.PlanoId)
             await ValidarEAplicarPlanoAsync(cliente, request.PlanoId.Value, cancellationToken);

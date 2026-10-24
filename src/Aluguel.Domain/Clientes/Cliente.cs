@@ -22,8 +22,12 @@ public class Cliente : AggregateRoot, ITenantOwned, IAuditable, ISoftDeletable
     public string? Cnpj { get; private set; }
     public string? InscricaoMunicipal { get; private set; }
     public string? CnaePrincipal { get; private set; }
-    /// <summary>Código de serviço municipal / LC 116 usado na emissão de NFS-e.</summary>
+    /// <summary>cTribNac — código de tributação nacional (6 dígitos, LC 116 / lista nacional).</summary>
     public string? CodigoServico { get; private set; }
+    /// <summary>cIndOp — código indicador da operação IBS/CBS (6 dígitos).</summary>
+    public string? CodigoIndicadorOperacao { get; private set; }
+    /// <summary>cClassTrib — classificação tributária IBS/CBS (6 dígitos).</summary>
+    public string? ClassificacaoTributaria { get; private set; }
     public RegimeTributario? RegimeTributario { get; private set; }
 
     // Contato + endereço
@@ -173,15 +177,32 @@ public class Cliente : AggregateRoot, ITenantOwned, IAuditable, ISoftDeletable
     }
 
     /// <summary>
-    /// Dados fiscais do emitente quando o plano permite NFS-e (CNAE, código de serviço e regime).
-    /// Aplicável a PF e PJ.
+    /// Dados fiscais do emitente quando o plano permite NFS-e
+    /// (CNAE, cTribNac, cIndOp, cClassTrib e regime). Aplicável a PF e PJ.
     /// </summary>
-    public void DefinirDadosFiscaisNfse(string? cnaePrincipal, string? codigoServico, RegimeTributario? regimeTributario)
+    public void DefinirDadosFiscaisNfse(
+        string? cnaePrincipal,
+        string? codigoServico,
+        RegimeTributario? regimeTributario,
+        string? codigoIndicadorOperacao = null,
+        string? classificacaoTributaria = null)
     {
         CnaePrincipal = string.IsNullOrWhiteSpace(cnaePrincipal) ? null : cnaePrincipal.Trim();
-        CodigoServico = string.IsNullOrWhiteSpace(codigoServico) ? null : codigoServico.Trim();
+        CodigoServico = string.IsNullOrWhiteSpace(codigoServico) ? null : SomenteDigitosOuNull(codigoServico);
+        CodigoIndicadorOperacao = string.IsNullOrWhiteSpace(codigoIndicadorOperacao)
+            ? null
+            : SomenteDigitosOuNull(codigoIndicadorOperacao);
+        ClassificacaoTributaria = string.IsNullOrWhiteSpace(classificacaoTributaria)
+            ? null
+            : SomenteDigitosOuNull(classificacaoTributaria);
         this.RegimeTributario = regimeTributario;
         Touch();
+    }
+
+    private static string? SomenteDigitosOuNull(string valor)
+    {
+        var digitos = new string(valor.Where(char.IsDigit).ToArray());
+        return string.IsNullOrEmpty(digitos) ? null : digitos;
     }
 
     /// <summary>Exclusão lógica (soft delete) — preserva histórico e libera o índice único de CPF/CNPJ.</summary>

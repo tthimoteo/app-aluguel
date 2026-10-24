@@ -1,4 +1,5 @@
 using Aluguel.Domain.Clientes;
+using Aluguel.Domain.Fiscal;
 using Aluguel.Domain.ValueObjects;
 using FluentAssertions;
 using Xunit;
@@ -27,17 +28,39 @@ public class ClienteTests
     }
 
     [Fact]
-    public void DefinirDadosFiscaisNfse_persiste_cnae_servico_e_regime_em_pf()
+    public void DefinirDadosFiscaisNfse_persiste_codigos_lucrare_em_pf()
     {
         var c = Cliente.CriarPessoaFisica(
             Guid.NewGuid(), null, "Locador Demo", "39053344705",
             null, null, null, Endereco.Vazio());
 
-        c.DefinirDadosFiscaisNfse("6201501", "07.02", RegimeTributario.SimplesNacional);
+        c.DefinirDadosFiscaisNfse(
+            "6201501",
+            NfseCodigosPadrao.CodigoTributacaoNacional,
+            RegimeTributario.SimplesNacional,
+            NfseCodigosPadrao.CodigoIndicadorOperacao,
+            NfseCodigosPadrao.ClassificacaoTributaria);
 
         c.CnaePrincipal.Should().Be("6201501");
-        c.CodigoServico.Should().Be("07.02");
+        c.CodigoServico.Should().Be(NfseCodigosPadrao.CodigoTributacaoNacional);
+        c.CodigoIndicadorOperacao.Should().Be(NfseCodigosPadrao.CodigoIndicadorOperacao);
+        c.ClassificacaoTributaria.Should().Be(NfseCodigosPadrao.ClassificacaoTributaria);
         c.RegimeTributario.Should().Be(RegimeTributario.SimplesNacional);
+    }
+
+    [Fact]
+    public void DefinirDadosFiscaisNfse_normaliza_somente_digitos()
+    {
+        var c = Cliente.CriarPessoaJuridica(
+            Guid.NewGuid(), null, "ACME LTDA", null, "11222333000181",
+            null, "6201501", null, null, Endereco.Vazio());
+
+        c.DefinirDadosFiscaisNfse(
+            "82.19.9-99", "990.301", RegimeTributario.SimplesNacional, "020.201", "200.027");
+
+        c.CodigoServico.Should().Be("990301");
+        c.CodigoIndicadorOperacao.Should().Be("020201");
+        c.ClassificacaoTributaria.Should().Be("200027");
     }
 
     [Fact]
@@ -47,10 +70,13 @@ public class ClienteTests
             Guid.NewGuid(), null, "ACME LTDA", null, "11222333000181",
             null, "6201501", null, null, Endereco.Vazio());
 
-        c.DefinirDadosFiscaisNfse("  ", "  ", RegimeTributario.LucroPresumido);
+        c.DefinirDadosFiscaisNfse(
+            "  ", "  ", RegimeTributario.LucroPresumido, "  ", "  ");
 
         c.CnaePrincipal.Should().BeNull();
         c.CodigoServico.Should().BeNull();
+        c.CodigoIndicadorOperacao.Should().BeNull();
+        c.ClassificacaoTributaria.Should().BeNull();
         c.RegimeTributario.Should().Be(RegimeTributario.LucroPresumido);
     }
 

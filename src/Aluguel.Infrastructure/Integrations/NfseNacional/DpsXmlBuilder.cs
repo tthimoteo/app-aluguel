@@ -51,19 +51,8 @@ public static class DpsXmlBuilder
                 prest.Add(new XElement(Ns + "IM", im));
         }
 
-        if (!string.IsNullOrWhiteSpace(pedido.Prestador.RazaoSocial))
-            prest.Add(new XElement(Ns + "xNome", Truncar(pedido.Prestador.RazaoSocial!, 150)));
-
-        AdicionarEndereco(prest, pedido.Prestador.CodigoMunicipioIbge, pedido.Prestador.Cep,
-            pedido.Prestador.Logradouro, pedido.Prestador.Numero, pedido.Prestador.Complemento,
-            pedido.Prestador.Bairro);
-
-        var foneP = SomenteDigitos(pedido.Prestador.Telefone);
-        if (!string.IsNullOrEmpty(foneP))
-            prest.Add(new XElement(Ns + "fone", Truncar(foneP, 20)));
-        if (!string.IsNullOrWhiteSpace(pedido.Prestador.Email))
-            prest.Add(new XElement(Ns + "email", Truncar(pedido.Prestador.Email!, 80)));
-
+        // E0121/E0128: com tpEmit=1 (prestador emitente) não informar xNome, endereço, fone nem e-mail
+        // do prestador — a SEFIN usa o cadastro CNC/RFB.
         prest.Add(MontarRegTrib(pedido.Prestador.RegimeTributario));
 
         var toma = new XElement(Ns + "toma");
@@ -92,16 +81,24 @@ public static class DpsXmlBuilder
         if (!string.IsNullOrWhiteSpace(pedido.Tomador.Email))
             toma.Add(new XElement(Ns + "email", Truncar(pedido.Tomador.Email!, 80)));
 
+        // Ordem XSD NT 009 (prod. restrita 20/10/2026): cTribNac, cTribMun?, cNBS?, …, xDescServ.
         var cServ = new XElement(Ns + "cServ",
             new XElement(Ns + "cTribNac", cTribNac));
         if (!string.IsNullOrEmpty(cTribMun))
             cServ.Add(new XElement(Ns + "cTribMun", cTribMun));
+        // E0322: com IBS/CBS a SEFIN exige cNBS. Locação 990301 → 110021000 / 110022000 (NT 005).
+        if (options.IncluirIbsCbs)
+        {
+            var nbsBruto = pedido.Imovel?.CodigoNbs ?? options.CodigoNbsPadrao;
+            if (SomenteDigitos(nbsBruto) is { Length: 9 } nbs)
+                cServ.Add(new XElement(Ns + "cNBS", nbs));
+        }
         cServ.Add(new XElement(Ns + "xDescServ", Truncar(pedido.DescricaoServico, 2000)));
-        if (options.IncluirIbsCbs && !string.IsNullOrWhiteSpace(options.CodigoNbsPadrao))
-            cServ.Add(new XElement(Ns + "cNBS", Digitos(options.CodigoNbsPadrao, 9, 9)));
 
+        // E0532: serviços 99.XX.XX (ex. 990301 locação) → tribISSQN = 4 (Não incidência).
+        var tribIssqn = cTribNac.StartsWith("99", StringComparison.Ordinal) ? "4" : "1";
         var tribMun = new XElement(Ns + "tribMun",
-            new XElement(Ns + "tribISSQN", "1"),
+            new XElement(Ns + "tribISSQN", tribIssqn),
             new XElement(Ns + "tpRetISSQN", "1"));
 
         var totTrib = MontarTotTrib(pedido.Prestador.RegimeTributario, options);
@@ -134,7 +131,7 @@ public static class DpsXmlBuilder
             valores);
 
         if (options.IncluirIbsCbs)
-            infDps.Add(MontarIbsCbs(options));
+            infDps.Add(MontarIbsCbs(pedido, options));
 
         var dps = new XElement(Ns + "DPS",
             new XAttribute("xmlns", Ns.NamespaceName),
@@ -223,20 +220,71 @@ public static class DpsXmlBuilder
     }
 
     /// <summary>
-    /// Grupo IBS/CBS no layout pós-20/10/2026: CST/cClassTrib em valores/trib (sem gIBSCBS obrigatório).
+    /// Grupo IBS/CBS (NT 009 / layout 20/10/2026): cIndOp, indDest, imovel (locação), valores/trib.
     /// </summary>
-    private static XElement MontarIbsCbs(NfseOptions options)
+    private static XElement MontarIbsCbs(NfseEmissaoPedido pedido, NfseOptions options)
     {
+        var prestador = pedido.Prestador;
+        var cClass = SomenteDigitos(prestador.ClassificacaoTributaria)
+                     ?? Digitos(options.ClassificacaoTributariaIbsCbs, 6, 6);
+        if (cClass.Length != 6)
+            cClass = Digitos(options.ClassificacaoTributariaIbsCbs, 6, 6);
+
+        var cInd = SomenteDigitos(prestador.CodigoIndicadorOperacao)
+                   ?? options.CodigoIndicadorOperacaoIbsCbs;
+        cInd = string.IsNullOrWhiteSpace(cInd) ? null : Digitos(cInd, 6, 6);
+
+        // E0959: CST = 3 primeiros dígitos de cClassTrib (ex.: 200027 → 200).
+        var cst = cClass.Length >= 3 ? cClass[..3] : Digitos(options.CstIbsCbs, 3, 3);
         var trib = new XElement(Ns + "trib",
-            new XElement(Ns + "CST", Digitos(options.CstIbsCbs, 3, 3)),
-            new XElement(Ns + "cClassTrib", Digitos(options.ClassificacaoTributariaIbsCbs, 6, 6)));
+            new XElement(Ns + "CST", cst),
+            new XElement(Ns + "cClassTrib", cClass));
 
         var ibs = new XElement(Ns + "IBSCBS");
-        if (!string.IsNullOrWhiteSpace(options.CodigoIndicadorOperacaoIbsCbs))
-            ibs.Add(new XElement(Ns + "cIndOp", Digitos(options.CodigoIndicadorOperacaoIbsCbs, 6, 6)));
+        if (!string.IsNullOrWhiteSpace(cInd))
+            ibs.Add(new XElement(Ns + "cIndOp", cInd));
         ibs.Add(new XElement(Ns + "indDest", "0"));
+
+        // E0932: cIndOp de imóvel (020101/020201/…) exige grupo imovel.
+        if (cInd is not null && cInd.StartsWith("02", StringComparison.Ordinal) && pedido.Imovel is not null)
+            ibs.Add(MontarGrupoImovel(pedido.Imovel, pedido.ValorServico));
+
         ibs.Add(new XElement(Ns + "valores", trib));
         return ibs;
+    }
+
+    private static XElement MontarGrupoImovel(NfseDadosImovel imovel, decimal valorOperacao)
+    {
+        var cMun = Digitos(imovel.CodigoMunicipioIbge, 7, 7);
+        var pCop = imovel.PercentualCopropriedade.ToString("F2", CultureInfo.InvariantCulture);
+        var vTot = valorOperacao.ToString("F2", CultureInfo.InvariantCulture);
+
+        var grupo = new XElement(Ns + "imovel",
+            new XElement(Ns + "cMun", cMun),
+            new XElement(Ns + "gLocacao",
+                new XElement(Ns + "pCopropriedade", pCop),
+                new XElement(Ns + "vTotOper", vTot)));
+
+        if (!string.IsNullOrWhiteSpace(imovel.InscricaoImobiliaria))
+            grupo.AddFirst(new XElement(Ns + "inscImobFisc", Truncar(imovel.InscricaoImobiliaria.Trim(), 30)));
+
+        var cep = SomenteDigitos(imovel.Cep);
+        var lgr = imovel.Logradouro?.Trim();
+        var nro = string.IsNullOrWhiteSpace(imovel.Numero) ? "S/N" : imovel.Numero.Trim();
+        var bai = imovel.Bairro?.Trim();
+        if (!string.IsNullOrEmpty(cep) && !string.IsNullOrWhiteSpace(lgr) && !string.IsNullOrWhiteSpace(bai))
+        {
+            var end = new XElement(Ns + "end",
+                new XElement(Ns + "CEP", Digitos(cep, 8, 8)),
+                new XElement(Ns + "xLgr", Truncar(lgr, 255)),
+                new XElement(Ns + "nro", Truncar(nro, 60)));
+            if (!string.IsNullOrWhiteSpace(imovel.Complemento))
+                end.Add(new XElement(Ns + "xCpl", Truncar(imovel.Complemento.Trim(), 156)));
+            end.Add(new XElement(Ns + "xBairro", Truncar(bai, 60)));
+            grupo.Add(new XElement(Ns + "gUnidImob", end));
+        }
+
+        return grupo;
     }
 
     private static void AdicionarEndereco(

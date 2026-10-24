@@ -1,4 +1,5 @@
 using Aluguel.Application.Abstractions;
+using Aluguel.Domain.Fiscal;
 using Aluguel.Infrastructure.Integrations.NfseNacional;
 using FluentAssertions;
 using Xunit;
@@ -16,20 +17,20 @@ public class DpsXmlBuilderTests
     }
 
     [Fact]
-    public void ResolverCodigosServico_codigo_longo_so_nacional()
+    public void ResolverCodigosServico_codigo_longo_usa_padrao_lucrare()
     {
-        var opts = new NfseOptions { CodigoTributacaoNacionalPadrao = "170101" };
+        var opts = new NfseOptions();
         var (nac, mun) = DpsXmlBuilder.ResolverCodigosServico("03158", opts);
-        nac.Should().Be("170101");
+        nac.Should().Be(NfseCodigosPadrao.CodigoTributacaoNacional);
         mun.Should().BeNull();
     }
 
     [Fact]
     public void ResolverCodigosServico_tres_digitos_vira_cTribMun()
     {
-        var opts = new NfseOptions { CodigoTributacaoNacionalPadrao = "170101" };
+        var opts = new NfseOptions();
         var (nac, mun) = DpsXmlBuilder.ResolverCodigosServico("001", opts);
-        nac.Should().Be("170101");
+        nac.Should().Be(NfseCodigosPadrao.CodigoTributacaoNacional);
         mun.Should().Be("001");
     }
 
@@ -37,19 +38,20 @@ public class DpsXmlBuilderTests
     public void ResolverCodigosServico_seis_digitos_e_nacional()
     {
         var opts = new NfseOptions();
-        var (nac, mun) = DpsXmlBuilder.ResolverCodigosServico("170601", opts);
-        nac.Should().Be("170601");
+        var (nac, mun) = DpsXmlBuilder.ResolverCodigosServico(NfseCodigosPadrao.CodigoTributacaoNacional, opts);
+        nac.Should().Be(NfseCodigosPadrao.CodigoTributacaoNacional);
         mun.Should().BeNull();
     }
 
     [Fact]
-    public void Montar_gera_xml_com_infDps_e_regTrib_simples()
+    public void Montar_gera_xml_com_codigos_padrao_lucrare_e_ibscbs()
     {
         var opts = new NfseOptions
         {
             Ambiente = "ProducaoRestrita",
-            CodigoTributacaoNacionalPadrao = "170101",
-            PercentualTotTribSn = 6.00m
+            PercentualTotTribSn = 6.00m,
+            IncluirIbsCbs = true,
+            EnviarImPrestador = false,
         };
 
         var pedido = new NfseEmissaoPedido(
@@ -59,14 +61,27 @@ public class DpsXmlBuilderTests
             "Aluguel competência 10/2026",
             new NfsePartePrestador(
                 "15809930000168", true, "45556059", "PRESTADOR TESTE",
-                "11999999999", "prestador@teste.com", "03158", "SimplesNacional",
+                "11999999999", "prestador@teste.com",
+                NfseCodigosPadrao.CodigoTributacaoNacional,
+                NfseCodigosPadrao.CodigoIndicadorOperacao,
+                NfseCodigosPadrao.ClassificacaoTributaria,
+                "SimplesNacional",
                 "3550308", "03159070", "Rua Faria Lobato", "137", null, "Vila Santa Clara"),
             new NfseParteTomador(
                 "52998224725", false, "Tomador Teste", null,
                 "11888888888", "toma@teste.com", "3550308",
                 "01310100", "Av Paulista", "1000", null, "Bela Vista"),
             Array.Empty<byte>(),
-            "senha");
+            "senha",
+            new NfseDadosImovel(
+                CodigoMunicipioIbge: "3550308",
+                Cep: "03159070",
+                Logradouro: "Rua Faria Lobato",
+                Numero: "137",
+                Complemento: null,
+                Bairro: "Vila Santa Clara",
+                InscricaoImobiliaria: null,
+                CodigoNbs: NfseCodigosPadrao.CodigoNbsResidencial));
 
         var xml = DpsXmlBuilder.Montar(pedido, opts, "100000000000001",
             new DateTimeOffset(2026, 10, 24, 15, 0, 0, TimeSpan.FromHours(-3)), out var idDps);
@@ -75,16 +90,24 @@ public class DpsXmlBuilderTests
         xml.Should().Contain("infDPS");
         xml.Should().Contain("finNFSe>0<");
         xml.Should().Contain("opSimpNac>3<");
-        xml.Should().Contain("pTotTribSN>6.00<");
-        xml.Should().Contain("cTribNac>170101<");
-        xml.Should().NotContain("cTribMun");
-        xml.Should().Contain("vServ>1500.50<");
-        xml.Should().NotContain("IBSCBS"); // IncluirIbsCbs padrão = false
+        xml.Should().Contain($"cTribNac>{NfseCodigosPadrao.CodigoTributacaoNacional}<");
+        xml.Should().Contain($"cIndOp>{NfseCodigosPadrao.CodigoIndicadorOperacao}<");
+        xml.Should().Contain($"cClassTrib>{NfseCodigosPadrao.ClassificacaoTributaria}<");
+        xml.Should().Contain($"cNBS>{NfseCodigosPadrao.CodigoNbsResidencial}<");
+        xml.Should().Contain("IBSCBS");
+        xml.Should().Contain("gLocacao");
+        xml.Should().Contain("pCopropriedade>100.00<");
+        xml.Should().Contain("vTotOper>1500.50<");
+        xml.Should().NotContain("<IM>");
+        xml.Should().NotContain("inscImobFisc");
+        xml.Should().NotContain("<prest><CNPJ>15809930000168</CNPJ><xNome>");
+        xml.Should().Contain($"CST>200<");
+        xml.Should().Contain("tribISSQN>4<");
         xml.Should().Contain($"Id=\"{idDps}\"");
-        xml.Should().NotContain("<Signature");
-        // finNFSe deve aparecer antes de cLocEmi (NT 009 / layout 20/10/2026).
         xml.IndexOf("finNFSe", StringComparison.Ordinal).Should().BeLessThan(
             xml.IndexOf("cLocEmi", StringComparison.Ordinal));
+        xml.IndexOf("cNBS>", StringComparison.Ordinal).Should().BeLessThan(
+            xml.IndexOf("xDescServ>", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -105,7 +128,11 @@ public class DpsXmlBuilderTests
         var provider = new MockNfseNacionalProvider();
         var pedido = new NfseEmissaoPedido(
             Guid.NewGuid(), "11/2026", 100m, "Teste",
-            new NfsePartePrestador("15809930000168", true, "1", "P", null, null, "170101",
+            new NfsePartePrestador(
+                "15809930000168", true, "1", "P", null, null,
+                NfseCodigosPadrao.CodigoTributacaoNacional,
+                NfseCodigosPadrao.CodigoIndicadorOperacao,
+                NfseCodigosPadrao.ClassificacaoTributaria,
                 "SimplesNacional", "3550308", null, null, null, null, null),
             new NfseParteTomador("52998224725", false, "T", null, null, null, null, null, null, null, null, null),
             Array.Empty<byte>(), "x");

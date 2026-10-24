@@ -20,6 +20,8 @@ internal static class ClienteMappings
         c.InscricaoMunicipal,
         c.CnaePrincipal,
         c.CodigoServico,
+        c.CodigoIndicadorOperacao,
+        c.ClassificacaoTributaria,
         c.RegimeTributario?.ToString(),
         c.Telefone,
         c.Email,

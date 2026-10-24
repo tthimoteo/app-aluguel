@@ -61,7 +61,7 @@ public class ClienteHandlersTests
         var admin = new FakeCurrentUser(Guid.NewGuid(), clienteId: null, ehAdministrador: true);
         var handler = HandlerAtualizar(new FakeClienteRepository(), admin);
         var cmd = new AtualizarClienteCommand(Guid.NewGuid(), null, "Novo", null,
-            null, null, null, null, null, null, null, null, null);
+            null, null, null, null, null, null, null, null, null, null, null);
 
         (await handler.Handle(cmd, default)).Should().BeNull();
     }
@@ -76,7 +76,7 @@ public class ClienteHandlersTests
         var handler = HandlerAtualizar(repo, admin);
 
         var dto = await handler.Handle(new AtualizarClienteCommand(cliente.Id, null, "Novo Nome", null,
-            null, null, null, null, null, null, "11888887777", "novo@x.com", null), default);
+            null, null, null, null, null, null, null, null, "11888887777", "novo@x.com", null), default);
 
         dto!.Nome.Should().Be("Novo Nome");
         dto.Telefone.Should().Be("11888887777");
@@ -94,7 +94,7 @@ public class ClienteHandlersTests
         var handler = HandlerAtualizar(repo, gestor);
 
         var dto = await handler.Handle(new AtualizarClienteCommand(cliente.Id, null, "Novo Nome", null,
-            null, null, null, null, null, null, null, null, null), default);
+            null, null, null, null, null, null, null, null, null, null, null), default);
 
         dto.Should().BeNull();
         repo.SalvouVezes.Should().Be(0);
@@ -110,7 +110,7 @@ public class ClienteHandlersTests
         var handler = HandlerAtualizar(repo, admin);
 
         var dto = await handler.Handle(new AtualizarClienteCommand(cliente.Id, null, "Antigo", null,
-            null, null, null, null, null, null, null, null, null, StatusCliente.Bloqueado), default);
+            null, null, null, null, null, null, null, null, null, null, null, StatusCliente.Bloqueado), default);
 
         dto!.Status.Should().Be(nameof(StatusCliente.Bloqueado));
         cliente.Status.Should().Be(StatusCliente.Bloqueado);
@@ -138,7 +138,7 @@ public class ClienteHandlersTests
         var handler = HandlerAtualizar(repo, admin, planos, imoveis);
 
         var act = () => handler.Handle(new AtualizarClienteCommand(cliente.Id, planoTrial.Id, "Locador", null,
-            null, null, null, null, null, null, null, null, null), default);
+            null, null, null, null, null, null, null, null, null, null, null), default);
 
         var ex = await act.Should().ThrowAsync<InvalidOperationException>();
         ex.Which.Message.Should().Contain("Trial");
@@ -168,7 +168,7 @@ public class ClienteHandlersTests
         var handler = HandlerAtualizar(repo, admin, planos, imoveis);
 
         var dto = await handler.Handle(new AtualizarClienteCommand(cliente.Id, planoBasico.Id, "Locador", null,
-            null, null, null, null, null, null, null, null, null), default);
+            null, null, null, null, null, null, null, null, null, null, null), default);
 
         dto!.PlanoId.Should().Be(planoBasico.Id);
         cliente.PlanoId.Should().Be(planoBasico.Id);

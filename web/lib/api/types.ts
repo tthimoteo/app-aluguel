@@ -135,7 +135,12 @@ export type Cliente = {
   cnpj: string | null;
   inscricaoMunicipal: string | null;
   cnaePrincipal: string | null;
+  /** cTribNac — 6 dígitos (padrão Lucrare: 990301) */
   codigoServico: string | null;
+  /** cIndOp — 6 dígitos (padrão Lucrare: 020201) */
+  codigoIndicadorOperacao: string | null;
+  /** cClassTrib — 6 dígitos (padrão Lucrare: 200027) */
+  classificacaoTributaria: string | null;
   regimeTributario: RegimeTributario | string | null;
   telefone: string | null;
   email: string | null;

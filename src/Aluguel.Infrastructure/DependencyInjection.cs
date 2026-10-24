@@ -1,4 +1,5 @@
 using Aluguel.Application.Abstractions;
+using Aluguel.Domain.Fiscal;
 using Aluguel.Infrastructure.Identity;
 using Aluguel.Infrastructure.Integrations.NfseNacional;
 using Aluguel.Infrastructure.Persistence;
@@ -66,7 +67,10 @@ public static class DependencyInjection
             if (s["CstIbsCbs"] is { Length: > 0 } cst) opts.CstIbsCbs = cst;
             if (s["ClassificacaoTributariaIbsCbs"] is { Length: > 0 } cls) opts.ClassificacaoTributariaIbsCbs = cls;
             if (bool.TryParse(s["IncluirIbsCbs"], out var ibs)) opts.IncluirIbsCbs = ibs;
-            if (s["CodigoNbsPadrao"] is { Length: > 0 } nbs) opts.CodigoNbsPadrao = nbs;
+            if (s["CodigoNbsPadrao"] is { } nbsCfg)
+                opts.CodigoNbsPadrao = string.IsNullOrWhiteSpace(nbsCfg)
+                    ? NfseCodigosPadrao.CodigoNbsResidencial
+                    : nbsCfg;
             if (bool.TryParse(s["EnviarImPrestador"], out var im)) opts.EnviarImPrestador = im;
         });
         var nfseAmbiente = configuration[$"{NfseOptions.SectionName}:Ambiente"] ?? "Mock";

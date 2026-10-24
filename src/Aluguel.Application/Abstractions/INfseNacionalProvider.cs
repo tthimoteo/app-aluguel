@@ -18,7 +18,21 @@ public sealed record NfseEmissaoPedido(
     NfsePartePrestador Prestador,
     NfseParteTomador Tomador,
     byte[] CertificadoPfx,
-    string SenhaCertificado);
+    string SenhaCertificado,
+    NfseDadosImovel? Imovel = null);
+
+/// <summary>Dados do imóvel para IBSCBS/imovel (obrigatório com cIndOp de locação, ex. 020201).</summary>
+public sealed record NfseDadosImovel(
+    string CodigoMunicipioIbge,
+    string? Cep,
+    string? Logradouro,
+    string? Numero,
+    string? Complemento,
+    string? Bairro,
+    string? InscricaoImobiliaria,
+    /// <summary>cNBS de 9 dígitos (residencial 110021000 / não residencial 110022000).</summary>
+    string? CodigoNbs = null,
+    decimal PercentualCopropriedade = 100m);
 
 public sealed record NfsePartePrestador(
     string Documento,
@@ -28,6 +42,8 @@ public sealed record NfsePartePrestador(
     string? Telefone,
     string? Email,
     string? CodigoServico,
+    string? CodigoIndicadorOperacao,
+    string? ClassificacaoTributaria,
     string? RegimeTributario,
     string CodigoMunicipioIbge,
     string? Cep,

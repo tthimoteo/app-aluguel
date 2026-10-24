@@ -30,14 +30,17 @@ Adapter: `INfseNacionalProvider` → `SefinNfseNacionalProvider` (ou `MockNfseNa
 | `VerAplic` | Identificador no XML (máx. 20) |
 | `SeriePadrao` | Série da DPS |
 | `CodigoMunicipioIbgePadrao` | IBGE fallback (São Paulo = `3550308`) |
-| `CodigoTributacaoNacionalPadrao` | `cTribNac` (6 dígitos) quando o código do cliente for municipal |
+| `CodigoTributacaoNacionalPadrao` | `cTribNac` Lucrare = **`990301`** |
+| `CodigoIndicadorOperacaoIbsCbs` | `cIndOp` Lucrare = **`020201`** |
+| `ClassificacaoTributariaIbsCbs` | `cClassTrib` Lucrare = **`200027`** |
+| `CstIbsCbs` | CST IBS/CBS = **`200`** (3 primeiros dígitos de `cClassTrib`) |
 | `PercentualTotTribSn` | `pTotTribSN` para optantes do Simples |
 | `FinNfse` | Finalidade (`0` = regular); obrigatório em `infDPS` (NT 009) |
-| `IncluirIbsCbs` | Inclui grupo `IBSCBS` (exige NBS/cIndOp válidos) |
+| `IncluirIbsCbs` | `true` (grupo `IBSCBS` com cIndOp/cClassTrib) |
 | `EnviarImPrestador` | Envia `prest/IM` (E0120 se CNC municipal incompleto) |
-| `CodigoNbsPadrao` | NBS 9 dígitos quando `IncluirIbsCbs=true` |
-| `CodigoIndicadorOperacaoIbsCbs` | `cIndOp` (opcional pós-20/10/2026) |
-| `CstIbsCbs` / `ClassificacaoTributariaIbsCbs` | Tributação IBS/CBS |
+| `CodigoNbsPadrao` | cNBS Lucrare residencial = **`110021000`** (comercial = `110022000` via tipo do imóvel) |
+
+Cadastro do cliente (Minha Conta / Admin): `codigoServico` = cTribNac, `codigoIndicadorOperacao` = cIndOp, `classificacaoTributaria` = cClassTrib — cada um com **6 dígitos** (FluentValidation).
 
 Em **Development**, o padrão é `ProducaoRestrita`. Em outros ambientes, `Mock` (CI sem mTLS).
 
@@ -53,7 +56,11 @@ A SEFIN homologa o leiaute da **NT 009**: `finNFSe` fica em `infDPS` (antes de `
 | E0120 | IM sem CNC complementar | `EnviarImPrestador=false` até cadastrar no CNC |
 | E0312 | `cTribNac` não administrado pelo município | Ajustar código nacional conveniado em SP / município |
 | E0207 | CPF do tomador inexistente na RFB | Usar documento real do inquilino |
-| E0322 | IBS/CBS sem NBS | Informar `cNBS` ou desligar `IncluirIbsCbs` |
+| E0322 | IBS/CBS sem NBS | Informar `cNBS` (locação: `110021000` / `110022000`) |
+| E0932 | cIndOp de imóvel sem grupo `imovel` | Enviar `IBSCBS/imovel/gLocacao` |
+| E0959 | CST ≠ 3 primeiros dígitos de `cClassTrib` | CST `200` com `cClassTrib` `200027` |
+| E0121 / E0128 | `prest/xNome` ou endereço com `tpEmit=1` | Enviar só CNPJ/CPF (+ regTrib); cadastro vem do CNC |
+| E0532 | `tribISSQN` ≠ 4 em serviço `99.XX.XX` | Usar `tribISSQN=4` (não incidência) para `990301` |
 
 O adapter autentica (mTLS A1), assina a DPS e fala com a SEFIN; autorização plena depende do CNC, lista de serviços do município e documentos do tomador.
 

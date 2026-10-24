@@ -5,6 +5,7 @@ using Aluguel.Application.Abstractions;
 using Aluguel.Application.Cobrancas.BaixarArquivoCobranca;
 using Aluguel.Application.Clientes.EnviarCertificadoCliente;
 using Aluguel.Application.Common.Acesso;
+using Aluguel.Application.Common.Validacoes;
 using Aluguel.Domain.Clientes;
 using Aluguel.Domain.Contratos;
 using Aluguel.Domain.Financeiro;
@@ -122,7 +123,7 @@ public sealed class GerarCobrancaCommandHandler(
             GarantirCompetenciaNaoFuturaParaEmissao(competencia);
 
             var emissao = await EmitirNfseNacionalAsync(
-                nfse, imovel.ClienteId, contrato.InquilinoId, competencia, valorTotal,
+                nfse, imovel, contrato.InquilinoId, competencia, valorTotal,
                 request.ValorAluguel, condo, iptu, cancellationToken);
 
             if (!emissao.Sucesso || emissao.XmlNfse is null || string.IsNullOrWhiteSpace(emissao.ChaveAcesso))
@@ -181,7 +182,7 @@ public sealed class GerarCobrancaCommandHandler(
 
     private async Task<NfseEmissaoResultado> EmitirNfseNacionalAsync(
         NotaFiscalServico nfse,
-        Guid clienteId,
+        Domain.Imoveis.Imovel imovel,
         Guid inquilinoId,
         string competencia,
         decimal valorTotal,
@@ -190,12 +191,16 @@ public sealed class GerarCobrancaCommandHandler(
         decimal iptu,
         CancellationToken ct)
     {
+        var clienteId = imovel.ClienteId;
         var cliente = await clientes.ObterPorIdAsync(clienteId, ct)
             ?? throw new InvalidOperationException("Cliente emitente não encontrado.");
 
-        if (string.IsNullOrWhiteSpace(cliente.CodigoServico))
-            throw new InvalidOperationException(
-                "Cadastre o código de serviço (dados fiscais NFS-e) do cliente antes de emitir.");
+        var cTribNac = NfseCodigoFiscal.NormalizarDigitos(cliente.CodigoServico, 6)
+                       ?? NfseCodigosPadrao.CodigoTributacaoNacional;
+        var cIndOp = NfseCodigoFiscal.NormalizarDigitos(cliente.CodigoIndicadorOperacao, 6)
+                     ?? NfseCodigosPadrao.CodigoIndicadorOperacao;
+        var cClassTrib = NfseCodigoFiscal.NormalizarDigitos(cliente.ClassificacaoTributaria, 6)
+                         ?? NfseCodigosPadrao.ClassificacaoTributaria;
 
         if (string.IsNullOrWhiteSpace(cliente.InscricaoMunicipal))
             throw new InvalidOperationException(
@@ -248,7 +253,9 @@ public sealed class GerarCobrancaCommandHandler(
                 RazaoSocial: cliente.TipoPessoa == TipoPessoa.PJ ? cliente.RazaoSocial : cliente.Nome,
                 Telefone: cliente.Telefone,
                 Email: cliente.Email,
-                CodigoServico: cliente.CodigoServico,
+                CodigoServico: cTribNac,
+                CodigoIndicadorOperacao: cIndOp,
+                ClassificacaoTributaria: cClassTrib,
                 RegimeTributario: regime,
                 CodigoMunicipioIbge: cMunPrest,
                 Cep: cliente.Endereco.Cep,
@@ -270,7 +277,18 @@ public sealed class GerarCobrancaCommandHandler(
                 Complemento: inquilino.Endereco.Complemento,
                 Bairro: inquilino.Endereco.Bairro),
             pfxBytes,
-            senha);
+            senha,
+            Imovel: new NfseDadosImovel(
+                CodigoMunicipioIbge: ResolverMunicipio(imovel.Endereco.Cidade, imovel.Endereco.Uf),
+                Cep: imovel.Endereco.Cep,
+                Logradouro: imovel.Endereco.Logradouro,
+                Numero: imovel.Endereco.Numero,
+                Complemento: imovel.Endereco.Complemento,
+                Bairro: imovel.Endereco.Bairro,
+                InscricaoImobiliaria: imovel.NumeroIptu,
+                CodigoNbs: imovel.Tipo == Domain.Imoveis.TipoImovel.Comercial
+                    ? NfseCodigosPadrao.CodigoNbsNaoResidencial
+                    : NfseCodigosPadrao.CodigoNbsResidencial));
 
         return await nfseProvider.EmitirAsync(pedido, ct);
     }
