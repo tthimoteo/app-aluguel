@@ -294,25 +294,42 @@ public sealed class GerarCobrancaCommandHandler(
     }
 
     /// <summary>
-    /// IBGE do município: usa cidade/UF conhecidos; senão São Paulo (padrão sandbox Demo).
-    /// A Infrastructure resolve o mapa completo; aqui só validamos presença mínima.
+    /// IBGE do município a partir de cidade/UF. Fallback São Paulo só quando cidade vazia —
+    /// cidade conhecida errada (ex. São Caetano → SP capital) gera E0240 na SEFIN.
     /// </summary>
     private static string ResolverMunicipio(string? cidade, string? uf)
     {
         if (string.IsNullOrWhiteSpace(cidade) || string.IsNullOrWhiteSpace(uf))
             return "3550308";
 
-        var c = cidade.Trim().ToLowerInvariant();
+        var c = cidade.Trim().ToLowerInvariant()
+            .Replace("á", "a").Replace("à", "a").Replace("ã", "a").Replace("â", "a")
+            .Replace("é", "e").Replace("ê", "e")
+            .Replace("í", "i")
+            .Replace("ó", "o").Replace("ô", "o").Replace("õ", "o")
+            .Replace("ú", "u").Replace("ü", "u")
+            .Replace("ç", "c");
         var u = uf.Trim().ToUpperInvariant();
-        if (u == "SP" && (c is "sao paulo" or "são paulo"))
-            return "3550308";
-        if (u == "MG" && c == "belo horizonte")
-            return "3106200";
-        if (u == "RJ" && c == "rio de janeiro")
-            return "3304557";
 
-        // Fallback alinhado a Nfse:CodigoMunicipioIbgePadrao (São Paulo).
-        return "3550308";
+        return (u, c) switch
+        {
+            ("SP", "sao paulo") => "3550308",
+            ("SP", "sao caetano do sul") => "3548807",
+            ("SP", "santo andre") => "3547809",
+            ("SP", "sao bernardo do campo") => "3548708",
+            ("SP", "guarulhos") => "3518800",
+            ("SP", "osasco") => "3534401",
+            ("SP", "campinas") => "3509502",
+            ("RJ", "rio de janeiro") => "3304557",
+            ("MG", "belo horizonte") => "3106200",
+            ("DF", "brasilia") => "5300108",
+            ("PR", "curitiba") => "4106902",
+            ("RS", "porto alegre") => "4314902",
+            ("BA", "salvador") => "2927408",
+            ("CE", "fortaleza") => "2304400",
+            ("PE", "recife") => "2611606",
+            _ => "3550308",
+        };
     }
 
     private static string MontarDescricaoServico(

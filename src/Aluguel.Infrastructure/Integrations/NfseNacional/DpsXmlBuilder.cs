@@ -259,14 +259,12 @@ public static class DpsXmlBuilder
         var pCop = imovel.PercentualCopropriedade.ToString("F2", CultureInfo.InvariantCulture);
         var vTot = valorOperacao.ToString("F2", CultureInfo.InvariantCulture);
 
+        // XSD prod. restrita NT 009 (release 1): após cMun só gLocacao/gUnidImob — inscImobFisc não entra no schema.
         var grupo = new XElement(Ns + "imovel",
             new XElement(Ns + "cMun", cMun),
             new XElement(Ns + "gLocacao",
                 new XElement(Ns + "pCopropriedade", pCop),
                 new XElement(Ns + "vTotOper", vTot)));
-
-        if (!string.IsNullOrWhiteSpace(imovel.InscricaoImobiliaria))
-            grupo.AddFirst(new XElement(Ns + "inscImobFisc", Truncar(imovel.InscricaoImobiliaria.Trim(), 30)));
 
         var cep = SomenteDigitos(imovel.Cep);
         var lgr = imovel.Logradouro?.Trim();

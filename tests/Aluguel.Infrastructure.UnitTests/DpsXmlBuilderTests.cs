@@ -80,7 +80,7 @@ public class DpsXmlBuilderTests
                 Numero: "137",
                 Complemento: null,
                 Bairro: "Vila Santa Clara",
-                InscricaoImobiliaria: null,
+                InscricaoImobiliaria: "3458756478",
                 CodigoNbs: NfseCodigosPadrao.CodigoNbsResidencial));
 
         var xml = DpsXmlBuilder.Montar(pedido, opts, "100000000000001",
@@ -108,6 +108,9 @@ public class DpsXmlBuilderTests
             xml.IndexOf("cLocEmi", StringComparison.Ordinal));
         xml.IndexOf("cNBS>", StringComparison.Ordinal).Should().BeLessThan(
             xml.IndexOf("xDescServ>", StringComparison.Ordinal));
+        var ibs = xml[xml.IndexOf("<IBSCBS>", StringComparison.Ordinal)..];
+        ibs.IndexOf("<cMun>", StringComparison.Ordinal)
+            .Should().BeLessThan(ibs.IndexOf("gLocacao>", StringComparison.Ordinal));
     }
 
     [Fact]

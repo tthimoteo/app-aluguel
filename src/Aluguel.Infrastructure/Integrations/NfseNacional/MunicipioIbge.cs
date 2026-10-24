@@ -28,6 +28,8 @@ public static class MunicipioIbge
         ["santo andré|SP"] = "3547809",
         ["sao bernardo do campo|SP"] = "3548708",
         ["são bernardo do campo|SP"] = "3548708",
+        ["sao caetano do sul|SP"] = "3548807",
+        ["são caetano do sul|SP"] = "3548807",
     };
 
     public static string? Resolver(string? cidade, string? uf, string? fallback = null)
