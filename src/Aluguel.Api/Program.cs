@@ -62,6 +62,7 @@ builder.Services.AddAuthorization(o =>
     o.AddPolicy(Politicas.GerenciaCadastros, p => p.RequireRole(Perfis.Administrador, Perfis.Gestor));
     o.AddPolicy(Politicas.EmitirNfse, p => p.RequireRole(Perfis.Administrador, Perfis.Gestor, Perfis.Analista));
     o.AddPolicy(Politicas.CancelarNfse, p => p.RequireRole(Perfis.Administrador, Perfis.Gestor, Perfis.Analista));
+    o.AddPolicy(Politicas.OperaCobranca, p => p.RequireRole(Perfis.Administrador, Perfis.Gestor, Perfis.Analista));
 });
 
 builder.Services.ConfigureHttpJsonOptions(o =>

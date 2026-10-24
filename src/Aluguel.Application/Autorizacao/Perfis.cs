@@ -24,4 +24,10 @@ public static class Politicas
 
     /// <summary>Cancelamento de NFS-e.</summary>
     public const string CancelarNfse = nameof(CancelarNfse);
+
+    /// <summary>
+    /// Operações de cobrança (gerar, marcar pagamento e remover pendente):
+    /// Administrador, Gestor e Analista.
+    /// </summary>
+    public const string OperaCobranca = nameof(OperaCobranca);
 }

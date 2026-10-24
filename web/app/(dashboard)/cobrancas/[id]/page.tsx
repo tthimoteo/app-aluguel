@@ -17,7 +17,7 @@ export default async function DetalheCobrancaPage({
 }) {
   const usuario = await requireSession();
   const ehAdmin = temPerfil(usuario, "Administrador");
-  const podeGerenciar = temPerfil(usuario, "Administrador", "Gestor");
+  const podeGerenciar = temPerfil(usuario, "Administrador", "Gestor", "Analista");
   const me = await api.me();
 
   if (!ehAdmin) {
