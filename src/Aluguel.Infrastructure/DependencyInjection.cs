@@ -49,6 +49,7 @@ public static class DependencyInjection
 
         services.AddSingleton<IFileStorage, LocalFileStorage>();
         services.AddSingleton<ISecretProtector, AesSecretProtector>();
+        services.AddSingleton<INfsePdfGenerator, NfseDanfsePdfGenerator>();
 
         services.Configure<NfseOptions>(opts =>
         {

@@ -38,6 +38,7 @@ public sealed class GerarCobrancaCommandHandler(
     IInquilinoRepository inquilinos,
     ICertificadoDigitalRepository certificados,
     INfseNacionalProvider nfseProvider,
+    INfsePdfGenerator nfsePdf,
     IFileStorage storage,
     ISecretProtector protector,
     ICurrentUser currentUser)
@@ -139,8 +140,7 @@ public sealed class GerarCobrancaCommandHandler(
                 agora);
 
             var xmlBytes = emissao.XmlNfse;
-            var pdfBytes = Encoding.UTF8.GetBytes(
-                $"%PDF-1.4\n% NFS-e chave {emissao.ChaveAcesso} competencia {competencia}\n");
+            var pdfBytes = nfsePdf.Gerar(xmlBytes, emissao.ChaveAcesso!, competencia);
 
             var xmlRel = $"{imovel.TenantId:D}/{nfse.Id:D}.xml";
             var pdfRel = $"{imovel.TenantId:D}/{nfse.Id:D}.pdf";

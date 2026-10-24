@@ -10,6 +10,7 @@
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
     <PackageReference Include="EFCore.NamingConventions" />
     <PackageReference Include="System.Security.Cryptography.Xml" />
+    <PackageReference Include="QuestPDF" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Aluguel.Application\Aluguel.Application.csproj" />

@@ -16,6 +16,7 @@ public static class CobrancaDemoSeeder
         using var scope = sp.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var storage = scope.ServiceProvider.GetRequiredService<IFileStorage>();
+        var nfsePdf = scope.ServiceProvider.GetRequiredService<INfsePdfGenerator>();
 
         if (await db.NotasFiscais.IgnoreQueryFilters().AnyAsync())
             return;
@@ -39,28 +40,29 @@ public static class CobrancaDemoSeeder
         var emissorId = gestor?.Id ?? Guid.Empty;
         var agora = DateTimeOffset.UtcNow;
 
-        await CriarCobrancaAsync(db, storage, cliente.TenantId, cliente.Id, imovel.Id, inquilino?.Id,
+        await CriarCobrancaAsync(db, storage, nfsePdf, cliente.TenantId, cliente.Id, imovel.Id, inquilino?.Id,
             "09/2026", 2500m, 9001, emissorId, agora.AddMonths(-1), comPagamento: true);
-        await CriarCobrancaAsync(db, storage, cliente.TenantId, cliente.Id, imovel.Id, inquilino?.Id,
+        await CriarCobrancaAsync(db, storage, nfsePdf, cliente.TenantId, cliente.Id, imovel.Id, inquilino?.Id,
             "10/2026", 2500m, 9002, emissorId, agora, comPagamento: false);
 
         await db.SaveChangesAsync();
     }
 
     private static async Task CriarCobrancaAsync(
-        AppDbContext db, IFileStorage storage,
+        AppDbContext db, IFileStorage storage, INfsePdfGenerator nfsePdf,
         Guid tenantId, Guid clienteId, Guid imovelId, Guid? inquilinoId,
         string competencia, decimal valor, long numero, Guid emissorId,
         DateTimeOffset emitidaEm, bool comPagamento)
     {
         var nfse = new NotaFiscalServico(tenantId, clienteId, imovelId, competencia, valor,
             inquilinoId: inquilinoId);
-        nfse.MarcarEmitida(numero, "1", $"NFe{numero}DEMO{competencia.Replace("/", "")}", emissorId, emitidaEm);
+        var chave = $"NFe{numero}DEMO{competencia.Replace("/", "")}";
+        nfse.MarcarEmitida(numero, "1", chave, emissorId, emitidaEm);
         db.NotasFiscais.Add(nfse);
 
         var xmlBytes = Encoding.UTF8.GetBytes(
-            $"""<?xml version="1.0" encoding="UTF-8"?><NFSe><Numero>{numero}</Numero><Competencia>{competencia}</Competencia><Valor>{valor:F2}</Valor></NFSe>""");
-        var pdfBytes = Encoding.UTF8.GetBytes($"%PDF-1.4\n% NFS-e {numero} competencia {competencia}\n");
+            $"""<?xml version="1.0" encoding="UTF-8"?><NFSe xmlns="http://www.sped.fazenda.gov.br/nfse"><infNFSe Id="NFS{chave}"><nNFSe>{numero}</nNFSe><cStat>100</cStat><valores><vLiq>{valor:F2}</vLiq></valores></infNFSe></NFSe>""");
+        var pdfBytes = nfsePdf.Gerar(xmlBytes, chave, competencia);
         var boletoBytes = Encoding.UTF8.GetBytes($"%PDF-1.4\n% Boleto competencia {competencia} valor {valor:F2}\n");
 
         var xmlRel = $"{tenantId:D}/{nfse.Id:D}.xml";
