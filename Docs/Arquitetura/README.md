@@ -19,6 +19,7 @@ Base: análise integral de [`../APP-Aluguel-Especificacao.md`](../APP-Aluguel-Es
 | 09 | [Plano de Implementação (Sprints)](09-Plano-de-Implementacao-Sprints.md) | Incrementos alinhados ao MVP, UC e BDD; rastreabilidade e riscos. |
 | 10 | [Requisitos Funcionais e Telas](10-Requisitos-Funcionais-e-Telas.md) | Home, emissão, pagamentos, histórico, menu, contabilidade, RNF. |
 | 11 | [Casos de Uso e Critérios de Aceite](11-Casos-de-Uso-e-Criterios-de-Aceite.md) | UC001–UC008 e cenários BDD (CASO 1–8). |
+| 12 | [Integração NFS-e Nacional](12-Integracao-Nfse-Nacional.md) | SEFIN (emissão DPS) vs ADN (consulta); sandbox; Cliente Demo PJ. |
 
 ## Stack (especificação §19)
 

@@ -134,6 +134,45 @@ public class Cliente : AggregateRoot, ITenantOwned, IAuditable, ISoftDeletable
     }
 
     /// <summary>
+    /// Converte PF → PJ (emitente NFS-e). Limpa CPF/nome de PF e passa a usar CNPJ/razão social.
+    /// Uso administrativo (ex.: alinhar Cliente Demo ao certificado A1 do CNPJ).
+    /// </summary>
+    public void ConverterParaPessoaJuridica(
+        string razaoSocial,
+        string? nomeFantasia,
+        string cnpj,
+        string? inscricaoMunicipal = null,
+        string? cnaePrincipal = null,
+        string? telefone = null,
+        string? email = null,
+        Endereco? endereco = null)
+    {
+        if (string.IsNullOrWhiteSpace(razaoSocial))
+            throw new ArgumentException("Razão social é obrigatória.", nameof(razaoSocial));
+        if (string.IsNullOrWhiteSpace(cnpj))
+            throw new ArgumentException("CNPJ é obrigatório.", nameof(cnpj));
+
+        var digitos = new string(cnpj.Where(char.IsDigit).ToArray());
+        if (digitos.Length != 14)
+            throw new ArgumentException("CNPJ deve ter 14 dígitos.", nameof(cnpj));
+
+        TipoPessoa = TipoPessoa.PJ;
+        RazaoSocial = razaoSocial.Trim();
+        NomeFantasia = string.IsNullOrWhiteSpace(nomeFantasia) ? null : nomeFantasia.Trim();
+        Cnpj = digitos;
+        InscricaoMunicipal = string.IsNullOrWhiteSpace(inscricaoMunicipal) ? InscricaoMunicipal : inscricaoMunicipal.Trim();
+        CnaePrincipal = string.IsNullOrWhiteSpace(cnaePrincipal) ? CnaePrincipal : cnaePrincipal.Trim();
+        if (telefone is not null) Telefone = telefone;
+        if (email is not null) Email = email;
+        if (endereco is not null) Endereco = endereco;
+
+        Nome = null;
+        Cpf = null;
+        DataNascimento = null;
+        Touch();
+    }
+
+    /// <summary>
     /// Dados fiscais do emitente quando o plano permite NFS-e (CNAE, código de serviço e regime).
     /// Aplicável a PF e PJ.
     /// </summary>

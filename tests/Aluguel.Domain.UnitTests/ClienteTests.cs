@@ -66,4 +66,26 @@ public class ClienteTests
 
         c.PlanoId.Should().Be(plano);
     }
+
+    [Fact]
+    public void ConverterParaPessoaJuridica_troca_pf_por_cnpj_e_razao()
+    {
+        var c = Cliente.CriarPessoaFisica(
+            Guid.NewGuid(), null, "Cliente Demo", "39053344705",
+            null, "11999990000", "gestor@demo.local", Endereco.Vazio());
+
+        c.ConverterParaPessoaJuridica(
+            "T THIMOTEO CONSULTORIA E SERVICOS DE ENGENHARIA LTDA",
+            "Cliente Demo",
+            "15.809.930/0001-68",
+            cnaePrincipal: "82.19.9-99");
+
+        c.TipoPessoa.Should().Be(TipoPessoa.PJ);
+        c.Cnpj.Should().Be("15809930000168");
+        c.RazaoSocial.Should().Be("T THIMOTEO CONSULTORIA E SERVICOS DE ENGENHARIA LTDA");
+        c.NomeFantasia.Should().Be("Cliente Demo");
+        c.Cpf.Should().BeNull();
+        c.Nome.Should().BeNull();
+        c.NomeExibicao.Should().Be("T THIMOTEO CONSULTORIA E SERVICOS DE ENGENHARIA LTDA");
+    }
 }

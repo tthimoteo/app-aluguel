@@ -21,7 +21,11 @@ public static class CobrancaDemoSeeder
             return;
 
         var cliente = await db.Clientes.IgnoreQueryFilters()
-            .FirstOrDefaultAsync(c => c.Nome == "Cliente Demo" || c.Id == Guid.Parse("e6c2a056-b096-4b51-852c-278a460bea4b"));
+            .FirstOrDefaultAsync(c =>
+                c.Id == Guid.Parse("e6c2a056-b096-4b51-852c-278a460bea4b")
+                || c.Cnpj == "15809930000168"
+                || c.Nome == "Cliente Demo"
+                || c.RazaoSocial == "T THIMOTEO CONSULTORIA E SERVICOS DE ENGENHARIA LTDA");
         if (cliente is null) return;
 
         var imovel = await db.Imoveis.IgnoreQueryFilters()

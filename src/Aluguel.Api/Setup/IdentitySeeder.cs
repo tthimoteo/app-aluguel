@@ -1,6 +1,7 @@
 using Aluguel.Application.Autorizacao;
 using Aluguel.Domain.Assinaturas;
 using Aluguel.Domain.Clientes;
+using Aluguel.Domain.Common;
 using Aluguel.Domain.Tenancy;
 using Aluguel.Domain.Usuarios;
 using Aluguel.Infrastructure.Identity;
@@ -37,12 +38,43 @@ public static class IdentitySeeder
 
         var planoNfse = await db.Planos.FirstOrDefaultAsync(p => p.Codigo == PlanoCodigo.Intermediario);
 
-        var cliente = await db.Clientes.FirstOrDefaultAsync(c => c.TenantId == tenant.Id && c.Cpf == "39053344705");
+        // Cliente Demo = emitente NFS-e (PJ) alinhado ao certificado A1 de testes.
+        const string cnpjDemo = "15809930000168";
+        const string razaoDemo = "T THIMOTEO CONSULTORIA E SERVICOS DE ENGENHARIA LTDA";
+        var clienteIdDemo = Guid.Parse("e6c2a056-b096-4b51-852c-278a460bea4b");
+
+        var cliente = await db.Clientes.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(c => c.Id == clienteIdDemo
+                                      || (c.TenantId == tenant.Id && (c.Cnpj == cnpjDemo || c.Cpf == "39053344705")));
         if (cliente is null)
         {
-            cliente = Cliente.CriarPessoaFisica(tenant.Id, planoNfse?.Id, "Cliente Demo", "39053344705",
-                null, "11999990000", "gestor@demo.local", null);
+            cliente = Cliente.CriarPessoaJuridica(
+                tenant.Id, planoNfse?.Id, razaoDemo, "Cliente Demo",
+                cnpjDemo, inscricaoMunicipal: null, cnaePrincipal: "82.19.9-99",
+                "11999990000", "gestor@demo.local", null);
+            // Mantém o Id estável usado por seeds/cobranças demo.
+            typeof(Entity).GetProperty(nameof(Entity.Id))!.SetValue(cliente, clienteIdDemo);
             db.Clientes.Add(cliente);
+            await db.SaveChangesAsync();
+        }
+        else if (cliente.TipoPessoa != TipoPessoa.PJ || cliente.Cnpj != cnpjDemo)
+        {
+            cliente.ConverterParaPessoaJuridica(
+                razaoDemo, "Cliente Demo", cnpjDemo,
+                inscricaoMunicipal: cliente.InscricaoMunicipal,
+                cnaePrincipal: cliente.CnaePrincipal ?? "82.19.9-99",
+                telefone: cliente.Telefone ?? "11999990000",
+                email: cliente.Email ?? "gestor@demo.local");
+            if (cliente.PlanoId is null && planoNfse is not null)
+                cliente.DefinirPlano(planoNfse.Id);
+            await db.SaveChangesAsync();
+        }
+        else if (!string.Equals(cliente.RazaoSocial, razaoDemo, StringComparison.Ordinal))
+        {
+            cliente.AtualizarDadosPessoaJuridica(
+                razaoDemo, cliente.NomeFantasia ?? "Cliente Demo",
+                cliente.InscricaoMunicipal, cliente.CnaePrincipal,
+                cliente.Telefone, cliente.Email, null);
             await db.SaveChangesAsync();
         }
 
