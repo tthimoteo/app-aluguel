@@ -35,7 +35,7 @@ const REGIMES = [
   { valor: "Mei", rotulo: "MEI" },
 ] as const;
 
-/** Padrão Lucrare para emissão NFS-e (SEFIN Nacional). */
+/** Padrão recomendado para emissão NFS-e (SEFIN Nacional). */
 const NFSE_PADRAO = {
   cTribNac: "990301",
   cIndOp: "020201",
@@ -46,7 +46,7 @@ function validarCodigoNfse6(valor: string, rotulo: string, padrao: string): stri
   const digitos = valor.replace(/\D/g, "");
   if (!digitos) return null;
   if (digitos.length !== 6) {
-    return `${rotulo} deve ter 6 dígitos (padrão Lucrare: ${padrao}).`;
+    return `${rotulo} deve ter 6 dígitos (padrão recomendado: ${padrao}).`;
   }
   return null;
 }
@@ -518,7 +518,7 @@ export function FormularioMinhaConta({
               </Campo>
             </div>
             <p className="mt-2 text-xs text-muted-foreground">
-              Padrão Lucrare: cTribNac {NFSE_PADRAO.cTribNac} · cIndOp {NFSE_PADRAO.cIndOp} ·
+              Padrão recomendado: cTribNac {NFSE_PADRAO.cTribNac} · cIndOp {NFSE_PADRAO.cIndOp} ·
               cClassTrib {NFSE_PADRAO.cClassTrib} (6 dígitos cada).
             </p>
 
