@@ -25,6 +25,11 @@ export type CobrancaListItem = {
   temBoletoPdf: boolean;
 };
 
+export type CobrancaResumo = {
+  emAberto: number;
+  atrasadas: number;
+};
+
 export type CobrancaDetalhe = {
   id: string;
   clienteId: string;

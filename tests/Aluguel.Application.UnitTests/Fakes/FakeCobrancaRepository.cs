@@ -18,6 +18,22 @@ public sealed class FakeCobrancaRepository : ICobrancaRepository
         int skip, int take, CancellationToken ct = default) =>
         Task.FromResult<(IReadOnlyList<CobrancaListItemDto>, int)>(([], 0));
 
+    public Task<CobrancaResumoDto> ContarResumoVencimentosAsync(
+        Guid? clienteId, DateOnly hoje, CancellationToken ct = default)
+    {
+        var abertas = Boletos
+            .Where(b => b.NfseId is { } nid
+                        && Nfses.Any(n => n.Id == nid
+                                         && n.Status != StatusNfse.Cancelada
+                                         && (clienteId is null || n.ClienteId == clienteId))
+                        && Pagamentos.All(p => p.NfseId != nid))
+            .Select(b => b.DataVencimento)
+            .ToList();
+        return Task.FromResult(new CobrancaResumoDto(
+            abertas.Count,
+            abertas.Count(d => d < hoje)));
+    }
+
     public Task<CobrancaDetalheDto?> ObterDetalheAsync(Guid id, CancellationToken ct = default)
     {
         var nfse = Nfses.FirstOrDefault(n => n.Id == id);

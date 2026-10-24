@@ -58,3 +58,9 @@ public sealed record ArquivoCobrancaDto(
     Stream Conteudo,
     string ContentType,
     string NomeArquivo);
+
+/// <summary>
+/// Indicadores da home: cobranças emitidas sem pagamento (em aberto)
+/// e quantas já passaram do vencimento do boleto (atrasadas).
+/// </summary>
+public sealed record CobrancaResumoDto(int EmAberto, int Atrasadas);

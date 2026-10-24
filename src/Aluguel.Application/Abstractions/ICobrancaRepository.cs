@@ -10,6 +10,13 @@ public interface ICobrancaRepository
         Guid? clienteId, Guid? imovelId, string? competencia,
         int skip, int take, CancellationToken ct = default);
 
+    /// <summary>
+    /// Conta cobranças não canceladas sem pagamento (em aberto) e, entre elas,
+    /// quantas têm vencimento do boleto anterior a <paramref name="hoje"/> (atrasadas).
+    /// </summary>
+    Task<CobrancaResumoDto> ContarResumoVencimentosAsync(
+        Guid? clienteId, DateOnly hoje, CancellationToken ct = default);
+
     Task<CobrancaDetalheDto?> ObterDetalheAsync(Guid id, CancellationToken ct = default);
 
     Task<NotaFiscalServico?> ObterNfseAsync(Guid id, CancellationToken ct = default);
