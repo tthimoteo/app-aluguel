@@ -87,6 +87,25 @@ public class CobrancaRepository(AppDbContext db) : ICobrancaRepository
         return (itens, total);
     }
 
+    public async Task<CobrancaResumoDto> ContarResumoVencimentosAsync(
+        Guid? clienteId, DateOnly hoje, CancellationToken ct = default)
+    {
+        var query =
+            from n in db.NotasFiscais.AsNoTracking()
+            where n.Status != StatusNfse.Cancelada
+            join b in db.Boletos.AsNoTracking() on n.Id equals b.NfseId
+            where !db.Pagamentos.Any(p => p.NfseId == n.Id)
+            select new { n.ClienteId, b.DataVencimento };
+
+        if (clienteId is { } cid)
+            query = query.Where(x => x.ClienteId == cid);
+
+        var vencimentos = await query.Select(x => x.DataVencimento).ToListAsync(ct);
+        var emAberto = vencimentos.Count;
+        var atrasadas = vencimentos.Count(d => d < hoje);
+        return new CobrancaResumoDto(emAberto, atrasadas);
+    }
+
     public async Task<CobrancaDetalheDto?> ObterDetalheAsync(Guid id, CancellationToken ct = default)
     {
         var n = await db.NotasFiscais.AsNoTracking()

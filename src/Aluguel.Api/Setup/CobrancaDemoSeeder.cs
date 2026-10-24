@@ -82,7 +82,8 @@ public static class CobrancaDemoSeeder
         db.DocumentosFiscais.Add(new DocumentoFiscal(tenantId, nfse.Id, TipoDocumentoFiscal.PDF, pdfPath,
             tamanhoBytes: pdfBytes.Length));
 
-        var venc = new DateOnly(emitidaEm.Year, emitidaEm.Month, Math.Min(10, DateTime.DaysInMonth(emitidaEm.Year, emitidaEm.Month)));
+        // Vencimento = dia 10 no mês seguinte à competência (mesmo critério da geração real).
+        var venc = Aluguel.Domain.Financeiro.CobrancaVencimento.Calcular(competencia, dia: 10);
         var boleto = new Boleto(tenantId, clienteId, imovelId, competencia, valor, venc, nfse.Id,
             nossoNumero: $"BOL{numero}", linhaDigitavel: $"23790.00000 00000.000000 00000.000000 {numero % 10} {numero}");
         boleto.DefinirPdf(boletoPath);

@@ -6,6 +6,7 @@ import type {
   Cliente,
   CobrancaDetalhe,
   CobrancaListItem,
+  CobrancaResumo,
   Contrato,
   Imovel,
   Inquilino,
@@ -127,5 +128,7 @@ export const api = {
         skip: opts?.skip ?? 0,
       })}`,
     ),
+  cobrancaResumo: (opts?: { clienteId?: string }) =>
+    apiFetch<CobrancaResumo>(`/api/cobrancas/resumo${qs({ clienteId: opts?.clienteId })}`),
   cobranca: (id: string) => apiFetch<CobrancaDetalhe>(`/api/cobrancas/${id}`),
 };

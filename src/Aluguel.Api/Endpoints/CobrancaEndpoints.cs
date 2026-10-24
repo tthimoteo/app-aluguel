@@ -4,6 +4,7 @@ using Aluguel.Application.Cobrancas.BaixarArquivoCobranca;
 using Aluguel.Application.Cobrancas.GerarCobranca;
 using Aluguel.Application.Cobrancas.ListarCobrancas;
 using Aluguel.Application.Cobrancas.ObterCobranca;
+using Aluguel.Application.Cobrancas.ObterResumoCobrancas;
 using Aluguel.Application.Cobrancas.RegistrarPagamentoCobranca;
 using Aluguel.Application.Cobrancas.RemoverCobranca;
 using MediatR;
@@ -41,6 +42,20 @@ public static class CobrancaEndpoints
             return Results.Ok(pagina);
         })
         .WithName("ListarCobrancas");
+
+        grupo.MapGet("/resumo", async (Guid? clienteId, ISender sender, CancellationToken ct) =>
+        {
+            try
+            {
+                var dto = await sender.Send(new ObterResumoCobrancasQuery(clienteId), ct);
+                return Results.Ok(dto);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new { erro = ex.Message });
+            }
+        })
+        .WithName("ObterResumoCobrancas");
 
         grupo.MapPost("/", async (GerarCobrancaRequest req, ISender sender, CancellationToken ct) =>
         {
