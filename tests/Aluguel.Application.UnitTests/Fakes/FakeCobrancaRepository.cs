@@ -105,6 +105,12 @@ public sealed class FakeCobrancaRepository : ICobrancaRepository
         return Task.CompletedTask;
     }
 
+    public Task RemoverBoletosDaNfseAsync(Guid nfseId, CancellationToken ct = default)
+    {
+        Boletos.RemoveAll(b => b.NfseId == nfseId);
+        return Task.CompletedTask;
+    }
+
     public Task<int> SalvarAlteracoesAsync(CancellationToken ct = default)
     {
         SalvouVezes++;

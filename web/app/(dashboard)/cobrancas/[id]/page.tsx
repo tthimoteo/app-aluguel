@@ -162,6 +162,9 @@ export default async function DetalheCobrancaPage({
             competencia={cobranca.competencia}
             valorFaturado={cobranca.valorFaturado}
             temPagamento={cobranca.temPagamento}
+            statusNfse={cobranca.statusNfse}
+            dataEmissao={cobranca.dataEmissao}
+            chaveAcesso={cobranca.chaveAcesso}
           />
         ) : null}
       </div>

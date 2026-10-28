@@ -63,6 +63,13 @@ export type CobrancaDetalhe = {
   statusBoleto: string | null;
 };
 
+/** Resultado de DELETE /api/cobrancas/{id} — inclui orientação sobre cancelamento da NFS-e. */
+export type RemoverCobrancaResultado = {
+  removida: boolean;
+  cancelamentoNfse: "SemNfseEmitida" | "CanceladaAutomaticamente" | "RequerCancelamentoManual";
+  mensagem: string;
+};
+
 export type UsuarioAutenticado = {
   id: string;
   email: string;

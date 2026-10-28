@@ -66,6 +66,24 @@ public class NotaFiscalServico : AggregateRoot, ITenantOwned, IAuditable
         UpdatedAt = DateTimeOffset.UtcNow;
     }
 
+    /// <summary>Registra cancelamento fiscal (UC006) — motivo, protocolo e data.</summary>
+    public void MarcarCancelada(string motivo, string? protocolo, DateTimeOffset canceladaEm)
+    {
+        if (string.IsNullOrWhiteSpace(motivo))
+            throw new ArgumentException("Motivo do cancelamento é obrigatório.", nameof(motivo));
+        if (Status == StatusNfse.Cancelada)
+            return;
+        if (Status is not (StatusNfse.Emitida or StatusNfse.CancelamentoSolicitado))
+            throw new InvalidOperationException(
+                $"NFS-e em status {Status} não pode ser cancelada.");
+
+        MotivoCancelamento = motivo.Trim();
+        ProtocoloCancelamento = string.IsNullOrWhiteSpace(protocolo) ? null : protocolo.Trim();
+        DataCancelamento = canceladaEm;
+        Status = StatusNfse.Cancelada;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
     public void AnexarDocumento(DocumentoFiscal documento)
     {
         ArgumentNullException.ThrowIfNull(documento);

@@ -38,6 +38,9 @@ public interface ICobrancaRepository
     /// <summary>Remove NFS-e, documentos fiscais e boleto vinculados (não remove se houver pagamento).</summary>
     Task RemoverCobrancaAsync(Guid nfseId, CancellationToken ct = default);
 
+    /// <summary>Remove apenas o(s) boleto(s) da NFS-e (mantém a nota — ex.: após cancelamento fiscal).</summary>
+    Task RemoverBoletosDaNfseAsync(Guid nfseId, CancellationToken ct = default);
+
     Task<int> SalvarAlteracoesAsync(CancellationToken ct = default);
     Task<int> ContarNfseAsync(CancellationToken ct = default);
 }

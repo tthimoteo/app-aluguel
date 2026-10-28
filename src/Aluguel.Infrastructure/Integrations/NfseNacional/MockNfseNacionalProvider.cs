@@ -4,7 +4,7 @@ using Aluguel.Application.Abstractions;
 
 namespace Aluguel.Infrastructure.Integrations.NfseNacional;
 
-/// <summary>Emissão local simulada (CI / Ambient=Mock) — não chama a SEFIN.</summary>
+/// <summary>Emissão/cancelamento local simulados (CI / Ambient=Mock) — não chama a SEFIN.</summary>
 public sealed class MockNfseNacionalProvider : INfseNacionalProvider
 {
     public Task<NfseEmissaoResultado> EmitirAsync(NfseEmissaoPedido pedido, CancellationToken ct = default)
@@ -25,6 +25,24 @@ public sealed class MockNfseNacionalProvider : INfseNacionalProvider
             IdDps: $"MOCK-DPS-{numero}",
             XmlNfse: xml,
             XmlDpsEnviado: null,
+            MensagemErro: null));
+    }
+
+    public Task<NfseCancelamentoResultado> CancelarAsync(
+        NfseCancelamentoPedido pedido, CancellationToken ct = default)
+    {
+        ct.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(pedido);
+
+        var chave = new string((pedido.ChaveAcesso ?? "").Where(char.IsDigit).ToArray());
+        var prot = $"MOCK-CANC-{chave[^Math.Min(8, Math.Max(chave.Length, 1))..]}";
+        var xml = Encoding.UTF8.GetBytes(
+            $"""<?xml version="1.0" encoding="UTF-8"?><evento xmlns="http://www.sped.fazenda.gov.br/nfse"><infEvento><chNFSe>{pedido.ChaveAcesso}</chNFSe><nProt>{prot}</nProt><tpEvento>e101101</tpEvento></infEvento></evento>""");
+
+        return Task.FromResult(new NfseCancelamentoResultado(
+            Sucesso: true,
+            Protocolo: prot,
+            XmlEvento: xml,
             MensagemErro: null));
     }
 }

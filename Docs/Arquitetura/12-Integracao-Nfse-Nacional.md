@@ -32,6 +32,16 @@ A API ADN de geração de DANFSe foi **desativada em 03/08/2026**. O app renderi
 
 Adapter: `INfseNacionalProvider` → `SefinNfseNacionalProvider` (ou `MockNfseNacionalProvider` quando `Nfse:Ambiente=Mock`).
 
+## Cancelamento na remoção de cobrança (§12 / UC006)
+
+Ao **remover uma cobrança** pendente (`DELETE /api/cobrancas/{id}`):
+
+1. Se não houver NFS-e emitida (sem chave): exclui cobrança/boleto/documentos.
+2. Se a NFS-e foi **emitida há menos de 24h**: envia evento **e101101** à SEFIN (`POST /nfse/{chave}/eventos`, XML `pedRegEvento` assinado + GZIP/Base64), persiste XML do evento (`XMLCancelamento`), marca `Status=Cancelada` (motivo + protocolo) e remove o boleto.
+3. Se a emissão tem **24h ou mais**: cancela a cobrança **só no sistema** (`Status=Cancelada`, boleto removido) e devolve mensagem pedindo cancelamento **manual no portal nacional da NFS-e**. A cobrança não é apagada do histórico fiscal.
+
+Resposta JSON: `{ removida, cancelamentoNfse, mensagem }` onde `cancelamentoNfse` ∈ `SemNfseEmitida` | `CanceladaAutomaticamente` | `RequerCancelamentoManual`.
+
 ### Configuração (`Nfse`)
 
 | Chave | Descrição |

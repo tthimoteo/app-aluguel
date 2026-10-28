@@ -1,0 +1,39 @@
+namespace Aluguel.Application.Cobrancas.RemoverCobranca;
+
+/// <summary>
+/// Regra de produto: remoção de cobrança cancela a NFS-e automaticamente na SEFIN
+/// se a emissão tiver menos de 24h; após esse prazo o cancelamento fiscal é manual no portal.
+/// </summary>
+public static class NfseCancelamentoPolitica
+{
+    public static readonly TimeSpan PrazoCancelamentoAutomatico = TimeSpan.FromHours(24);
+
+    public const string MotivoRemocaoCobranca =
+        "Remoção de cobrança no APP Aluguel — cancelamento solicitado pelo emitente.";
+
+    public const string CodigoMotivoErroEmissao = "1";
+
+    public const string MensagemSemNfseEmitida = "Cobrança removida.";
+
+    public const string MensagemCanceladaAutomaticamente =
+        "Cobrança removida e NFS-e cancelada automaticamente na SEFIN (emitida há menos de 24 horas).";
+
+    public const string MensagemRequerCancelamentoManual =
+        "A cobrança foi cancelada no sistema. Como a NFS-e foi emitida há mais de 24 horas, " +
+        "o cancelamento fiscal deve ser feito manualmente no portal nacional da NFS-e (gov.br).";
+
+    public static bool DentroDoPrazoAutomatico(DateTimeOffset? dataEmissao, DateTimeOffset agoraUtc) =>
+        dataEmissao is { } em && agoraUtc - em < PrazoCancelamentoAutomatico;
+}
+
+public enum NfseCancelamentoAoRemover
+{
+    SemNfseEmitida = 0,
+    CanceladaAutomaticamente = 1,
+    RequerCancelamentoManual = 2,
+}
+
+public sealed record RemoverCobrancaResultado(
+    bool Removida,
+    NfseCancelamentoAoRemover CancelamentoNfse,
+    string Mensagem);

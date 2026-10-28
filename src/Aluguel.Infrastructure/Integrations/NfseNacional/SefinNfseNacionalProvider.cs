@@ -136,8 +136,120 @@ public sealed class SefinNfseNacionalProvider(
         }
     }
 
+    public async Task<NfseCancelamentoResultado> CancelarAsync(
+        NfseCancelamentoPedido pedido, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(pedido);
+        var opts = options.Value;
+
+        X509Certificate2 cert;
+        try
+        {
+            cert = X509CertificateLoader.LoadPkcs12(
+                pedido.CertificadoPfx,
+                pedido.SenhaCertificado,
+                X509KeyStorageFlags.EphemeralKeySet);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Falha ao abrir certificado A1 para cancelamento NFS-e");
+            return FalhaCancelamento("Não foi possível abrir o certificado A1. Verifique o PFX e a senha.");
+        }
+
+        using (cert)
+        {
+            string idPedReg;
+            string xmlAssinado;
+            try
+            {
+                var xml = EventoCancelamentoXmlBuilder.Montar(
+                    pedido, opts, DateTimeOffset.UtcNow, out idPedReg);
+                xmlAssinado = DpsXmlSigner.Assinar(xml, idPedReg, cert);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Falha ao montar/assinar evento de cancelamento NFS-e");
+                return FalhaCancelamento($"Falha ao montar/assinar o evento de cancelamento: {ex.Message}");
+            }
+
+            var chave = new string(pedido.ChaveAcesso.Where(char.IsDigit).ToArray());
+            var payload = JsonSerializer.Serialize(new
+            {
+                pedidoRegistroEventoXmlGZipB64 = GzipBase64.CompactarParaBase64(xmlAssinado)
+            });
+
+            try
+            {
+                using var handler = new HttpClientHandler();
+                handler.ClientCertificates.Add(cert);
+                handler.ClientCertificateOptions = ClientCertificateOption.Manual;
+
+                using var http = new HttpClient(handler)
+                {
+                    BaseAddress = new Uri(opts.BaseUrl),
+                    Timeout = TimeSpan.FromSeconds(90)
+                };
+                http.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+                using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+                using var response = await http.PostAsync($"nfse/{chave}/eventos", content, ct);
+                var body = await response.Content.ReadAsStringAsync(ct);
+
+                if ((int)response.StatusCode is >= 200 and < 300)
+                {
+                    var envelope = JsonSerializer.Deserialize<SefinEventoEnvelope>(body, JsonOpts);
+                    if (string.IsNullOrWhiteSpace(envelope?.EventoXmlGZipB64))
+                    {
+                        // Algumas respostas 200 trazem só dataHoraProcessamento (sem XML).
+                        logger.LogInformation(
+                            "SEFIN aceitou cancelamento sem XML de evento. Chave={Chave} IdPed={Id}",
+                            chave, idPedReg);
+                        return new NfseCancelamentoResultado(
+                            true, idPedReg, Encoding.UTF8.GetBytes(xmlAssinado), null);
+                    }
+
+                    byte[] xmlEvento;
+                    try
+                    {
+                        xmlEvento = GzipBase64.DescompactarDeBase64(envelope.EventoXmlGZipB64);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Falha ao descompactar eventoXmlGZipB64");
+                        return FalhaCancelamento(
+                            "Não foi possível descompactar o XML do evento de cancelamento retornado pela SEFIN.");
+                    }
+
+                    var protocolo = ExtrairProtocolo(xmlEvento) ?? idPedReg;
+                    logger.LogInformation(
+                        "NFS-e cancelada na SEFIN. Chave={Chave} Protocolo={Prot} Ambiente={Ambiente}",
+                        chave, protocolo, opts.Ambiente);
+
+                    return new NfseCancelamentoResultado(true, protocolo, xmlEvento, null);
+                }
+
+                var msgErro = ExtrairMensagemErro(body)
+                              ?? $"SEFIN HTTP {(int)response.StatusCode}: {TruncarLog(body)}";
+                logger.LogWarning("SEFIN rejeitou cancelamento NFS-e: {Erro}", msgErro);
+                return FalhaCancelamento(msgErro);
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                return FalhaCancelamento("Timeout ao chamar a SEFIN Nacional (cancelamento).");
+            }
+            catch (HttpRequestException ex)
+            {
+                logger.LogError(ex, "Erro de transporte mTLS/HTTP com a SEFIN (cancelamento)");
+                return FalhaCancelamento($"Falha de comunicação com a SEFIN: {ex.Message}");
+            }
+        }
+    }
+
     private static NfseEmissaoResultado Falha(string mensagem, string? xmlDps = null) =>
         new(false, null, null, null, null, null, xmlDps, mensagem);
+
+    private static NfseCancelamentoResultado FalhaCancelamento(string mensagem) =>
+        new(false, null, null, mensagem);
 
     private static string? ExtrairMensagemErro(string body)
     {
@@ -216,6 +328,13 @@ public sealed class SefinNfseNacionalProvider(
         return Math.Abs(chave.GetHashCode(StringComparison.Ordinal)) % 900_000 + 100_000;
     }
 
+    private static string? ExtrairProtocolo(byte[] xmlBytes)
+    {
+        var texto = Encoding.UTF8.GetString(xmlBytes);
+        var m = Regex.Match(texto, @"<nProt>([^<]+)</nProt>", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+        return m.Success ? m.Groups[1].Value.Trim() : null;
+    }
+
     private static string TruncarLog(string? s) =>
         string.IsNullOrEmpty(s) ? "" : s.Length <= 800 ? s : s[..800] + "…";
 
@@ -224,5 +343,10 @@ public sealed class SefinNfseNacionalProvider(
         public string? IdDps { get; set; }
         public string? ChaveAcesso { get; set; }
         public string? NfseXmlGZipB64 { get; set; }
+    }
+
+    private sealed class SefinEventoEnvelope
+    {
+        public string? EventoXmlGZipB64 { get; set; }
     }
 }

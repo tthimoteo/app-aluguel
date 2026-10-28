@@ -7,6 +7,11 @@ public interface INfseNacionalProvider
 {
     /// <summary>Emite NFS-e a partir dos dados da cobrança/prestador (mTLS A1 + DPS assinada).</summary>
     Task<NfseEmissaoResultado> EmitirAsync(NfseEmissaoPedido pedido, CancellationToken ct = default);
+
+    /// <summary>
+    /// Cancela NFS-e via evento e101101 na SEFIN (<c>POST /nfse/{chave}/eventos</c>).
+    /// </summary>
+    Task<NfseCancelamentoResultado> CancelarAsync(NfseCancelamentoPedido pedido, CancellationToken ct = default);
 }
 
 /// <summary>Pedido de emissão (prestador = cliente; tomador = inquilino).</summary>
@@ -75,4 +80,22 @@ public sealed record NfseEmissaoResultado(
     string? IdDps,
     byte[]? XmlNfse,
     string? XmlDpsEnviado,
+    string? MensagemErro);
+
+/// <summary>Pedido de cancelamento (evento e101101) assinado com o A1 do emitente.</summary>
+public sealed record NfseCancelamentoPedido(
+    string ChaveAcesso,
+    string DocumentoAutor,
+    bool AutorPessoaJuridica,
+    string Motivo,
+    /// <summary>cMotivo: 1=Erro na emissão, 2=Serviço não prestado, 9=Outros.</summary>
+    string CodigoMotivo,
+    byte[] CertificadoPfx,
+    string SenhaCertificado);
+
+/// <summary>Resultado síncrono do evento de cancelamento na SEFIN (ou mock).</summary>
+public sealed record NfseCancelamentoResultado(
+    bool Sucesso,
+    string? Protocolo,
+    byte[]? XmlEvento,
     string? MensagemErro);

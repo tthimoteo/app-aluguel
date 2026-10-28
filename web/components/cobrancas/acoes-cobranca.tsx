@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { bff, BffError } from "@/lib/api/browser";
+import type { RemoverCobrancaResultado } from "@/lib/api/types";
 import { formatarMoeda, mascaraMoeda, moedaParaInput, parseMoeda } from "@/lib/format";
+
+const PRAZO_CANCELAMENTO_MS = 24 * 60 * 60 * 1000;
 
 function hojeIso(): string {
   const d = new Date();
@@ -25,6 +28,14 @@ function hojeIso(): string {
   return `${y}-${m}-${day}`;
 }
 
+function nfseEmitidaHaMenosDe24h(dataEmissao: string | null, statusNfse: string): boolean {
+  if (!dataEmissao) return false;
+  if (statusNfse.toLowerCase() !== "emitida") return false;
+  const em = Date.parse(dataEmissao);
+  if (Number.isNaN(em)) return false;
+  return Date.now() - em < PRAZO_CANCELAMENTO_MS;
+}
+
 type Painel = "pagamento" | "remover" | null;
 
 export function AcoesCobranca({
@@ -32,17 +43,31 @@ export function AcoesCobranca({
   competencia,
   valorFaturado,
   temPagamento,
+  statusNfse,
+  dataEmissao,
+  chaveAcesso,
 }: {
   cobrancaId: string;
   competencia: string;
   valorFaturado: number;
   temPagamento: boolean;
+  statusNfse: string;
+  dataEmissao: string | null;
+  chaveAcesso: string | null;
 }) {
   const router = useRouter();
   const [painel, setPainel] = useState<Painel>(null);
   const [pending, setPending] = useState(false);
   const [dataPagamento, setDataPagamento] = useState(hojeIso());
   const [valorTxt, setValorTxt] = useState(moedaParaInput(valorFaturado));
+
+  const cancelada = statusNfse.toLowerCase() === "cancelada";
+  const podeRemover = !temPagamento && !cancelada;
+  const cancelamentoAutomatico = useMemo(
+    () => Boolean(chaveAcesso) && nfseEmitidaHaMenosDe24h(dataEmissao, statusNfse),
+    [chaveAcesso, dataEmissao, statusNfse],
+  );
+  const requerCancelamentoManual = Boolean(chaveAcesso) && statusNfse.toLowerCase() === "emitida" && !cancelamentoAutomatico;
 
   async function onMarcarPagamento() {
     const valor = parseMoeda(valorTxt);
@@ -74,8 +99,12 @@ export function AcoesCobranca({
   async function onRemover() {
     setPending(true);
     try {
-      await bff.removerCobranca(cobrancaId);
-      toast.success("Cobrança removida.");
+      const resultado: RemoverCobrancaResultado = await bff.removerCobranca(cobrancaId);
+      if (resultado.cancelamentoNfse === "RequerCancelamentoManual") {
+        toast.warning(resultado.mensagem, { duration: 12_000 });
+      } else {
+        toast.success(resultado.mensagem || "Cobrança removida.");
+      }
       setPainel(null);
       router.push("/cobrancas");
       router.refresh();
@@ -86,17 +115,25 @@ export function AcoesCobranca({
     }
   }
 
+  const descricaoRemocao = cancelamentoAutomatico
+    ? `A cobrança da competência ${competencia} será removida e a NFS-e será cancelada automaticamente na SEFIN (emitida há menos de 24 horas).`
+    : requerCancelamentoManual
+      ? `A cobrança da competência ${competencia} será cancelada no sistema. Como a NFS-e foi emitida há mais de 24 horas, o cancelamento fiscal deverá ser feito manualmente no portal nacional da NFS-e (gov.br).`
+      : `A cobrança da competência ${competencia} será excluída (documentos e boleto vinculados). Esta ação não pode ser desfeita.`;
+
   return (
     <>
       <section className="rounded-lg bg-card p-5 shadow-[0_2px_8px_rgba(0,0,0,0.1)] ring-1 ring-border lg:col-span-2">
         <h3 className="mb-2 text-sm font-semibold">Ações</h3>
         <p className="mb-4 text-sm text-muted-foreground">
-          {temPagamento
-            ? "Esta cobrança já está paga e não pode ser removida."
-            : "Marque o pagamento quando receber o valor, ou remova a cobrança se foi gerada por engano."}
+          {cancelada
+            ? "Esta cobrança está cancelada. A NFS-e permanece no histórico fiscal."
+            : temPagamento
+              ? "Esta cobrança já está paga e não pode ser removida."
+              : "Marque o pagamento quando receber o valor, ou remova a cobrança se foi gerada por engano."}
         </p>
         <div className="flex flex-wrap gap-2">
-          {!temPagamento ? (
+          {podeRemover ? (
             <Button
               type="button"
               className="h-9 rounded-[4px]"
@@ -109,7 +146,7 @@ export function AcoesCobranca({
               Marcar pagamento
             </Button>
           ) : null}
-          {!temPagamento ? (
+          {podeRemover ? (
             <Button
               type="button"
               variant="outline"
@@ -118,9 +155,9 @@ export function AcoesCobranca({
             >
               Remover cobrança
             </Button>
-          ) : (
+          ) : temPagamento ? (
             <p className="text-sm font-medium text-[#155724]">Pagamento registrado · remoção bloqueada</p>
-          )}
+          ) : null}
         </div>
       </section>
 
@@ -179,11 +216,19 @@ export function AcoesCobranca({
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="pl-4">Remover cobrança</DialogTitle>
-            <DialogDescription className="pl-4">
-              A cobrança da competência {competencia} será excluída (NFS-e e boleto vinculados). Esta ação não
-              pode ser desfeita.
-            </DialogDescription>
+            <DialogDescription className="pl-4">{descricaoRemocao}</DialogDescription>
           </DialogHeader>
+          {requerCancelamentoManual ? (
+            <p className="mx-[10px] rounded-[4px] bg-[#fff3cd] px-3 py-2 text-sm text-[#856404]">
+              Guarde a chave de acesso da NFS-e para o cancelamento no portal do governo
+              {chaveAcesso ? (
+                <>
+                  : <span className="break-all font-mono text-xs">{chaveAcesso}</span>
+                </>
+              ) : null}
+              .
+            </p>
+          ) : null}
           <DialogFooter>
             <Button
               type="button"
@@ -191,7 +236,7 @@ export function AcoesCobranca({
               className="h-9 rounded-[4px] bg-[#95A5A6] text-white hover:bg-[#7F8C8D]"
               onClick={() => setPainel(null)}
             >
-              Cancelar
+              Voltar
             </Button>
             <Button
               type="button"
@@ -199,7 +244,7 @@ export function AcoesCobranca({
               className="h-9 rounded-[4px] bg-[#E74C3C] px-4 text-white hover:bg-[#C0392B]"
               onClick={() => void onRemover()}
             >
-              Remover
+              Confirmar remoção
             </Button>
           </DialogFooter>
         </DialogContent>

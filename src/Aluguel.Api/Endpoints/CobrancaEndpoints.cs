@@ -117,8 +117,8 @@ public static class CobrancaEndpoints
         {
             try
             {
-                var removido = await sender.Send(new RemoverCobrancaCommand(id), ct);
-                return removido ? Results.NoContent() : Results.NotFound();
+                var resultado = await sender.Send(new RemoverCobrancaCommand(id), ct);
+                return resultado is null ? Results.NotFound() : Results.Ok(resultado);
             }
             catch (InvalidOperationException ex)
             {

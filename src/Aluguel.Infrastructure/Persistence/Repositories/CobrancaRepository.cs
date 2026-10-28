@@ -208,6 +208,12 @@ public class CobrancaRepository(AppDbContext db) : ICobrancaRepository
             db.NotasFiscais.Remove(nfse);
     }
 
+    public async Task RemoverBoletosDaNfseAsync(Guid nfseId, CancellationToken ct = default)
+    {
+        var boletos = await db.Boletos.Where(b => b.NfseId == nfseId).ToListAsync(ct);
+        db.Boletos.RemoveRange(boletos);
+    }
+
     public Task<int> SalvarAlteracoesAsync(CancellationToken ct = default) => db.SaveChangesAsync(ct);
     public Task<int> ContarNfseAsync(CancellationToken ct = default) => db.NotasFiscais.IgnoreQueryFilters().CountAsync(ct);
 }

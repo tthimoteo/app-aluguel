@@ -5,6 +5,7 @@ import type {
   Contrato,
   Imovel,
   Inquilino,
+  RemoverCobrancaResultado,
   Usuario,
 } from "@/lib/api/types";
 import type { EnderecoViaCep } from "@/lib/cep";
@@ -232,7 +233,7 @@ export const bff = {
       body: JSON.stringify(dados ?? {}),
     }),
   removerCobranca: (id: string) =>
-    bffFetch<void>(`/api/cobrancas/${id}`, { method: "DELETE" }),
+    bffFetch<RemoverCobrancaResultado>(`/api/cobrancas/${id}`, { method: "DELETE" }),
   enviarCertificado: async (clienteId: string, arquivo: File, senha: string) => {
     const form = new FormData();
     form.append("arquivo", arquivo);
