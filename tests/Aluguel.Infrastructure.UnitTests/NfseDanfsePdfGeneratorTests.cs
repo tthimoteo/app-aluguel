@@ -7,48 +7,54 @@ namespace Aluguel.Infrastructure.UnitTests;
 public class NfseDanfsePdfGeneratorTests
 {
     [Fact]
-    public void Gerar_produz_pdf_valido_com_chave()
+    public void Gerar_a_partir_do_xml_autorizado_sefin_produz_danfse_valido()
     {
-        var xml = """
-            <?xml version="1.0" encoding="utf-8"?>
-            <NFSe versao="1.01" xmlns="http://www.sped.fazenda.gov.br/nfse">
-              <infNFSe Id="NFS35503082215809930000168000000000000226108863589574">
-                <xLocEmi>São Paulo</xLocEmi>
-                <xLocPrestacao>São Paulo</xLocPrestacao>
-                <nNFSe>2</nNFSe>
-                <xTribNac>Locação de Bens Imóveis</xTribNac>
-                <xNBS>Locação de imóveis residenciais</xNBS>
-                <ambGer>2</ambGer>
-                <cStat>100</cStat>
-                <dhProc>2026-10-24T11:57:00-03:00</dhProc>
-                <emit>
-                  <CNPJ>15809930000168</CNPJ>
-                  <xNome>PRESTADOR TESTE LTDA</xNome>
-                  <enderNac>
-                    <xLgr>Rua A</xLgr><nro>1</nro><xBairro>Centro</xBairro><UF>SP</UF><CEP>01001000</CEP>
-                  </enderNac>
-                </emit>
-                <valores><vLiq>100.00</vLiq></valores>
-                <DPS>
-                  <infDPS>
-                    <dCompet>2026-07-01</dCompet>
-                    <toma><CPF>28958973870</CPF><xNome>Tomador Teste</xNome></toma>
-                    <serv><cServ><xDescServ>Aluguel competência 07/2026</xDescServ></cServ></serv>
-                  </infDPS>
-                </DPS>
-              </infNFSe>
-            </NFSe>
-            """;
-
+        var xml = File.ReadAllBytes(FixturePath("nfse-autorizada-sefin.xml"));
         var gen = new NfseDanfsePdfGenerator();
-        var pdf = gen.Gerar(
-            System.Text.Encoding.UTF8.GetBytes(xml),
-            "35503082215809930000168000000000000226108863589574",
-            "07/2026");
+
+        var pdf = gen.Gerar(xml);
 
         pdf.Should().NotBeEmpty();
-        pdf.Length.Should().BeGreaterThan(1000);
+        pdf.Length.Should().BeGreaterThan(5_000);
         System.Text.Encoding.ASCII.GetString(pdf.AsSpan(0, 5)).Should().Be("%PDF-");
         System.Text.Encoding.ASCII.GetString(pdf).Should().Contain("%%EOF");
+    }
+
+    [Fact]
+    public void Parser_extrai_campos_obrigatorios_do_xml_autorizado()
+    {
+        var xml = File.ReadAllBytes(FixturePath("nfse-autorizada-sefin.xml"));
+        var m = NfseDanfseXmlParser.Parse(xml, null, null);
+
+        m.ChaveAcesso.Should().StartWith("3550308");
+        m.ChaveAcesso.Should().HaveLength(50);
+        m.NumeroNfse.Should().Be("1");
+        m.Homologacao.Should().BeTrue();
+        m.TributacaoNacionalCodigo.Should().Be("990301");
+        m.CodigoNbs.Should().Be("110021000");
+        m.Cst.Should().Be("200");
+        m.ClassificacaoTributaria.Should().Be("200027");
+        m.CodigoIndicadorOperacao.Should().Be("020201");
+        m.SemIssqn.Should().BeTrue();
+        m.Prestador.Documento.Should().Contain("15.809.930");
+        m.Tomador.Should().NotBeNull();
+        m.Tomador!.Nome.Should().Be("Thiago Thimoteo");
+        m.ConsultaPublicaUrl.Should().Contain(m.ChaveAcesso);
+        m.DescricaoServico.Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
+    public void Gerar_xml_vazio_lanca()
+    {
+        var gen = new NfseDanfsePdfGenerator();
+        var act = () => gen.Gerar(Array.Empty<byte>());
+        act.Should().Throw<ArgumentException>();
+    }
+
+    private static string FixturePath(string name)
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "Fixtures", name);
+        File.Exists(path).Should().BeTrue($"fixture {path} deve existir");
+        return path;
     }
 }

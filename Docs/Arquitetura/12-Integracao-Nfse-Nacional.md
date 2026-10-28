@@ -18,9 +18,17 @@ Rastreabilidade: especificação §11 (faturamento / NFS-e); sprints em `09-Plan
 1. Prestador (cliente PJ/PF com plano NFS-e) tem certificado A1, IM, código de serviço e endereço.
 2. Em `GerarCobranca` com `EmitirNfse=true`, o app carrega o PFX (`certificates` + `ISecretProtector`), monta a **DPS** (layout v1.01), assina com XMLDSig (RSA-SHA256), compacta (GZIP) e envia Base64 via `POST /nfse` na SEFIN (`dpsXmlGZipB64`).
 3. SEFIN valida e devolve `chaveAcesso` + `nfseXmlGZipB64` (ou lista `erros`).
-4. App persiste `NotaFiscalServico` (Emitida), `DocumentoFiscal` (XML autorizado + PDF auxiliar via QuestPDF) e gera boleto.
+4. App persiste `NotaFiscalServico` (Emitida), `DocumentoFiscal` (XML autorizado + **DANFSe PDF** via QuestPDF) e gera boleto.
 
-> O PDF baixável é um **documento auxiliar** gerado localmente a partir do XML autorizado (API DANFSe do ADN foi desativada em 03/08/2026). Não substitui o leiaute oficial completo da NT 008.
+### DANFSe (PDF) — NT 008/2026
+
+A API ADN de geração de DANFSe foi **desativada em 03/08/2026**. O app renderiza o PDF **localmente** a partir do **XML autorizado** da NFS-e (`INfsePdfGenerator` / `NfseDanfsePdfGenerator`), seguindo a **NT 008 v1.02**:
+
+- Somente dados presentes no XML (sem inventar campos)
+- Cabeçalho DANFSe v2.0 + logomarca NFS-e + QR Code da consulta pública
+- Em produção restrita (`tpAmb=2`): faixa **“NFS-e SEM VALIDADE JURÍDICA”**
+- Blocos: identificação, prestador, tomador, serviço, ISSQN (suprimido quando não incidência), IBS/CBS, totais e informações complementares (imóvel)
+- Supressões permitidas (§2.3): destinatário = tomador; intermediário ausente; ISSQN não incidente
 
 Adapter: `INfseNacionalProvider` → `SefinNfseNacionalProvider` (ou `MockNfseNacionalProvider` quando `Nfse:Ambiente=Mock`).
 

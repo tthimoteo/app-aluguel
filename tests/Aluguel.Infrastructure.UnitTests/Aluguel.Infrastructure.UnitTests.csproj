@@ -16,4 +16,7 @@
     <ProjectReference Include="..\..\src\Aluguel.Infrastructure\Aluguel.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Aluguel.Application\Aluguel.Application.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Fixtures\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

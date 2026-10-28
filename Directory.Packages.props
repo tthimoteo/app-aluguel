@@ -21,5 +21,6 @@
     <PackageVersion Include="FluentAssertions" Version="6.12.2" />
     <PackageVersion Include="System.Security.Cryptography.Xml" Version="9.0.21" />
     <PackageVersion Include="QuestPDF" Version="2025.7.3" />
+    <PackageVersion Include="QRCoder" Version="1.6.0" />
   </ItemGroup>
 </Project>

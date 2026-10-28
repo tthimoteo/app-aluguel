@@ -1,5 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
+    <InternalsVisibleTo Include="Aluguel.Infrastructure.UnitTests" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -11,6 +14,11 @@
     <PackageReference Include="EFCore.NamingConventions" />
     <PackageReference Include="System.Security.Cryptography.Xml" />
     <PackageReference Include="QuestPDF" />
+    <PackageReference Include="QRCoder" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Integrations/NfseNacional/Assets/logo-nfse.png"
+                      LogicalName="Aluguel.Infrastructure.Nfse.logo-nfse.png" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Aluguel.Application\Aluguel.Application.csproj" />

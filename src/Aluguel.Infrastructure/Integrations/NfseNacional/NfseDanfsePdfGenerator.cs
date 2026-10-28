@@ -1,6 +1,6 @@
-using System.Globalization;
-using System.Xml.Linq;
+using System.Reflection;
 using Aluguel.Application.Abstractions;
+using QRCoder;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
@@ -8,231 +8,376 @@ using QuestPDF.Infrastructure;
 namespace Aluguel.Infrastructure.Integrations.NfseNacional;
 
 /// <summary>
-/// Documento auxiliar da NFS-e em PDF (leitura a partir do XML SEFIN).
-/// Layout pragmático alinhado à NT 008 (não é o leiaute oficial completo do DANFSe).
+/// Gera o DANFSe (PDF) a partir do XML autorizado da NFS-e, conforme NT 008/2026 v1.02.
+/// A API ADN de DANFSe foi desativada em 03/08/2026 — a renderização é local e usa
+/// exclusivamente tags presentes no XML (item 2.1 da NT).
 /// </summary>
 public sealed class NfseDanfsePdfGenerator : INfsePdfGenerator
 {
+    private static readonly byte[]? LogoBytes = CarregarLogo();
+
     static NfseDanfsePdfGenerator()
     {
         QuestPDF.Settings.License = LicenseType.Community;
     }
 
-    public byte[] Gerar(byte[] xmlNfseAutorizado, string chaveAcesso, string competencia)
+    public byte[] Gerar(byte[] xmlNfseAutorizado, string? chaveAcesso = null, string? competencia = null)
     {
         ArgumentNullException.ThrowIfNull(xmlNfseAutorizado);
         if (xmlNfseAutorizado.Length == 0)
-            throw new ArgumentException("XML da NFS-e está vazio.", nameof(xmlNfseAutorizado));
+            throw new ArgumentException("XML da NFS-e autorizado está vazio.", nameof(xmlNfseAutorizado));
 
-        var dados = Extrair(xmlNfseAutorizado, chaveAcesso, competencia);
-        var consultaUrl =
-            $"https://www.nfse.gov.br/ConsultaPublica/?tpc=1&chave={dados.ChaveAcesso}";
+        var m = NfseDanfseXmlParser.Parse(xmlNfseAutorizado, chaveAcesso, competencia);
 
         return Document.Create(container =>
         {
             container.Page(page =>
             {
                 page.Size(PageSizes.A4);
-                page.Margin(36);
-                page.DefaultTextStyle(x => x.FontSize(9).FontFamily(Fonts.Arial));
+                // NT 008 §2.2.2: margens 0,15–0,20 cm; usamos 0,20 cm.
+                page.MarginHorizontal(0.2f, Unit.Centimetre);
+                page.MarginVertical(0.2f, Unit.Centimetre);
+                page.DefaultTextStyle(x => x.FontSize(7).FontFamily(Fonts.Arial).FontColor(Colors.Black));
 
-                page.Header().Column(col =>
+                page.Content().Border(1).BorderColor(Colors.Black).Padding(4).Column(root =>
                 {
-                    col.Item().Row(row =>
-                    {
-                        row.RelativeItem().Column(c =>
-                        {
-                            c.Item().Text("DANFSe").Bold().FontSize(14);
-                            c.Item().Text("Documento Auxiliar da NFS-e").FontSize(10);
-                            c.Item().Text($"Município emissor: {dados.LocalEmissao}").FontSize(8);
-                            c.Item().Text($"Ambiente: {dados.Ambiente}").FontSize(8);
-                        });
-                        row.ConstantItem(120).AlignRight().Column(c =>
-                        {
-                            c.Item().AlignRight().Text($"Nº {dados.Numero}").Bold().FontSize(12);
-                            c.Item().AlignRight().Text($"Série {dados.Serie}").FontSize(9);
-                            c.Item().AlignRight().Text($"Competência {dados.Competencia}").FontSize(9);
-                        });
-                    });
-                    col.Item().PaddingTop(8).LineHorizontal(1).LineColor(Colors.Grey.Darken2);
-                });
-
-                page.Content().PaddingVertical(12).Column(col =>
-                {
-                    col.Spacing(10);
-
-                    col.Item().Background(Colors.Grey.Lighten3).Padding(8).Column(c =>
-                    {
-                        c.Item().Text("Chave de acesso").SemiBold().FontSize(8);
-                        c.Item().Text(dados.ChaveAcesso).FontFamily(Fonts.CourierNew).FontSize(8);
-                        c.Item().PaddingTop(4).Text("Consulta pública / QR").SemiBold().FontSize(8);
-                        c.Item().Text(consultaUrl).FontSize(7).FontColor(Colors.Blue.Darken2);
-                    });
-
-                    col.Item().Element(e => Secao(e, "Prestador / Emitente", [
-                        ("Razão social", dados.EmitenteNome),
-                        ("CNPJ/CPF", dados.EmitenteDoc),
-                        ("Endereço", dados.EmitenteEndereco),
-                    ]));
-
-                    col.Item().Element(e => Secao(e, "Tomador", [
-                        ("Nome", dados.TomadorNome),
-                        ("CNPJ/CPF", dados.TomadorDoc),
-                    ]));
-
-                    col.Item().Element(e => Secao(e, "Serviço", [
-                        ("Tributação nacional", dados.TributacaoNacional),
-                        ("NBS", dados.Nbs),
-                        ("Descrição", dados.DescricaoServico),
-                        ("Local da prestação", dados.LocalPrestacao),
-                    ]));
-
-                    col.Item().Element(e => Secao(e, "Valores", [
-                        ("Valor líquido", FormatarMoeda(dados.ValorLiquido)),
-                        ("Data/hora processamento", dados.DataProcessamento),
-                        ("Status", dados.Status),
-                    ]));
-                });
-
-                page.Footer().AlignCenter().Text(txt =>
-                {
-                    txt.Span("Gerado pelo APP Aluguel Lucrare · ").FontSize(7).FontColor(Colors.Grey.Darken1);
-                    txt.Span("autenticidade pela chave no portal nacional da NFS-e").FontSize(7).FontColor(Colors.Grey.Darken1);
+                    root.Spacing(3);
+                    root.Item().Element(e => Cabecalho(e, m));
+                    root.Item().Element(e => BlocoIdentificacao(e, m));
+                    root.Item().Element(e => BlocoParte(e, "PRESTADOR / FORNECEDOR", m.Prestador, incluirRegime: true));
+                    root.Item().Element(e => BlocoTomador(e, m));
+                    root.Item().Element(e => BlocoDestinatario(e));
+                    root.Item().Element(e => BlocoIntermediario(e));
+                    root.Item().Element(e => BlocoServico(e, m));
+                    root.Item().Element(e => BlocoIssqn(e, m));
+                    root.Item().Element(e => BlocoIbsCbs(e, m));
+                    root.Item().Element(e => BlocoTotais(e, m));
+                    root.Item().Element(e => BlocoComplementares(e, m));
                 });
             });
         }).GeneratePdf();
     }
 
-    private static void Secao(IContainer container, string titulo, (string Rotulo, string Valor)[] linhas)
+    private static void Cabecalho(IContainer container, NfseDanfseModelo m)
     {
-        container.Border(1).BorderColor(Colors.Grey.Lighten1).Padding(8).Column(col =>
+        container.Background(Colors.Grey.Lighten3).Border(0.5f).BorderColor(Colors.Black).Padding(4).Row(row =>
         {
-            col.Item().Text(titulo).Bold().FontSize(10);
-            col.Item().PaddingTop(4).Column(inner =>
+            row.ConstantItem(90).AlignMiddle().Element(e =>
             {
-                foreach (var (rotulo, valor) in linhas)
+                if (LogoBytes is { Length: > 0 })
+                    e.Height(28).Image(LogoBytes).FitArea();
+                else
+                    e.AlignMiddle().Text("NFS-e").Bold().FontSize(11);
+            });
+
+            row.RelativeItem().AlignMiddle().AlignCenter().Column(c =>
+            {
+                c.Item().AlignCenter().Text("DANFSe v2.0").Bold().FontSize(9).FontFamily(Fonts.Arial);
+                c.Item().AlignCenter().Text("Documento Auxiliar da NFS-e").Bold().FontSize(9).FontFamily(Fonts.Arial);
+                if (m.Homologacao)
                 {
-                    if (string.IsNullOrWhiteSpace(valor)) continue;
-                    inner.Item().PaddingBottom(2).Row(r =>
+                    c.Item().AlignCenter().Text("NFS-e SEM VALIDADE JURÍDICA")
+                        .Bold().FontSize(9).FontColor(Colors.Red.Medium).FontFamily(Fonts.Arial);
+                }
+            });
+
+            row.ConstantItem(130).Column(c =>
+            {
+                c.Item().AlignRight().Text($"Município: {m.LocalEmissao}").FontSize(8);
+                c.Item().AlignRight().Text(m.AmbienteGerador).FontSize(6);
+                c.Item().AlignRight().Text(m.TipoAmbiente).FontSize(6);
+            });
+        });
+    }
+
+    private static void BlocoIdentificacao(IContainer container, NfseDanfseModelo m)
+    {
+        container.Border(0.5f).BorderColor(Colors.Black).Column(col =>
+        {
+            col.Item().Background(Colors.Grey.Lighten3).Padding(2)
+                .Text("DADOS DA NFS-e").Bold().FontSize(7);
+
+            col.Item().Padding(3).Row(row =>
+            {
+                row.RelativeItem(3).Column(c =>
+                {
+                    Campo(c, "CHAVE DE ACESSO", m.ChaveAcesso, mono: true);
+                    c.Item().PaddingTop(2).Row(r =>
                     {
-                        r.ConstantItem(130).Text(rotulo).FontSize(8).FontColor(Colors.Grey.Darken2);
-                        r.RelativeItem().Text(valor).FontSize(9);
+                        r.RelativeItem().Element(e => CampoBox(e, "NÚMERO", m.NumeroNfse));
+                        r.RelativeItem().Element(e => CampoBox(e, "COMPETÊNCIA", m.Competencia));
+                        r.RelativeItem().Element(e => CampoBox(e, "DATA/HORA EMISSÃO NFS-e", m.DhProcessamento));
+                    });
+                    c.Item().PaddingTop(2).Row(r =>
+                    {
+                        r.RelativeItem().Element(e => CampoBox(e, "NÚMERO DPS", m.NumeroDps));
+                        r.RelativeItem().Element(e => CampoBox(e, "SÉRIE DPS", m.SerieDps));
+                        r.RelativeItem().Element(e => CampoBox(e, "DATA/HORA EMISSÃO DPS", m.DhEmissaoDps));
+                    });
+                    c.Item().PaddingTop(2).Row(r =>
+                    {
+                        r.RelativeItem().Background(Colors.Grey.Lighten3)
+                            .Element(e => CampoBox(e, "EMITENTE DA NFS-e", m.EmitenteDescricao));
+                        r.RelativeItem().Element(e => CampoBox(e, "SITUAÇÃO", m.SituacaoDescricao));
+                        r.RelativeItem().Element(e => CampoBox(e, "FINALIDADE", m.FinalidadeDescricao));
+                    });
+                });
+
+                row.ConstantItem(95).PaddingLeft(4).Column(qr =>
+                {
+                    qr.Item().AlignCenter().Width(54).Height(54).Image(GerarQrPng(m.ConsultaPublicaUrl)).FitArea();
+                    qr.Item().PaddingTop(2).AlignCenter()
+                        .Text("A autenticidade desta NFS-e pode ser verificada pela leitura deste código QR ou pela consulta da chave de acesso no portal nacional da NFS-e.")
+                        .FontSize(5).AlignCenter();
+                });
+            });
+        });
+    }
+
+    private static void BlocoParte(IContainer container, string titulo, ParteDanfse p, bool incluirRegime)
+    {
+        container.Border(0.5f).BorderColor(Colors.Black).Column(col =>
+        {
+            col.Item().Background(Colors.Grey.Lighten3).Padding(2).Text(titulo).Bold().FontSize(7);
+            col.Item().Padding(3).Column(c =>
+            {
+                c.Item().Row(r =>
+                {
+                    r.RelativeItem().Element(e => CampoBox(e, "CNPJ / CPF / NIF", p.Documento));
+                    r.RelativeItem().Element(e => CampoBox(e, "Inscrição Municipal", string.IsNullOrWhiteSpace(p.InscricaoMunicipal) ? "—" : p.InscricaoMunicipal));
+                    r.RelativeItem().Element(e => CampoBox(e, "Telefone", string.IsNullOrWhiteSpace(p.Telefone) ? "—" : p.Telefone));
+                });
+                Campo(c, "Nome / Nome Empresarial", p.Nome);
+                c.Item().Row(r =>
+                {
+                    r.RelativeItem(2).Element(e => CampoBox(e, "Endereço", p.Endereco));
+                    r.RelativeItem().Element(e => CampoBox(e, "Município / UF / IBGE", p.MunicipioUf));
+                    r.RelativeItem().Element(e => CampoBox(e, "CEP", string.IsNullOrWhiteSpace(p.Cep) ? "—" : p.Cep));
+                });
+                if (!string.IsNullOrWhiteSpace(p.Email))
+                    Campo(c, "E-mail", p.Email);
+                if (incluirRegime)
+                {
+                    c.Item().Row(r =>
+                    {
+                        r.RelativeItem().Element(e => CampoBox(e, "Simples Nacional", string.IsNullOrWhiteSpace(p.SimplesNacional) ? "—" : p.SimplesNacional));
+                        r.RelativeItem().Element(e => CampoBox(e, "Regime de Apuração SN", string.IsNullOrWhiteSpace(p.RegimeApuracaoSn) ? "—" : p.RegimeApuracaoSn));
                     });
                 }
             });
         });
     }
 
-    private static string FormatarMoeda(decimal? valor) =>
-        valor is null
-            ? ""
-            : valor.Value.ToString("C", CultureInfo.GetCultureInfo("pt-BR"));
-
-    private static DadosDanfse Extrair(byte[] xmlBytes, string chaveFallback, string competenciaFallback)
+    private static void BlocoTomador(IContainer container, NfseDanfseModelo m)
     {
-        using var stream = new MemoryStream(xmlBytes);
-        var doc = XDocument.Load(stream);
-        XNamespace ns = "http://www.sped.fazenda.gov.br/nfse";
-
-        string? TAbs(string localName) =>
-            doc.Descendants(ns + localName).Select(e => e.Value?.Trim()).FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
-
-        var id = doc.Descendants(ns + "infNFSe").FirstOrDefault()?.Attribute("Id")?.Value;
-        var chave = chaveFallback;
-        if (!string.IsNullOrWhiteSpace(id) && id.StartsWith("NFS", StringComparison.OrdinalIgnoreCase) && id.Length > 3)
-            chave = id[3..];
-
-        var emit = doc.Descendants(ns + "emit").FirstOrDefault();
-        var toma = doc.Descendants(ns + "toma").FirstOrDefault()
-                   ?? doc.Descendants(ns + "DPS").Descendants(ns + "toma").FirstOrDefault();
-        var ender = emit?.Element(ns + "enderNac");
-
-        static string? Val(XElement? parent, XNamespace n, string name) =>
-            parent?.Element(n + name)?.Value?.Trim()
-            ?? parent?.Descendants(n + name).Select(e => e.Value?.Trim()).FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
-
-        var emitEnd = string.Join(", ", new[]
+        if (m.Tomador is null)
         {
-            Val(ender, ns, "xLgr"),
-            Val(ender, ns, "nro"),
-            Val(ender, ns, "xBairro"),
-            Val(ender, ns, "UF"),
-            SomenteDigitos(Val(ender, ns, "CEP")),
-        }.Where(s => !string.IsNullOrWhiteSpace(s)));
+            container.Border(0.5f).BorderColor(Colors.Black).Column(col =>
+            {
+                col.Item().Background(Colors.Grey.Lighten3).Padding(2)
+                    .Text("TOMADOR / ADQUIRENTE DA OPERAÇÃO").Bold().FontSize(7);
+                col.Item().Padding(6).Text("TOMADOR/ADQUIRENTE DA OPERAÇÃO NÃO IDENTIFICADO NA NFS-e").FontSize(7);
+            });
+            return;
+        }
 
-        var ambGer = TAbs("ambGer");
-        var ambiente = ambGer switch
+        BlocoParte(container, "TOMADOR / ADQUIRENTE DA OPERAÇÃO", m.Tomador, incluirRegime: false);
+    }
+
+    private static void BlocoDestinatario(IContainer container)
+    {
+        // NT 008 §2.3.2 — destinatário = tomador na locação típica.
+        container.Border(0.5f).BorderColor(Colors.Black).Column(col =>
         {
-            "1" => "Produção",
-            "2" => "Produção restrita",
-            _ => ambGer ?? "—",
-        };
-
-        decimal? vLiq = null;
-        if (decimal.TryParse(TAbs("vLiq"), NumberStyles.Number, CultureInfo.InvariantCulture, out var v))
-            vLiq = v;
-
-        var dCompet = TAbs("dCompet");
-        var competencia = competenciaFallback;
-        if (DateOnly.TryParse(dCompet, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dc))
-            competencia = $"{dc.Month:00}/{dc.Year}";
-
-        return new DadosDanfse(
-            ChaveAcesso: chave,
-            Numero: TAbs("nNFSe") ?? "—",
-            Serie: "1",
-            Competencia: competencia,
-            LocalEmissao: TAbs("xLocEmi") ?? "—",
-            LocalPrestacao: TAbs("xLocPrestacao") ?? TAbs("xLocEmi") ?? "—",
-            Ambiente: ambiente,
-            EmitenteNome: Val(emit, ns, "xNome") ?? "—",
-            EmitenteDoc: FormatDoc(Val(emit, ns, "CNPJ") ?? Val(emit, ns, "CPF")),
-            EmitenteEndereco: emitEnd,
-            TomadorNome: Val(toma, ns, "xNome") ?? "—",
-            TomadorDoc: FormatDoc(Val(toma, ns, "CNPJ") ?? Val(toma, ns, "CPF")),
-            TributacaoNacional: TAbs("xTribNac") ?? "—",
-            Nbs: TAbs("xNBS") ?? "—",
-            DescricaoServico: TAbs("xDescServ") ?? "—",
-            ValorLiquido: vLiq,
-            DataProcessamento: TAbs("dhProc") ?? "—",
-            Status: TAbs("cStat") == "100" ? "Autorizada (100)" : (TAbs("cStat") ?? "—"));
+            col.Item().Background(Colors.Grey.Lighten3).Padding(2)
+                .Text("DESTINATÁRIO DA OPERAÇÃO").Bold().FontSize(7);
+            col.Item().Padding(6)
+                .Text("O DESTINATÁRIO É O PRÓPRIO TOMADOR/ADQUIRENTE DA OPERAÇÃO").FontSize(7);
+        });
     }
 
-    private static string FormatDoc(string? digitos)
+    private static void BlocoIntermediario(IContainer container)
     {
-        var d = SomenteDigitos(digitos);
-        if (string.IsNullOrEmpty(d)) return "—";
-        if (d.Length == 14)
-            return $"{d[..2]}.{d[2..5]}.{d[5..8]}/{d[8..12]}-{d[12..]}";
-        if (d.Length == 11)
-            return $"{d[..3]}.{d[3..6]}.{d[6..9]}-{d[9..]}";
-        return d;
+        container.Border(0.5f).BorderColor(Colors.Black).Column(col =>
+        {
+            col.Item().Background(Colors.Grey.Lighten3).Padding(2)
+                .Text("INTERMEDIÁRIO DA OPERAÇÃO").Bold().FontSize(7);
+            col.Item().Padding(6)
+                .Text("INTERMEDIÁRIO DA OPERAÇÃO NÃO IDENTIFICADO NA NFS-e").FontSize(7);
+        });
     }
 
-    private static string? SomenteDigitos(string? valor)
+    private static void BlocoServico(IContainer container, NfseDanfseModelo m)
     {
-        if (string.IsNullOrWhiteSpace(valor)) return null;
-        var d = new string(valor.Where(char.IsDigit).ToArray());
-        return string.IsNullOrEmpty(d) ? null : d;
+        container.Border(0.5f).BorderColor(Colors.Black).Column(col =>
+        {
+            col.Item().Background(Colors.Grey.Lighten3).Padding(2)
+                .Text("SERVIÇO PRESTADO").Bold().FontSize(7);
+            col.Item().Padding(3).Column(c =>
+            {
+                c.Item().Row(r =>
+                {
+                    r.RelativeItem().Element(e => CampoBox(e, "Cód. Tributação Nacional", m.TributacaoNacionalCodigo));
+                    r.RelativeItem(2).Element(e => CampoBox(e, "Descrição Tributação Nacional", m.TributacaoNacionalDescricao));
+                });
+                c.Item().Row(r =>
+                {
+                    r.RelativeItem().Element(e => CampoBox(e, "Código NBS", m.CodigoNbs));
+                    r.RelativeItem(2).Element(e => CampoBox(e, "Descrição NBS", m.DescricaoNbs));
+                });
+                Campo(c, "Local da Prestação", m.LocalPrestacao);
+                Campo(c, "Descrição do Serviço", m.DescricaoServico);
+            });
+        });
     }
 
-    private sealed record DadosDanfse(
-        string ChaveAcesso,
-        string Numero,
-        string Serie,
-        string Competencia,
-        string LocalEmissao,
-        string LocalPrestacao,
-        string Ambiente,
-        string EmitenteNome,
-        string EmitenteDoc,
-        string EmitenteEndereco,
-        string TomadorNome,
-        string TomadorDoc,
-        string TributacaoNacional,
-        string Nbs,
-        string DescricaoServico,
-        decimal? ValorLiquido,
-        string DataProcessamento,
-        string Status);
+    private static void BlocoIssqn(IContainer container, NfseDanfseModelo m)
+    {
+        container.Border(0.5f).BorderColor(Colors.Black).Column(col =>
+        {
+            col.Item().Background(Colors.Grey.Lighten3).Padding(2)
+                .Text("TRIBUTAÇÃO MUNICIPAL (ISSQN)").Bold().FontSize(7);
+            if (m.SemIssqn)
+            {
+                col.Item().Padding(6)
+                    .Text($"TRIBUTAÇÃO MUNICIPAL (ISSQN) — OPERAÇÃO NÃO SUJEITA AO ISSQN ({m.TribIssqnDescricao})")
+                    .FontSize(7);
+                return;
+            }
+
+            col.Item().Padding(3).Row(r =>
+            {
+                r.RelativeItem().Element(e => CampoBox(e, "Tipo de Tributação", m.TribIssqnDescricao));
+                r.RelativeItem().Element(e => CampoBox(e, "Retenção ISSQN", string.IsNullOrWhiteSpace(m.RetencaoIssqn) ? "—" : m.RetencaoIssqn));
+            });
+        });
+    }
+
+    private static void BlocoIbsCbs(IContainer container, NfseDanfseModelo m)
+    {
+        container.Border(0.5f).BorderColor(Colors.Black).Column(col =>
+        {
+            col.Item().Background(Colors.Grey.Lighten3).Padding(2)
+                .Text("TRIBUTAÇÃO IBS / CBS").Bold().FontSize(7);
+            col.Item().Padding(3).Column(c =>
+            {
+                c.Item().Row(r =>
+                {
+                    r.RelativeItem().Element(e => CampoBox(e, "CST", string.IsNullOrWhiteSpace(m.Cst) ? "—" : m.Cst));
+                    r.RelativeItem().Element(e => CampoBox(e, "cClassTrib", string.IsNullOrWhiteSpace(m.ClassificacaoTributaria) ? "—" : m.ClassificacaoTributaria));
+                    r.RelativeItem().Element(e => CampoBox(e, "cIndOp", m.CodigoIndicadorOperacao));
+                });
+                Campo(c, "Localidade de Incidência IBS", string.IsNullOrWhiteSpace(m.LocalidadeIncidenciaIbs) ? "—" : m.LocalidadeIncidenciaIbs);
+                Campo(c, "Base de Cálculo", string.IsNullOrWhiteSpace(m.BaseCalculoIbsCbs) ? "—" : m.BaseCalculoIbsCbs);
+                c.Item().Row(r =>
+                {
+                    r.RelativeItem().Element(e => CampoBox(e, "Alíq. IBS UF", OuTraco(m.AliquotaIbsUf)));
+                    r.RelativeItem().Element(e => CampoBox(e, "Red. Alíq. UF", OuTraco(m.ReducaoAliqIbsUf)));
+                    r.RelativeItem().Element(e => CampoBox(e, "Alíq. Efet. UF", OuTraco(m.AliquotaEfetivaIbsUf)));
+                    r.RelativeItem().Element(e => CampoBox(e, "Valor IBS UF", OuTraco(m.ValorIbsUf)));
+                });
+                c.Item().Row(r =>
+                {
+                    r.RelativeItem().Element(e => CampoBox(e, "Alíq. IBS Mun", OuTraco(m.AliquotaIbsMun)));
+                    r.RelativeItem().Element(e => CampoBox(e, "Red. Alíq. Mun", OuTraco(m.ReducaoAliqIbsMun)));
+                    r.RelativeItem().Element(e => CampoBox(e, "Alíq. Efet. Mun", OuTraco(m.AliquotaEfetivaIbsMun)));
+                    r.RelativeItem().Element(e => CampoBox(e, "Valor IBS Mun", OuTraco(m.ValorIbsMun)));
+                });
+                c.Item().Row(r =>
+                {
+                    r.RelativeItem().Element(e => CampoBox(e, "Valor Total IBS", OuTraco(m.ValorTotalIbs)));
+                    r.RelativeItem().Element(e => CampoBox(e, "Alíq. CBS", OuTraco(m.AliquotaCbs)));
+                    r.RelativeItem().Element(e => CampoBox(e, "Red. Alíq. CBS", OuTraco(m.ReducaoAliqCbs)));
+                    r.RelativeItem().Element(e => CampoBox(e, "Alíq. Efet. CBS", OuTraco(m.AliquotaEfetivaCbs)));
+                    r.RelativeItem().Element(e => CampoBox(e, "Valor CBS", OuTraco(m.ValorCbs)));
+                });
+            });
+        });
+    }
+
+    private static void BlocoTotais(IContainer container, NfseDanfseModelo m)
+    {
+        container.Border(0.5f).BorderColor(Colors.Black).Column(col =>
+        {
+            col.Item().Background(Colors.Grey.Lighten3).Padding(2)
+                .Text("VALOR TOTAL DA NFS-e").Bold().FontSize(7);
+            col.Item().Padding(3).Row(r =>
+            {
+                r.RelativeItem().Element(e => CampoBox(e, "Valor do Serviço", OuTraco(m.ValorServico)));
+                r.RelativeItem().Element(e => CampoBox(e, "Valor Líquido", OuTraco(m.ValorLiquido)));
+                r.RelativeItem().Element(e => CampoBox(e, "Total IBS/CBS", OuTraco(m.TotalIbsCbs)));
+                r.RelativeItem().Background(Colors.Grey.Lighten3)
+                    .Element(e => CampoBox(e, "Valor Líquido + IBS/CBS", OuTraco(m.ValorTotalNf)));
+            });
+        });
+    }
+
+    private static void BlocoComplementares(IContainer container, NfseDanfseModelo m)
+    {
+        container.Border(0.5f).BorderColor(Colors.Black).Column(col =>
+        {
+            col.Item().Background(Colors.Grey.Lighten3).Padding(2)
+                .Text("INFORMAÇÕES COMPLEMENTARES").Bold().FontSize(7);
+            col.Item().Padding(3).Column(c =>
+            {
+                if (!string.IsNullOrWhiteSpace(m.ImovelMunicipio) || !string.IsNullOrWhiteSpace(m.ImovelEndereco))
+                {
+                    Campo(c, "Imóvel — Município IBGE", OuTraco(m.ImovelMunicipio));
+                    Campo(c, "Imóvel — Endereço", OuTraco(m.ImovelEndereco));
+                    c.Item().Row(r =>
+                    {
+                        r.RelativeItem().Element(e => CampoBox(e, "Copropriedade", OuTraco(m.ImovelPercentualCopropriedade)));
+                        r.RelativeItem().Element(e => CampoBox(e, "Valor Total da Operação", OuTraco(m.ImovelValorOperacao)));
+                    });
+                }
+
+                if (!string.IsNullOrWhiteSpace(m.PercentualTotTribSn))
+                {
+                    Campo(c, "Totais Aproximados de Tributos (pTotTribSN — Lei 12.741/2012)",
+                        $"{m.PercentualTotTribSn}%");
+                }
+
+                Campo(c, "Consulta pública", m.ConsultaPublicaUrl);
+            });
+        });
+    }
+
+    private static void Campo(ColumnDescriptor col, string label, string valor, bool mono = false)
+    {
+        col.Item().PaddingBottom(1).Column(c =>
+        {
+            c.Item().Text(label).Bold().FontSize(6).FontFamily(Fonts.Arial);
+            var t = c.Item().Text(valor).FontSize(7);
+            if (mono) t.FontFamily(Fonts.CourierNew);
+        });
+    }
+
+    private static void CampoBox(IContainer container, string label, string valor)
+    {
+        container.Padding(1).Column(c =>
+        {
+            c.Item().Text(label).Bold().FontSize(6).FontFamily(Fonts.Arial);
+            c.Item().Text(string.IsNullOrWhiteSpace(valor) ? "—" : valor).FontSize(7);
+        });
+    }
+
+    private static string OuTraco(string? v) => string.IsNullOrWhiteSpace(v) ? "—" : v;
+
+    private static byte[] GerarQrPng(string url)
+    {
+        using var gen = new QRCodeGenerator();
+        using var data = gen.CreateQrCode(url, QRCodeGenerator.ECCLevel.M);
+        var qr = new PngByteQRCode(data);
+        return qr.GetGraphic(4);
+    }
+
+    private static byte[]? CarregarLogo()
+    {
+        var asm = Assembly.GetExecutingAssembly();
+        using var stream = asm.GetManifestResourceStream("Aluguel.Infrastructure.Nfse.logo-nfse.png");
+        if (stream is null) return null;
+        using var ms = new MemoryStream();
+        stream.CopyTo(ms);
+        return ms.ToArray();
+    }
 }
