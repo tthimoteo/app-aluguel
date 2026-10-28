@@ -1,8 +1,13 @@
 using System.Text;
 using Aluguel.Application.Abstractions;
 using Aluguel.Application.Cobrancas.BaixarArquivoCobranca;
+using Aluguel.Domain.Clientes;
+using Aluguel.Domain.Common;
 using Aluguel.Domain.Financeiro;
 using Aluguel.Domain.Fiscal;
+using Aluguel.Domain.Imoveis;
+using Aluguel.Domain.Inquilinos;
+using Aluguel.Domain.ValueObjects;
 using Aluguel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,6 +22,7 @@ public static class CobrancaDemoSeeder
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var storage = scope.ServiceProvider.GetRequiredService<IFileStorage>();
         var nfsePdf = scope.ServiceProvider.GetRequiredService<INfsePdfGenerator>();
+        var env = scope.ServiceProvider.GetRequiredService<IHostEnvironment>();
 
         if (await db.NotasFiscais.IgnoreQueryFilters().AnyAsync())
             return;
@@ -31,19 +37,38 @@ public static class CobrancaDemoSeeder
 
         var imovel = await db.Imoveis.IgnoreQueryFilters()
             .FirstOrDefaultAsync(i => i.ClienteId == cliente.Id);
-        if (imovel is null) return;
+        if (imovel is null)
+        {
+            var end = new Endereco("Rua Faria Lobato", "137", null, "Vila Santa Clara", "São Paulo", "SP", "03159070");
+            imovel = new Imovel(cliente.TenantId, cliente.Id, "Apto Demo — Faria Lobato", TipoImovel.Residencial, end);
+            imovel.DefinirCobranca("09/2026", PropositoLocacao.Residencial, 10, null, null);
+            db.Imoveis.Add(imovel);
+            await db.SaveChangesAsync();
+        }
 
         var inquilino = await db.Inquilinos.IgnoreQueryFilters()
             .FirstOrDefaultAsync(i => i.ClienteId == cliente.Id);
+        if (inquilino is null)
+        {
+            inquilino = new Inquilino(
+                cliente.TenantId, cliente.Id, TipoPessoa.PF, "Thiago Thimoteo", "28958973870",
+                telefone: "11999990000", email: "tomador@demo.local",
+                endereco: new Endereco("Av Paulista", "1000", null, "Bela Vista", "São Paulo", "SP", "01310100"),
+                imovelId: imovel.Id);
+            db.Inquilinos.Add(inquilino);
+            await db.SaveChangesAsync();
+        }
 
         var gestor = await db.Users.FirstOrDefaultAsync(u => u.Email == "gestor@demo.local");
         var emissorId = gestor?.Id ?? Guid.Empty;
         var agora = DateTimeOffset.UtcNow;
 
-        await CriarCobrancaAsync(db, storage, nfsePdf, cliente.TenantId, cliente.Id, imovel.Id, inquilino?.Id,
-            "09/2026", 2500m, 9001, emissorId, agora.AddMonths(-1), comPagamento: true);
-        await CriarCobrancaAsync(db, storage, nfsePdf, cliente.TenantId, cliente.Id, imovel.Id, inquilino?.Id,
-            "10/2026", 2500m, 9002, emissorId, agora, comPagamento: false);
+        var xmlAutorizado = await CarregarXmlAutorizadoAsync(env);
+
+        await CriarCobrancaAsync(db, storage, nfsePdf, cliente.TenantId, cliente.Id, imovel.Id, inquilino.Id,
+            "09/2026", 2500m, 9001, emissorId, agora.AddMonths(-1), comPagamento: true, xmlAutorizado);
+        await CriarCobrancaAsync(db, storage, nfsePdf, cliente.TenantId, cliente.Id, imovel.Id, inquilino.Id,
+            "10/2026", 2500m, 9002, emissorId, agora, comPagamento: false, xmlAutorizado);
 
         await db.SaveChangesAsync();
     }
@@ -52,16 +77,16 @@ public static class CobrancaDemoSeeder
         AppDbContext db, IFileStorage storage, INfsePdfGenerator nfsePdf,
         Guid tenantId, Guid clienteId, Guid imovelId, Guid? inquilinoId,
         string competencia, decimal valor, long numero, Guid emissorId,
-        DateTimeOffset emitidaEm, bool comPagamento)
+        DateTimeOffset emitidaEm, bool comPagamento, byte[] xmlAutorizado)
     {
         var nfse = new NotaFiscalServico(tenantId, clienteId, imovelId, competencia, valor,
             inquilinoId: inquilinoId);
-        var chave = $"NFe{numero}DEMO{competencia.Replace("/", "")}";
+        // Chave real do XML autorizado SEFIN (fixture) — fallback demo só se o Id do XML não bater.
+        var chave = ExtrairChave(xmlAutorizado) ?? $"NFe{numero}DEMO{competencia.Replace("/", "")}";
         nfse.MarcarEmitida(numero, "1", chave, emissorId, emitidaEm);
         db.NotasFiscais.Add(nfse);
 
-        var xmlBytes = Encoding.UTF8.GetBytes(
-            $"""<?xml version="1.0" encoding="UTF-8"?><NFSe xmlns="http://www.sped.fazenda.gov.br/nfse"><infNFSe Id="NFS{chave}"><nNFSe>{numero}</nNFSe><cStat>100</cStat><valores><vLiq>{valor:F2}</vLiq></valores></infNFSe></NFSe>""");
+        var xmlBytes = xmlAutorizado;
         var pdfBytes = nfsePdf.Gerar(xmlBytes, chave, competencia);
         var boletoBytes = Encoding.UTF8.GetBytes($"%PDF-1.4\n% Boleto competencia {competencia} valor {valor:F2}\n");
 
@@ -95,5 +120,35 @@ public static class CobrancaDemoSeeder
             db.Pagamentos.Add(new Pagamento(tenantId, clienteId, imovelId, competencia, valor,
                 venc.AddDays(2), nfseId: nfse.Id));
         }
+    }
+
+    private static async Task<byte[]> CarregarXmlAutorizadoAsync(IHostEnvironment env)
+    {
+        var candidatos = new[]
+        {
+            Path.Combine(env.ContentRootPath, "Fixtures", "nfse-autorizada-sefin.xml"),
+            Path.Combine(AppContext.BaseDirectory, "Fixtures", "nfse-autorizada-sefin.xml"),
+            Path.Combine(env.ContentRootPath, "..", "..", "tests", "Aluguel.Infrastructure.UnitTests", "Fixtures", "nfse-autorizada-sefin.xml"),
+        };
+        foreach (var path in candidatos)
+        {
+            if (File.Exists(path))
+                return await File.ReadAllBytesAsync(path);
+        }
+
+        throw new FileNotFoundException(
+            "Fixture nfse-autorizada-sefin.xml não encontrada para seed do DANFSe demo.");
+    }
+
+    private static string? ExtrairChave(byte[] xml)
+    {
+        var texto = Encoding.UTF8.GetString(xml);
+        const string marker = "Id=\"NFS";
+        var i = texto.IndexOf(marker, StringComparison.Ordinal);
+        if (i < 0) return null;
+        var start = i + marker.Length;
+        var end = texto.IndexOf('"', start);
+        if (end <= start) return null;
+        return texto[start..end];
     }
 }
