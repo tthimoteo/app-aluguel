@@ -23,7 +23,7 @@ public class EventoCancelamentoXmlBuilderTests
         var opts = new NfseOptions { Ambiente = "ProducaoRestrita", VerAplic = "LucrareAluguel1.0" };
         var pedido = new NfseCancelamentoPedido(
             Chave50, "15809930000168", true,
-            "Remoção de cobrança no APP Aluguel — cancelamento solicitado pelo emitente.",
+            "Remocao de cobranca no APP Aluguel - cancelamento solicitado pelo emitente.",
             "1", [1], "x");
 
         var xml = EventoCancelamentoXmlBuilder.Montar(
@@ -36,5 +36,22 @@ public class EventoCancelamentoXmlBuilderTests
         xml.Should().Contain($"<chNFSe>{Chave50}</chNFSe>");
         xml.Should().Contain("<CNPJAutor>15809930000168</CNPJAutor>");
         xml.Should().Contain($"Id=\"{id}\"");
+    }
+
+    [Fact]
+    public void Montar_sanitiza_travessao_unicode_em_xMotivo()
+    {
+        var opts = new NfseOptions { Ambiente = "ProducaoRestrita" };
+        var pedido = new NfseCancelamentoPedido(
+            Chave50, "15809930000168", true,
+            "Remoção de cobrança — cancelamento solicitado pelo emitente.",
+            "1", [1], "x");
+
+        var xml = EventoCancelamentoXmlBuilder.Montar(
+            pedido, opts, DateTimeOffset.UtcNow, out _);
+
+        xml.Should().NotContain("\u2014");
+        xml.Should().Contain("<xMotivo>");
+        xml.Should().Contain("cancelamento solicitado pelo emitente.");
     }
 }

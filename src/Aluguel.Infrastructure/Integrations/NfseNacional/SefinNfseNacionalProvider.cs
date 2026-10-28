@@ -230,7 +230,9 @@ public sealed class SefinNfseNacionalProvider(
 
                 var msgErro = ExtrairMensagemErro(body)
                               ?? $"SEFIN HTTP {(int)response.StatusCode}: {TruncarLog(body)}";
-                logger.LogWarning("SEFIN rejeitou cancelamento NFS-e: {Erro}", msgErro);
+                logger.LogWarning(
+                    "SEFIN rejeitou cancelamento NFS-e: {Erro}. Body={Body}",
+                    msgErro, TruncarLog(body));
                 return FalhaCancelamento(msgErro);
             }
             catch (OperationCanceledException) when (!ct.IsCancellationRequested)
@@ -257,38 +259,74 @@ public sealed class SefinNfseNacionalProvider(
         {
             using var doc = JsonDocument.Parse(body);
             var root = doc.RootElement;
-            if (root.TryGetProperty("erros", out var erros) && erros.ValueKind == JsonValueKind.Array)
-            {
-                var partes = new List<string>();
-                foreach (var e in erros.EnumerateArray())
-                {
-                    var codigo = Prop(e, "Codigo", "codigo");
-                    var desc = Prop(e, "Descricao", "descricao") ?? Prop(e, "Message", "message");
-                    var comp = Prop(e, "Complemento", "complemento");
-                    partes.Add(string.Join(" — ", new[] { codigo, desc, comp }.Where(s => !string.IsNullOrWhiteSpace(s))));
-                }
 
+            // SEFIN usa tanto "erros" quanto "erro" — e "erro" pode ser objeto ou array.
+            foreach (var nome in new[] { "erros", "erro" })
+            {
+                if (!root.TryGetProperty(nome, out var no))
+                    continue;
+
+                var partes = ExtrairItensErro(no);
                 if (partes.Count > 0)
                     return string.Join("; ", partes);
-            }
-
-            if (root.TryGetProperty("erro", out var erro))
-            {
-                var codigo = Prop(erro, "Codigo", "codigo");
-                var desc = Prop(erro, "Descricao", "descricao");
-                return string.Join(" — ", new[] { codigo, desc }.Where(s => !string.IsNullOrWhiteSpace(s)));
             }
         }
         catch (JsonException)
         {
             // body não-JSON
         }
+        catch (InvalidOperationException)
+        {
+            // ValueKind inesperado (ex.: primitivo) — cai no fallback HTTP do caller
+        }
 
         return null;
     }
 
+    private static List<string> ExtrairItensErro(JsonElement no)
+    {
+        var partes = new List<string>();
+        if (no.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var e in no.EnumerateArray())
+            {
+                var linha = FormatarItemErro(e);
+                if (!string.IsNullOrWhiteSpace(linha))
+                    partes.Add(linha);
+            }
+        }
+        else if (no.ValueKind == JsonValueKind.Object)
+        {
+            var linha = FormatarItemErro(no);
+            if (!string.IsNullOrWhiteSpace(linha))
+                partes.Add(linha);
+        }
+        else if (no.ValueKind == JsonValueKind.String)
+        {
+            var s = no.GetString();
+            if (!string.IsNullOrWhiteSpace(s))
+                partes.Add(s);
+        }
+
+        return partes;
+    }
+
+    private static string FormatarItemErro(JsonElement e)
+    {
+        if (e.ValueKind != JsonValueKind.Object)
+            return e.ValueKind == JsonValueKind.String ? (e.GetString() ?? "") : "";
+
+        var codigo = Prop(e, "Codigo", "codigo");
+        var desc = Prop(e, "Descricao", "descricao") ?? Prop(e, "Message", "message");
+        var comp = Prop(e, "Complemento", "complemento");
+        return string.Join(" — ", new[] { codigo, desc, comp }.Where(s => !string.IsNullOrWhiteSpace(s)));
+    }
+
     private static string? Prop(JsonElement el, params string[] names)
     {
+        if (el.ValueKind != JsonValueKind.Object)
+            return null;
+
         foreach (var n in names)
         {
             if (el.TryGetProperty(n, out var v) && v.ValueKind == JsonValueKind.String)

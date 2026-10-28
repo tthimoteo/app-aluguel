@@ -8,8 +8,12 @@ public static class NfseCancelamentoPolitica
 {
     public static readonly TimeSpan PrazoCancelamentoAutomatico = TimeSpan.FromHours(24);
 
+    /// <summary>
+    /// Texto de <c>xMotivo</c> (TSMotivo): 15–255 chars no padrão SEFIN <c>!-ÿ</c>
+    /// (Latin-1). Evitar travessão tipográfico e demais Unicode fora de Latin-1.
+    /// </summary>
     public const string MotivoRemocaoCobranca =
-        "Remoção de cobrança no APP Aluguel — cancelamento solicitado pelo emitente.";
+        "Remocao de cobranca no APP Aluguel - cancelamento solicitado pelo emitente.";
 
     public const string CodigoMotivoErroEmissao = "1";
 

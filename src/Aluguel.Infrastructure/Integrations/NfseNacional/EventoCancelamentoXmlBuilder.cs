@@ -34,7 +34,7 @@ internal static class EventoCancelamentoXmlBuilder
         var chave = SomenteDigitos(pedido.ChaveAcesso);
         idPedReg = MontarIdPedido(chave);
         var docAutor = SomenteDigitos(pedido.DocumentoAutor);
-        var motivo = (pedido.Motivo ?? "").Trim();
+        var motivo = SanitizarMotivo(pedido.Motivo);
         if (motivo.Length < 15)
             motivo = motivo.PadRight(15, '.');
         if (motivo.Length > 255)
@@ -71,6 +71,21 @@ internal static class EventoCancelamentoXmlBuilder
     {
         if (string.IsNullOrWhiteSpace(valor)) return "";
         return new string(valor.Where(char.IsDigit).ToArray());
+    }
+
+    /// <summary>
+    /// TSMotivo SEFIN: caracteres Latin-1 de '!' (0x21) a ÿ (0xFF), sem controle.
+    /// Substitui travessões tipográficos e demais Unicode fora do intervalo.
+    /// </summary>
+    private static string SanitizarMotivo(string? raw)
+    {
+        var s = (raw ?? "").Trim()
+            .Replace('\u2014', '-') // —
+            .Replace('\u2013', '-') // –
+            .Replace('\u2012', '-')
+            .Replace('\u00A0', ' ');
+        var chars = s.Select(ch => ch is >= '!' and <= 'ÿ' ? ch : ' ').ToArray();
+        return new string(chars).Trim();
     }
 
     private static string Truncar(string? s, int max) =>
