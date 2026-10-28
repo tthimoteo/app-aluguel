@@ -21,10 +21,12 @@ export default async function MinhaContaPage() {
     );
   }
 
-  const [cliente, planos, certificado] = await Promise.all([
+  const [cliente, planos, certificado, boletoProvedores, integracaoBoleto] = await Promise.all([
     api.cliente(clienteId),
     api.planos(),
     api.certificadoCliente(clienteId),
+    api.boletoProvedores(),
+    api.integracaoBoleto(clienteId),
   ]);
 
   return (
@@ -38,6 +40,8 @@ export default async function MinhaContaPage() {
         cliente={cliente}
         planos={planos}
         certificado={certificado}
+        boletoProvedores={boletoProvedores}
+        integracaoBoleto={integracaoBoleto}
       />
     </div>
   );

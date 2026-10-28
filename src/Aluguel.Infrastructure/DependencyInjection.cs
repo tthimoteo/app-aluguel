@@ -1,6 +1,7 @@
 using Aluguel.Application.Abstractions;
 using Aluguel.Domain.Fiscal;
 using Aluguel.Infrastructure.Identity;
+using Aluguel.Infrastructure.Integrations.BoletoBancario;
 using Aluguel.Infrastructure.Integrations.NfseNacional;
 using Aluguel.Infrastructure.Persistence;
 using Aluguel.Infrastructure.Persistence.Repositories;
@@ -46,11 +47,13 @@ public static class DependencyInjection
         services.AddScoped<IContratoRepository, ContratoRepository>();
         services.AddScoped<ICertificadoDigitalRepository, CertificadoDigitalRepository>();
         services.AddScoped<ICobrancaRepository, CobrancaRepository>();
+        services.AddScoped<IIntegracaoBoletoRepository, IntegracaoBoletoRepository>();
 
         services.AddSingleton<IFileStorage, LocalFileStorage>();
         services.AddSingleton<ISecretProtector, AesSecretProtector>();
         services.AddSingleton<INfsePdfGenerator, NfseDanfsePdfGenerator>();
         services.AddSingleton(TimeProvider.System);
+        services.AddHttpClient();
 
         services.Configure<NfseOptions>(opts =>
         {
@@ -80,6 +83,30 @@ public static class DependencyInjection
             services.AddScoped<INfseNacionalProvider, MockNfseNacionalProvider>();
         else
             services.AddScoped<INfseNacionalProvider, SefinNfseNacionalProvider>();
+
+        services.Configure<BoletoOptions>(opts =>
+        {
+            var s = configuration.GetSection(BoletoOptions.SectionName);
+            if (s["Ambiente"] is { Length: > 0 } amb) opts.Ambiente = amb;
+            var urls = s.GetSection("BaseUrls");
+            foreach (var child in urls.GetChildren())
+            {
+                if (!string.IsNullOrWhiteSpace(child.Key) && !string.IsNullOrWhiteSpace(child.Value))
+                    opts.BaseUrls[child.Key] = child.Value!;
+            }
+        });
+
+        services.AddScoped<IBoletoProvider, ItauBoletoProvider>();
+        services.AddScoped<IBoletoProvider, BradescoBoletoProvider>();
+        services.AddScoped<IBoletoProvider, BancoDoBrasilBoletoProvider>();
+        services.AddScoped<IBoletoProvider, SantanderBoletoProvider>();
+        services.AddScoped<IBoletoProvider, CaixaBoletoProvider>();
+        services.AddScoped<IBoletoProvider, SicrediBoletoProvider>();
+        services.AddScoped<IBoletoProvider, MercadoPagoBoletoProvider>();
+        services.AddScoped<IBoletoProvider, InterBoletoProvider>();
+        services.AddScoped<IBoletoProvider, C6BoletoProvider>();
+        services.AddScoped<IBoletoProvider, NubankBoletoProvider>();
+        services.AddScoped<IBoletoProviderFactory, BoletoProviderFactory>();
 
         return services;
     }

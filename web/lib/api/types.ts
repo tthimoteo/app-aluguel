@@ -126,6 +126,33 @@ export type CertificadoDigital = {
   createdAt: string;
 };
 
+export type CampoProvedorBoleto = {
+  chave: string;
+  rotulo: string;
+  tipo: "Texto" | "Segredo" | "Numero" | string;
+  obrigatorio: boolean;
+  placeholder: string | null;
+  ajuda: string | null;
+};
+
+export type ProvedorBoleto = {
+  codigo: string;
+  nome: string;
+  codigoBanco: string;
+  campos: CampoProvedorBoleto[];
+};
+
+export type IntegracaoBoletoCliente = {
+  id: string;
+  clienteId: string;
+  provedorCodigo: string;
+  provedorNome: string;
+  ativo: boolean;
+  camposPublicos: Record<string, string>;
+  camposSegredoPreenchidos: string[];
+  updatedAt: string;
+};
+
 export type RegimeTributario =
   | "SimplesNacional"
   | "LucroPresumido"

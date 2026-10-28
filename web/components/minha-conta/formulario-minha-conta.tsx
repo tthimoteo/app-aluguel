@@ -22,8 +22,16 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { IntegracaoBoletoForm } from "@/components/minha-conta/integracao-boleto-form";
 import { bff, BffError, type AtualizacaoClienteInput } from "@/lib/api/browser";
-import type { AuthMe, CertificadoDigital, Cliente, Plano } from "@/lib/api/types";
+import type {
+  AuthMe,
+  CertificadoDigital,
+  Cliente,
+  IntegracaoBoletoCliente,
+  Plano,
+  ProvedorBoleto,
+} from "@/lib/api/types";
 import { formatarCpfCnpj, formatarData, mascaraTelefone } from "@/lib/format";
 import { beneficiosDoPlano, precoRotulo } from "@/lib/planos";
 import { cn } from "@/lib/utils";
@@ -56,12 +64,17 @@ export function FormularioMinhaConta({
   cliente: clienteInicial,
   planos,
   certificado: certificadoInicial,
+  boletoProvedores = [],
+  integracaoBoleto = null,
   variante = "minha-conta",
 }: {
   me: AuthMe;
   cliente: Cliente;
   planos: Plano[];
   certificado: CertificadoDigital | null;
+  /** Catálogo expansível de bancos/APIs de boleto (só usado se o plano permite cobrança). */
+  boletoProvedores?: ProvedorBoleto[];
+  integracaoBoleto?: IntegracaoBoletoCliente | null;
   /** Admin edita qualquer cliente e aplica plano sem fluxo de pagamento. */
   variante?: "minha-conta" | "admin";
 }) {
@@ -126,6 +139,8 @@ export function FormularioMinhaConta({
     [planos, cliente.planoId],
   );
   const mostraNfse = Boolean(planoVigente?.permiteNfse);
+  /** Mesmo gate do módulo Cobrança: plano com NFS-e habilita boletos. */
+  const mostraBoleto = mostraNfse;
   const ehPj = cliente.tipoPessoa === "PJ";
 
   async function onSubmit(ev: FormEvent<HTMLFormElement>) {
@@ -576,6 +591,22 @@ export function FormularioMinhaConta({
                 </Button>
               </div>
             </div>
+          </section>
+        ) : null}
+
+        {mostraBoleto ? (
+          <section className="rounded-lg bg-card p-5 shadow-[0_2px_8px_rgba(0,0,0,0.1)] ring-1 ring-border">
+            <h3 className="mb-1 text-sm font-semibold">Integração bancária (boletos)</h3>
+            <p className="mb-4 text-xs text-muted-foreground">
+              Credenciais da API do banco para emissão de boletos de cobrança. Visível somente com plano que permite
+              o módulo Cobrança ({planoVigente?.nome}). Novos bancos podem ser adicionados ao catálogo sem alterar o
+              cadastro do cliente.
+            </p>
+            <IntegracaoBoletoForm
+              clienteId={cliente.id}
+              provedores={boletoProvedores}
+              integracaoInicial={integracaoBoleto}
+            />
           </section>
         ) : null}
 

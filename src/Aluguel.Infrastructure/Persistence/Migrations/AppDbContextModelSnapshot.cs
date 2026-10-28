@@ -667,6 +667,11 @@ namespace Aluguel.Infrastructure.Persistence.Migrations
                         .HasColumnType("date")
                         .HasColumnName("data_vencimento");
 
+                    b.Property<string>("IdExterno")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("id_externo");
+
                     b.Property<Guid>("ImovelId")
                         .HasColumnType("uuid")
                         .HasColumnName("imovel_id");
@@ -684,6 +689,11 @@ namespace Aluguel.Infrastructure.Persistence.Migrations
                         .HasMaxLength(40)
                         .HasColumnType("character varying(40)")
                         .HasColumnName("nosso_numero");
+
+                    b.Property<string>("ProvedorCodigo")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("provedor_codigo");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -785,6 +795,63 @@ namespace Aluguel.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_despesa_imovel_id_competencia");
 
                     b.ToTable("despesa", "app");
+                });
+
+            modelBuilder.Entity("Aluguel.Domain.Financeiro.IntegracaoBoletoCliente", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("Ativo")
+                        .HasColumnType("boolean")
+                        .HasColumnName("ativo");
+
+                    b.Property<Guid>("ClienteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cliente_id");
+
+                    b.Property<string>("ConfiguracaoPublicaJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("configuracao_publica_json");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("ProvedorCodigo")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("provedor_codigo");
+
+                    b.Property<byte[]>("SegredosCifrados")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("segredos_cifrados");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_integracao_boleto_cliente");
+
+                    b.HasIndex("ClienteId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_integracao_boleto_cliente_ativo")
+                        .HasFilter("ativo");
+
+                    b.HasIndex("ProvedorCodigo")
+                        .HasDatabaseName("ix_integracao_boleto_cliente_provedor_codigo");
+
+                    b.ToTable("integracao_boleto_cliente", "app");
                 });
 
             modelBuilder.Entity("Aluguel.Domain.Financeiro.Pagamento", b =>
@@ -1865,6 +1932,16 @@ namespace Aluguel.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_despesa_imoveis_imovel_id");
+                });
+
+            modelBuilder.Entity("Aluguel.Domain.Financeiro.IntegracaoBoletoCliente", b =>
+                {
+                    b.HasOne("Aluguel.Domain.Clientes.Cliente", null)
+                        .WithMany()
+                        .HasForeignKey("ClienteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_integracao_boleto_cliente_cliente_cliente_id");
                 });
 
             modelBuilder.Entity("Aluguel.Domain.Financeiro.Pagamento", b =>

@@ -5,6 +5,7 @@ import type {
   Contrato,
   Imovel,
   Inquilino,
+  IntegracaoBoletoCliente,
   RemoverCobrancaResultado,
   Usuario,
 } from "@/lib/api/types";
@@ -250,6 +251,14 @@ export const bff = {
     }
     return body as CertificadoDigital;
   },
+  salvarIntegracaoBoleto: (
+    clienteId: string,
+    dados: { provedorCodigo: string; campos: Record<string, string | null> },
+  ) =>
+    bffFetch<IntegracaoBoletoCliente>(`/api/clientes/${clienteId}/integracao-boleto`, {
+      method: "PUT",
+      body: JSON.stringify(dados),
+    }),
 };
 
 export type AtualizacaoClienteInput = {

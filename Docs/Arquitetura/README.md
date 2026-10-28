@@ -20,6 +20,7 @@ Base: análise integral de [`../APP-Aluguel-Especificacao.md`](../APP-Aluguel-Es
 | 10 | [Requisitos Funcionais e Telas](10-Requisitos-Funcionais-e-Telas.md) | Home, emissão, pagamentos, histórico, menu, contabilidade, RNF. |
 | 11 | [Casos de Uso e Critérios de Aceite](11-Casos-de-Uso-e-Criterios-de-Aceite.md) | UC001–UC008 e cenários BDD (CASO 1–8). |
 | 12 | [Integração NFS-e Nacional](12-Integracao-Nfse-Nacional.md) | SEFIN (emissão DPS) vs ADN (consulta); sandbox; Cliente Demo PJ. |
+| 13 | [Integração Boleto Bancário](13-Integracao-Boleto-Bancario.md) | Catálogo expansível de bancos/APIs; cadastro no cliente; GerarCobranca. |
 
 ## Stack (especificação §19)
 

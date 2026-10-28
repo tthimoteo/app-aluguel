@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using Aluguel.Application.Abstractions;
 using Aluguel.Application.Cobrancas.BaixarArquivoCobranca;
 using Aluguel.Domain.Clientes;
@@ -22,10 +23,8 @@ public static class CobrancaDemoSeeder
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var storage = scope.ServiceProvider.GetRequiredService<IFileStorage>();
         var nfsePdf = scope.ServiceProvider.GetRequiredService<INfsePdfGenerator>();
+        var protector = scope.ServiceProvider.GetRequiredService<ISecretProtector>();
         var env = scope.ServiceProvider.GetRequiredService<IHostEnvironment>();
-
-        if (await db.NotasFiscais.IgnoreQueryFilters().AnyAsync())
-            return;
 
         var cliente = await db.Clientes.IgnoreQueryFilters()
             .FirstOrDefaultAsync(c =>
@@ -34,6 +33,29 @@ public static class CobrancaDemoSeeder
                 || c.Nome == "Cliente Demo"
                 || c.RazaoSocial == "T THIMOTEO CONSULTORIA E SERVICOS DE ENGENHARIA LTDA");
         if (cliente is null) return;
+
+        // Integração de boleto demo (Bradesco) — permite GerarCobranca mesmo sem cadastro manual.
+        if (!await db.IntegracoesBoleto.IgnoreQueryFilters()
+                .AnyAsync(i => i.ClienteId == cliente.Id && i.Ativo))
+        {
+            var publicos = JsonSerializer.Serialize(new Dictionary<string, string>
+            {
+                ["agencia"] = "1234",
+                ["conta"] = "567890",
+                ["carteira"] = "09",
+                ["client_id"] = "demo-client-id",
+            });
+            var segredos = protector.Protect(JsonSerializer.Serialize(new Dictionary<string, string>
+            {
+                ["client_secret"] = "demo-client-secret",
+            }));
+            db.IntegracoesBoleto.Add(new IntegracaoBoletoCliente(
+                cliente.TenantId, cliente.Id, "bradesco", publicos, segredos));
+            await db.SaveChangesAsync();
+        }
+
+        if (await db.NotasFiscais.IgnoreQueryFilters().AnyAsync())
+            return;
 
         var imovel = await db.Imoveis.IgnoreQueryFilters()
             .FirstOrDefaultAsync(i => i.ClienteId == cliente.Id);
@@ -110,7 +132,10 @@ public static class CobrancaDemoSeeder
         // Vencimento = dia 10 no mês seguinte à competência (mesmo critério da geração real).
         var venc = Aluguel.Domain.Financeiro.CobrancaVencimento.Calcular(competencia, dia: 10);
         var boleto = new Boleto(tenantId, clienteId, imovelId, competencia, valor, venc, nfse.Id,
-            nossoNumero: $"BOL{numero}", linhaDigitavel: $"23790.00000 00000.000000 00000.000000 {numero % 10} {numero}");
+            nossoNumero: $"BOL{numero}",
+            linhaDigitavel: $"23790.00000 00000.000000 00000.000000 {numero % 10} {numero}",
+            provedorCodigo: "bradesco",
+            idExterno: $"demo-{numero}");
         boleto.DefinirPdf(boletoPath);
         db.Boletos.Add(boleto);
 

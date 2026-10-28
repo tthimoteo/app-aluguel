@@ -10,8 +10,10 @@ import type {
   Contrato,
   Imovel,
   Inquilino,
+  IntegracaoBoletoCliente,
   Pagina,
   Plano,
+  ProvedorBoleto,
   Usuario,
 } from "@/lib/api/types";
 import { getAccessTokenFromJar } from "@/lib/auth/cookies";
@@ -107,6 +109,15 @@ export const api = {
   certificadoCliente: async (clienteId: string) => {
     try {
       return await apiFetch<CertificadoDigital>(`/api/clientes/${clienteId}/certificado`);
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 404) return null;
+      throw e;
+    }
+  },
+  boletoProvedores: () => apiFetch<ProvedorBoleto[]>("/api/boleto-provedores"),
+  integracaoBoleto: async (clienteId: string) => {
+    try {
+      return await apiFetch<IntegracaoBoletoCliente>(`/api/clientes/${clienteId}/integracao-boleto`);
     } catch (e) {
       if (e instanceof ApiError && e.status === 404) return null;
       throw e;

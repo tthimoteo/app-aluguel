@@ -14,6 +14,10 @@ public class Boleto : Entity, ITenantOwned
     public DateOnly DataVencimento { get; private set; }
     public string? NossoNumero { get; private set; }
     public string? LinhaDigitavel { get; private set; }
+    /// <summary>Código do provedor bancário usado na geração (catálogo expansível).</summary>
+    public string? ProvedorCodigo { get; private set; }
+    /// <summary>Identificador do boleto na API do banco/fintech.</summary>
+    public string? IdExterno { get; private set; }
     public StatusBoleto Status { get; private set; } = StatusBoleto.Gerado;
     public string? StoragePathPdf { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; } = DateTimeOffset.UtcNow;
@@ -21,7 +25,8 @@ public class Boleto : Entity, ITenantOwned
     private Boleto() { }
 
     public Boleto(Guid tenantId, Guid clienteId, Guid imovelId, string competencia, decimal valor,
-        DateOnly dataVencimento, Guid? nfseId = null, string? nossoNumero = null, string? linhaDigitavel = null)
+        DateOnly dataVencimento, Guid? nfseId = null, string? nossoNumero = null, string? linhaDigitavel = null,
+        string? provedorCodigo = null, string? idExterno = null)
     {
         if (string.IsNullOrWhiteSpace(competencia))
             throw new ArgumentException("Competência é obrigatória.", nameof(competencia));
@@ -35,6 +40,8 @@ public class Boleto : Entity, ITenantOwned
         NfseId = nfseId;
         NossoNumero = nossoNumero;
         LinhaDigitavel = linhaDigitavel;
+        ProvedorCodigo = string.IsNullOrWhiteSpace(provedorCodigo) ? null : provedorCodigo.Trim().ToLowerInvariant();
+        IdExterno = string.IsNullOrWhiteSpace(idExterno) ? null : idExterno.Trim();
     }
 
     public void DefinirPdf(string storagePath)

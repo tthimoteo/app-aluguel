@@ -25,9 +25,11 @@ export default async function EditarClientePage({
     throw e;
   }
 
-  const [planos, certificado] = await Promise.all([
+  const [planos, certificado, boletoProvedores, integracaoBoleto] = await Promise.all([
     api.planos(),
     api.certificadoCliente(id),
+    api.boletoProvedores(),
+    api.integracaoBoleto(id),
   ]);
 
   return (
@@ -46,6 +48,8 @@ export default async function EditarClientePage({
         cliente={cliente}
         planos={planos}
         certificado={certificado}
+        boletoProvedores={boletoProvedores}
+        integracaoBoleto={integracaoBoleto}
         variante="admin"
       />
     </div>

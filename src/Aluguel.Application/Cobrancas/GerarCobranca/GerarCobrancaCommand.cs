@@ -1,5 +1,5 @@
 using System.Globalization;
-using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Aluguel.Application.Abstractions;
 using Aluguel.Application.Cobrancas.BaixarArquivoCobranca;
@@ -37,6 +37,8 @@ public sealed class GerarCobrancaCommandHandler(
     IPlanoRepository planos,
     IInquilinoRepository inquilinos,
     ICertificadoDigitalRepository certificados,
+    IIntegracaoBoletoRepository integracoesBoleto,
+    IBoletoProviderFactory boletoFactory,
     INfseNacionalProvider nfseProvider,
     INfsePdfGenerator nfsePdf,
     IFileStorage storage,
@@ -155,12 +157,15 @@ public sealed class GerarCobrancaCommandHandler(
             cobrancas.AdicionarDocumento(new DocumentoFiscal(imovel.TenantId, nfse.Id, TipoDocumentoFiscal.PDF, pdfPath, tamanhoBytes: pdfBytes.Length));
         }
 
-        var boletoBytes = Encoding.UTF8.GetBytes(
-            $"%PDF-1.4\n% Boleto competencia {competencia} valor {F(valorTotal)} venc {vencimento:dd/MM/yyyy}\n");
+        var geracaoBoleto = await GerarBoletoBancarioAsync(
+            imovel, contrato.InquilinoId, nfse.Id, competencia, valorTotal, vencimento,
+            request.ValorAluguel, condo, iptu, cancellationToken);
+
         var boletoRel = $"{imovel.TenantId:D}/{nfse.Id:D}-boleto.pdf";
         string boletoPath;
-        await using (var s = new MemoryStream(boletoBytes))
-            boletoPath = await storage.UploadAsync(BaixarArquivoCobrancaQueryHandler.BucketBoletos, boletoRel, s, "application/pdf", cancellationToken);
+        await using (var s = new MemoryStream(geracaoBoleto.PdfBytes))
+            boletoPath = await storage.UploadAsync(
+                BaixarArquivoCobrancaQueryHandler.BucketBoletos, boletoRel, s, "application/pdf", cancellationToken);
 
         var boleto = new Boleto(
             imovel.TenantId,
@@ -170,14 +175,109 @@ public sealed class GerarCobrancaCommandHandler(
             valorTotal,
             vencimento,
             nfse.Id,
-            nossoNumero: $"BOL{numero}",
-            linhaDigitavel: $"23790.00000 00000.000000 00000.000000 {numero % 10} {numero}");
+            nossoNumero: geracaoBoleto.NossoNumero,
+            linhaDigitavel: geracaoBoleto.LinhaDigitavel,
+            provedorCodigo: geracaoBoleto.ProvedorCodigo,
+            idExterno: geracaoBoleto.IdExterno);
         boleto.DefinirPdf(boletoPath);
         cobrancas.AdicionarBoleto(boleto);
 
         await cobrancas.SalvarAlteracoesAsync(cancellationToken);
 
         return (await cobrancas.ObterDetalheAsync(nfse.Id, cancellationToken))!;
+    }
+
+    private sealed record BoletoGeradoLocal(
+        string ProvedorCodigo,
+        string NossoNumero,
+        string LinhaDigitavel,
+        string? IdExterno,
+        byte[] PdfBytes);
+
+    private async Task<BoletoGeradoLocal> GerarBoletoBancarioAsync(
+        Domain.Imoveis.Imovel imovel,
+        Guid inquilinoId,
+        Guid nfseId,
+        string competencia,
+        decimal valorTotal,
+        DateOnly vencimento,
+        decimal valorAluguel,
+        decimal condo,
+        decimal iptu,
+        CancellationToken ct)
+    {
+        var integracao = await integracoesBoleto.ObterAtivaPorClienteAsync(imovel.ClienteId, ct)
+            ?? throw new InvalidOperationException(
+                "Cadastre a integração bancária do cliente (Minha Conta → Boletos) antes de gerar a cobrança.");
+
+        var cliente = await clientes.ObterPorIdAsync(imovel.ClienteId, ct)
+            ?? throw new InvalidOperationException("Cliente emitente não encontrado.");
+
+        var inquilino = await inquilinos.ObterPorIdAsync(inquilinoId, ct)
+            ?? throw new InvalidOperationException("Inquilino (pagador) da cobrança não encontrado.");
+
+        var credenciais = MontarCredenciaisBoleto(integracao);
+        var provider = boletoFactory.Obter(integracao.ProvedorCodigo);
+
+        var benefDoc = cliente.TipoPessoa == TipoPessoa.PJ ? cliente.Cnpj! : cliente.Cpf!;
+        var benefNome = cliente.TipoPessoa == TipoPessoa.PJ
+            ? (cliente.RazaoSocial ?? cliente.NomeExibicao)
+            : (cliente.Nome ?? cliente.NomeExibicao);
+
+        var pedido = new BoletoGeracaoPedido(
+            ReferenciaId: nfseId,
+            ClienteId: cliente.Id,
+            Competencia: competencia,
+            Valor: valorTotal,
+            DataVencimento: vencimento,
+            BeneficiarioNome: benefNome,
+            BeneficiarioDocumento: benefDoc,
+            BeneficiarioPj: cliente.TipoPessoa == TipoPessoa.PJ,
+            PagadorNome: inquilino.Nome,
+            PagadorDocumento: inquilino.Documento,
+            PagadorPj: inquilino.TipoPessoa == TipoPessoa.PJ,
+            Descricao: MontarDescricaoServico(competencia, valorAluguel, condo, iptu),
+            Credenciais: credenciais);
+
+        var resultado = await provider.GerarAsync(pedido, ct);
+        if (!resultado.Sucesso || resultado.PdfBytes is null || resultado.PdfBytes.Length == 0)
+        {
+            throw new InvalidOperationException(
+                resultado.MensagemErro
+                ?? $"Falha ao gerar boleto via provedor '{integracao.ProvedorCodigo}'.");
+        }
+
+        return new BoletoGeradoLocal(
+            integracao.ProvedorCodigo,
+            resultado.NossoNumero ?? $"BOL{nfseId.ToString("N")[..10]}",
+            resultado.LinhaDigitavel ?? "",
+            resultado.IdExterno,
+            resultado.PdfBytes);
+    }
+
+    private Dictionary<string, string> MontarCredenciaisBoleto(IntegracaoBoletoCliente integracao)
+    {
+        var mapa = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var kv in integracao.LerConfiguracaoPublica())
+            mapa[kv.Key] = kv.Value;
+
+        try
+        {
+            var json = protector.Unprotect(integracao.SegredosCifrados);
+            var segredos = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
+            if (segredos is not null)
+            {
+                foreach (var kv in segredos)
+                    mapa[kv.Key] = kv.Value;
+            }
+        }
+        catch (Exception)
+        {
+            throw new InvalidOperationException(
+                "Não foi possível recuperar os segredos da integração bancária. Regrave as credenciais na Minha Conta.");
+        }
+
+        return mapa;
     }
 
     private async Task<NfseEmissaoResultado> EmitirNfseNacionalAsync(

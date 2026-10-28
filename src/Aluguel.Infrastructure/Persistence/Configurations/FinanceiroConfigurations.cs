@@ -56,6 +56,8 @@ public class BoletoConfiguration : IEntityTypeConfiguration<Boleto>
         b.Property(x => x.Valor).HasColumnType("numeric(14,2)");
         b.Property(x => x.NossoNumero).HasMaxLength(40);
         b.Property(x => x.LinhaDigitavel).HasMaxLength(80);
+        b.Property(x => x.ProvedorCodigo).HasMaxLength(40);
+        b.Property(x => x.IdExterno).HasMaxLength(80);
         b.Property(x => x.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
         b.Property(x => x.StoragePathPdf);
 
