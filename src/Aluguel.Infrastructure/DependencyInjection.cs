@@ -146,21 +146,43 @@ public static class DependencyInjection
         {
             var s = configuration.GetSection(EmailOptions.SectionName);
             s.Bind(opts);
-            // Secrets / env (ASP.NET Core: Email__SmtpPassword; também EMAIL_SMTP_*).
+            // Graph OAuth2
+            if (configuration["EMAIL_GRAPH_TENANT_ID"] is { Length: > 0 } gt) opts.GraphTenantId = gt;
+            if (configuration["EMAIL_GRAPH_CLIENT_ID"] is { Length: > 0 } gc) opts.GraphClientId = gc;
+            if (configuration["EMAIL_GRAPH_CLIENT_SECRET"] is { Length: > 0 } gs) opts.GraphClientSecret = gs;
+            if (configuration["EMAIL_GRAPH_SENDER"] is { Length: > 0 } gsend) opts.GraphSenderUser = gsend;
+            // SMTP legado
             if (configuration["EMAIL_SMTP_USER"] is { Length: > 0 } eu) opts.SmtpUser = eu;
             if (configuration["EMAIL_SMTP_PASSWORD"] is { Length: > 0 } ep) opts.SmtpPassword = ep;
             if (configuration["EMAIL_SMTP_HOST"] is { Length: > 0 } eh) opts.SmtpHost = eh;
         });
         var emailOptsBound = new EmailOptions();
         configuration.GetSection(EmailOptions.SectionName).Bind(emailOptsBound);
+        if (configuration["EMAIL_GRAPH_TENANT_ID"] is { Length: > 0 } envTenant)
+            emailOptsBound.GraphTenantId = envTenant;
+        if (configuration["EMAIL_GRAPH_CLIENT_ID"] is { Length: > 0 } envClient)
+            emailOptsBound.GraphClientId = envClient;
+        if (configuration["EMAIL_GRAPH_CLIENT_SECRET"] is { Length: > 0 } envSecret)
+            emailOptsBound.GraphClientSecret = envSecret;
+        if (configuration["EMAIL_GRAPH_SENDER"] is { Length: > 0 } envSender)
+            emailOptsBound.GraphSenderUser = envSender;
         if (configuration["EMAIL_SMTP_USER"] is { Length: > 0 } envUser)
             emailOptsBound.SmtpUser = envUser;
         if (configuration["EMAIL_SMTP_PASSWORD"] is { Length: > 0 } envPass)
             emailOptsBound.SmtpPassword = envPass;
+
         var forcarMock = string.Equals(emailOptsBound.Ambiente, "Mock", StringComparison.OrdinalIgnoreCase);
-        var temCredencial = !string.IsNullOrWhiteSpace(emailOptsBound.SmtpUser)
+        var temGraph = !string.IsNullOrWhiteSpace(emailOptsBound.GraphTenantId)
+            && !string.IsNullOrWhiteSpace(emailOptsBound.GraphClientId)
+            && !string.IsNullOrWhiteSpace(emailOptsBound.GraphClientSecret);
+        var forcarGraph = string.Equals(emailOptsBound.Ambiente, "Graph", StringComparison.OrdinalIgnoreCase);
+        var temSmtp = !string.IsNullOrWhiteSpace(emailOptsBound.SmtpUser)
             && !string.IsNullOrWhiteSpace(emailOptsBound.SmtpPassword);
-        if (!forcarMock && temCredencial)
+        var forcarSmtp = string.Equals(emailOptsBound.Ambiente, "Smtp", StringComparison.OrdinalIgnoreCase);
+
+        if (!forcarMock && (forcarGraph || temGraph) && temGraph)
+            services.AddSingleton<IEmailSender, GraphEmailSender>();
+        else if (!forcarMock && (forcarSmtp || temSmtp) && temSmtp)
             services.AddSingleton<IEmailSender, SmtpEmailSender>();
         else
             services.AddSingleton<IEmailSender, LoggingEmailSender>();

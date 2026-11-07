@@ -49,8 +49,8 @@ export function FormularioDemonstracao() {
         </Link>
         <h1 className="mt-6 text-2xl font-bold text-[#003366]">Solicitar demonstração · Plano Pro</h1>
         <p className="mt-2 text-sm text-[#6c757d]">
-          Sem limites de utilização. Ao enviar, os dados vão por e-mail para a equipe comercial
-          (tthimoteoconsultoria@gmail.com).
+          Sem limites de utilização. Ao enviar, os dados vão por e-mail (Microsoft 365 / Graph) para a
+          equipe comercial (tthimoteoconsultoria@gmail.com).
         </p>
 
         {enviado ? (
