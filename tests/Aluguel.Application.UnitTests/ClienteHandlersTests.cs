@@ -120,7 +120,7 @@ public class ClienteHandlersTests
     public async Task Atualizar_plano_com_imoveis_excedentes_bloqueia()
     {
         var repo = new FakeClienteRepository();
-        var planoAvancado = new Plano(Guid.NewGuid(), PlanoCodigo.Avancado, "Avançado", 10, 5, true, 0, 249.99m);
+        var planoAvancado = new Plano(Guid.NewGuid(), PlanoCodigo.Avancado, "Avançado", 10, 5, true, 0, 249.99m, permiteBoleto: true);
         var planoTrial = new Plano(Guid.NewGuid(), PlanoCodigo.Trial, "Trial", 1, 1, false, 7, 0m);
         var cliente = Cliente.CriarPessoaFisica(Tenant, planoAvancado.Id, "Locador", "39053344705", null, null, null, null);
         repo.Adicionar(cliente);
@@ -153,7 +153,7 @@ public class ClienteHandlersTests
     {
         var repo = new FakeClienteRepository();
         var planoTrial = new Plano(Guid.NewGuid(), PlanoCodigo.Trial, "Trial", 1, 1, false, 7, 0m);
-        var planoBasico = new Plano(Guid.NewGuid(), PlanoCodigo.Basico, "Básico", 3, 1, false, 0, 49.99m);
+        var planoBasico = new Plano(Guid.NewGuid(), PlanoCodigo.Basico, "Básico", 3, 1, true, 0, 49.99m);
         var cliente = Cliente.CriarPessoaFisica(Tenant, planoTrial.Id, "Locador", "39053344705", null, null, null, null);
         repo.Adicionar(cliente);
 

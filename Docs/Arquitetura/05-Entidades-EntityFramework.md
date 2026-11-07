@@ -179,7 +179,7 @@ public class Assinatura : AggregateRoot, ITenantOwned
 
 public class PagamentoPlano : Entity, ITenantOwned { /* AssinaturaId, Valor, DataVencimento, DataPagamento, Status(StatusPagamentoPlano), MetodoPagamento, MercadoPagoPaymentId, Observacao */ }
 public class AuditoriaAssinatura : Entity, ITenantOwned { /* ClienteId, AssinaturaId?, UsuarioId?, Evento, DataHora, Ip, PlanoAnterior, NovoPlano, Valor, Descricao */ }
-public class Plano : Entity { public string Codigo=default!; public int? MaxImoveis; public int? MaxUsuarios; public bool PermiteNfse; public int TrialDias; public decimal? ValorMensal; }
+public class Plano : Entity { public string Codigo=default!; public int? MaxImoveis; public int? MaxUsuarios; public bool PermiteNfse; public bool PermiteBoleto; public int TrialDias; public decimal? ValorMensal; }
 ```
 
 ## 7. Imóvel, Inquilino, Contrato

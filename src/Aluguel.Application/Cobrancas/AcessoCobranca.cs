@@ -3,7 +3,7 @@ using Aluguel.Domain.Assinaturas;
 
 namespace Aluguel.Application.Cobrancas;
 
-/// <summary>Gestor/Analista só acessam Cobrança se o plano do cliente permitir NFS-e (e boletos).</summary>
+/// <summary>Gestor/Analista só acessam Cobrança se o plano do cliente permitir NFS-e.</summary>
 public static class AcessoCobranca
 {
     public static async Task GarantirPlanoPermiteAsync(
@@ -21,12 +21,12 @@ public static class AcessoCobranca
 
         if (cliente.PlanoId is null)
             throw new InvalidOperationException(
-                "O módulo Cobrança não está disponível: o cliente não possui plano com emissão de NFS-e e boletos.");
+                "O módulo Cobrança não está disponível: o cliente não possui plano com emissão de NFS-e.");
 
         var plano = await planos.ObterPorIdAsync(cliente.PlanoId.Value, ct);
         if (plano is null || !plano.PermiteModuloCobranca)
             throw new InvalidOperationException(
-                "O módulo Cobrança está disponível apenas para planos que permitem emissão de NFS-e e geração de boletos.");
+                "O módulo Cobrança está disponível apenas para planos que permitem emissão de NFS-e.");
     }
 
     public static async Task<bool> ClientePermiteAsync(

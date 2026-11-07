@@ -1,6 +1,6 @@
 # 13 — Integração boleto bancário (catálogo expansível)
 
-Geração de boletos de cobrança de aluguel via **API do banco/fintech** cadastrado no cliente. O módulo só aparece quando o plano permite Cobrança (`Plano.PermiteNfse` / `PermiteModuloCobranca`).
+Geração de boletos de cobrança de aluguel via **API do banco/fintech** cadastrado no cliente. O cadastro de integração e a emissão de boleto só aparecem quando o plano tem `Plano.PermiteBoleto` (Avançado/Pro). O módulo Cobrança (histórico/NFS-e) exige apenas `PermiteNfse` (Básico em diante, exceto Trial).
 
 ## Provedores iniciais
 

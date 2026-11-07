@@ -11,6 +11,9 @@ export function beneficiosDoPlano(plano: Plano): string[] {
     plano.permiteNfse
       ? "Emissão de NFS-e via API Nacional"
       : "Sem emissão de NFS-e neste plano",
+    plano.permiteBoleto
+      ? "Emissão de boleto bancário de cobrança"
+      : "Sem emissão de boleto neste plano",
     "Gestão de inquilinos e contratos",
     "Dashboard e indicadores operacionais",
   ];
@@ -18,7 +21,7 @@ export function beneficiosDoPlano(plano: Plano): string[] {
   if (plano.codigo === "TRIAL") {
     itens.push(`Período de avaliação de ${plano.trialDias || 7} dias`);
   } else if (plano.codigo === "PRO") {
-    itens.push("Condições comerciais negociadas com a Lucrare");
+    itens.push("Sem limites de utilização — sob consulta comercial com a Lucrare");
   } else {
     itens.push("Pagamento via PIX ou cartão (Mercado Pago — em breve)");
   }

@@ -139,8 +139,8 @@ export function FormularioMinhaConta({
     [planos, cliente.planoId],
   );
   const mostraNfse = Boolean(planoVigente?.permiteNfse);
-  /** Mesmo gate do módulo Cobrança: plano com NFS-e habilita boletos. */
-  const mostraBoleto = mostraNfse;
+  /** Boleto só em Avançado/Pro (`permiteBoleto`); NFS-e pode existir sem boleto. */
+  const mostraBoleto = Boolean(planoVigente?.permiteBoleto);
   const ehPj = cliente.tipoPessoa === "PJ";
 
   async function onSubmit(ev: FormEvent<HTMLFormElement>) {
@@ -448,7 +448,8 @@ export function FormularioMinhaConta({
                     <p className="mt-1 text-sm font-medium text-primary">{precoRotulo(p)}</p>
                     <p className="mt-2 text-xs text-muted-foreground">
                       Até {p.maxImoveis ?? "∞"} imóveis · {p.maxUsuarios ?? "∞"} usuários
-                      {p.permiteNfse ? " · Emite NFS-e" : ""}
+                      {p.permiteNfse ? " · NFS-e" : ""}
+                      {p.permiteBoleto ? " · Boleto" : ""}
                     </p>
                   </button>
                 </li>

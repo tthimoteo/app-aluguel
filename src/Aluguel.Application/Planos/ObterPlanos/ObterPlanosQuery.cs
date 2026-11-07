@@ -14,7 +14,7 @@ public sealed class ObterPlanosQueryHandler(IPlanoRepository repositorio)
         var planos = await repositorio.ListarAtivosAsync(cancellationToken);
         return planos
             .Select(p => new PlanoDto(p.Id, p.Codigo, p.Nome, p.MaxImoveis, p.MaxUsuarios,
-                p.PermiteNfse, p.TrialDias, p.ValorMensal))
+                p.PermiteNfse, p.PermiteBoleto, p.TrialDias, p.ValorMensal))
             .ToList();
     }
 }

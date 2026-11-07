@@ -14,13 +14,13 @@ Aplicação web **responsiva**, **multi-tenant**, hospedada em **subdomínio da 
 
 ## 3. Planos
 
-| Plano | Imóveis | Usuários | NFS-e | Preço | Pagamento |
-|---|---|---|---|---|---|
-| **Trial** | 1 cliente / imóvel | 1 | Não | Grátis (7 dias) | — |
-| **Básico** | até 3 | 1 | Não | R$ 49,99 | PIX ou cartão |
-| **Intermediário** | até 5 | até 3 | Sim | R$ 149,99 | PIX ou cartão |
-| **Avançado** | até 10 | até 5 | Sim | R$ 249,99 | PIX ou cartão |
-| **Pro** | mais de 10 | — | Sim | Negociado via contato | — |
+| Plano | Imóveis | Usuários | NFS-e | Boleto | Preço | Pagamento |
+|---|---|---|---|---|---|---|
+| **Trial** | 1 cliente / imóvel | 1 | Não | Não | Grátis (7 dias) | — |
+| **Básico** | até 3 | 1 | Sim | Não | R$ 49,99 | PIX ou cartão |
+| **Intermediário** | até 5 | até 3 | Sim | Não | R$ 149,99 | PIX ou cartão |
+| **Avançado** | até 10 | até 5 | Sim | Sim | R$ 249,99 | PIX ou cartão |
+| **Pro** | sem limites (sob consulta) | sem limites | Sim | Sim | Sob consulta | Contato comercial |
 
 A cobrança será destinada para a CC da **Lucrare Contabilidade Estratégia LTDA – CNPJ 51.095.456/0001-13**.
 
@@ -315,7 +315,7 @@ AuditLog
 - **CASO 1** — Dado que já existe usuário com CPF em um cliente, quando tentar cadastrar o mesmo CPF **nesse cliente**, o sistema deve apresentar erro informando que o CPF já está cadastrado nesse cliente. O mesmo CPF **pode** ser vinculado a outro cliente; nesse caso o usuário atua conforme o perfil de cada vinculação.
 - **CASO 2** — Dado plano que permite 10 imóveis com 10 imóveis cadastrados, quando optar por downgrade, o sistema deve alertar que é preciso inativar imóveis para se enquadrar no novo plano.
 - **CASO 3** — Dado contrato ativo para um inquilino em um imóvel, quando tentar cadastrar novo inquilino para o mesmo imóvel, o sistema deve impedir e alertar que é preciso inativar o contrato atual antes.
-- **CASO 4** — Dado cliente com plano Básico, quando tentar emitir NFS-e, o sistema deve impedir e informar que o plano não suporta emissão fiscal.
+- **CASO 4** — Dado cliente com plano Trial (ou outro sem NFS-e), quando tentar emitir NFS-e, o sistema deve impedir e informar que o plano não suporta emissão fiscal.
 - **CASO 5** — Dado assinatura Suspensa, quando o usuário acessar a Home, o sistema deve impedir o acesso e redirecionar para a tela de pagamento.
 - **CASO 6** — Dado pagamento já registrado para uma competência, quando tentar registrar novo pagamento, o sistema deve impedir a operação.
 - **CASO 7** — Dado que a NFS-e foi cancelada, quando emitir nova NFS-e para a mesma competência, o sistema deve permitir a emissão.

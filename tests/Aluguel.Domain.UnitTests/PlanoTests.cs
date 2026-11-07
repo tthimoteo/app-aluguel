@@ -8,11 +8,19 @@ public class PlanoTests
 {
     private static Plano Basico() =>
         new(Guid.NewGuid(), PlanoCodigo.Basico, "Básico", maxImoveis: 3, maxUsuarios: 1,
-            permiteNfse: false, trialDias: 0, valorMensal: 49.99m);
+            permiteNfse: true, trialDias: 0, valorMensal: 49.99m, permiteBoleto: false);
+
+    private static Plano Intermediario() =>
+        new(Guid.NewGuid(), PlanoCodigo.Intermediario, "Intermediário", maxImoveis: 5, maxUsuarios: 3,
+            permiteNfse: true, trialDias: 0, valorMensal: 149.99m, permiteBoleto: false);
+
+    private static Plano Avancado() =>
+        new(Guid.NewGuid(), PlanoCodigo.Avancado, "Avançado", maxImoveis: 10, maxUsuarios: 5,
+            permiteNfse: true, trialDias: 0, valorMensal: 249.99m, permiteBoleto: true);
 
     private static Plano Pro() =>
         new(Guid.NewGuid(), PlanoCodigo.Pro, "Pro", maxImoveis: null, maxUsuarios: null,
-            permiteNfse: true, trialDias: 0, valorMensal: null);
+            permiteNfse: true, trialDias: 0, valorMensal: null, permiteBoleto: true);
 
     [Theory]
     [InlineData(0, true)]
@@ -31,9 +39,21 @@ public class PlanoTests
     }
 
     [Fact]
-    public void Plano_Basico_nao_permite_nfse()
+    public void Plano_Basico_e_Intermediario_permitem_nfse_sem_boleto()
     {
-        Basico().PermiteNfse.Should().BeFalse();
+        Basico().PermiteNfse.Should().BeTrue();
+        Basico().PermiteBoleto.Should().BeFalse();
+        Intermediario().PermiteNfse.Should().BeTrue();
+        Intermediario().PermiteBoleto.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Plano_Avancado_e_Pro_permitem_nfse_e_boleto()
+    {
+        Avancado().PermiteNfse.Should().BeTrue();
+        Avancado().PermiteBoleto.Should().BeTrue();
+        Pro().PermiteNfse.Should().BeTrue();
+        Pro().PermiteBoleto.Should().BeTrue();
     }
 
     [Theory]
@@ -68,7 +88,11 @@ public class PlanoTests
     [Fact]
     public void PermiteModuloCobranca_segue_flag_de_nfse()
     {
-        Basico().PermiteModuloCobranca.Should().BeFalse();
+        Basico().PermiteModuloCobranca.Should().BeTrue();
+        Intermediario().PermiteModuloCobranca.Should().BeTrue();
+        Avancado().PermiteModuloCobranca.Should().BeTrue();
         Pro().PermiteModuloCobranca.Should().BeTrue();
+        new Plano(Guid.NewGuid(), PlanoCodigo.Trial, "Trial", 1, 1, false, 7, 0m)
+            .PermiteModuloCobranca.Should().BeFalse();
     }
 }

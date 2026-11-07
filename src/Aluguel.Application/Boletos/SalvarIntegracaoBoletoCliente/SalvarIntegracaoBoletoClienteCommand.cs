@@ -29,14 +29,15 @@ public sealed class SalvarIntegracaoBoletoClienteCommandHandler(
             throw new InvalidOperationException("Sem permissão para alterar a integração de boleto deste cliente.");
 
         if (cliente.PlanoId is null)
-            throw new InvalidOperationException("O cliente precisa de um plano com módulo de cobrança para cadastrar boletos.");
+            throw new InvalidOperationException(
+                "O cliente precisa de um plano que permita emissão de boletos (Avançado ou Pro).");
 
         var plano = await planos.ObterPorIdAsync(cliente.PlanoId.Value, cancellationToken)
             ?? throw new InvalidOperationException("Plano do cliente não encontrado.");
 
-        if (!plano.PermiteModuloCobranca && !currentUser.EhAdministrador)
+        if (!plano.PermiteBoleto && !currentUser.EhAdministrador)
             throw new InvalidOperationException(
-                "O plano contratado não permite emissão de boletos. Faça upgrade do plano para habilitar.");
+                "O plano contratado não permite emissão de boletos. Faça upgrade para Avançado ou Pro.");
 
         var def = ProvedorBoletoCatalogo.Obter(request.ProvedorCodigo)
             ?? throw new InvalidOperationException(

@@ -112,6 +112,8 @@ export type Plano = {
   maxImoveis: number | null;
   maxUsuarios: number | null;
   permiteNfse: boolean;
+  /** Geração de boleto bancário (Avançado/Pro). */
+  permiteBoleto: boolean;
   trialDias: number;
   valorMensal: number | null;
 };

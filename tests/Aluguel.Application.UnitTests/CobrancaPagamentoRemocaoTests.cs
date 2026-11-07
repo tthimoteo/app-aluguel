@@ -36,7 +36,7 @@ public class CobrancaPagamentoRemocaoTests
         bool nfseEmitida = true,
         DateTimeOffset? emitidaEm = null)
     {
-        var plano = new Plano(Guid.NewGuid(), PlanoCodigo.Avancado, "Avançado", 10, 5, true, 0, 249.99m);
+        var plano = new Plano(Guid.NewGuid(), PlanoCodigo.Avancado, "Avançado", 10, 5, true, 0, 249.99m, permiteBoleto: true);
         var cliente = Cliente.CriarPessoaJuridica(
             Tenant, plano.Id, "Locadora Demo LTDA", "Locadora",
             "15809930000168", "12345", "8219999", null, "gestor@demo.local", null);

@@ -5,7 +5,7 @@ export type NavItem = {
   label: string;
   icone: "home" | "building" | "users" | "file" | "userCog" | "user" | "barChart" | "scroll" | "landmark" | "receipt";
   visivelPara: Perfil[] | "todos";
-  /** Se true, Gestor/Analista só veem o item quando o cliente do contexto permite Cobrança (plano NFS-e). */
+  /** Se true, Gestor/Analista só veem o item quando o plano do cliente permite NFS-e (módulo Cobrança). */
   exigeCobranca?: boolean;
 };
 
@@ -28,7 +28,7 @@ export const NAV_ITEMS: NavItem[] = [
 ];
 
 export type OpcoesMenu = {
-  /** Administrador: sempre true. Gestor/Analista: plano do cliente atual permite NFS-e/boletos. */
+  /** Administrador: sempre true. Gestor/Analista: plano do cliente atual permite NFS-e. */
   permiteCobranca?: boolean;
   ehAdministrador?: boolean;
 };

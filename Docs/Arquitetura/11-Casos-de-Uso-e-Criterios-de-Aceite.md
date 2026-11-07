@@ -65,9 +65,9 @@ Então o sistema deve impedir e alertar que existe contrato válido
 E orientar a inativar o contrato atual antes de cadastrar um novo
 ```
 
-### CASO 4 — Plano sem emissão fiscal
+### CASO 4 — Plano sem emissão fiscal (ex.: Trial)
 ```gherkin
-Dado um cliente com plano Básico
+Dado um cliente com plano Trial (sem NFS-e)
 Quando tentar emitir NFS-e
 Então o sistema deve impedir e informar que o plano não suporta emissão fiscal
 ```

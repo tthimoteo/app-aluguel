@@ -104,7 +104,7 @@ if (plano.MaxImoveis is int max && qtd >= max)
 ```
 
 - **Downgrade** valida limites antes de trocar o plano; se exceder, é bloqueado com alerta para inativar imóveis/usuários (**CASO 2**).
-- **Plano sem NFS-e** (Básico/Trial): emissão bloqueada por policy `PlanoComNfse` (**CASO 4**).
+- **Plano sem NFS-e** (Trial): emissão bloqueada por policy `PlanoComNfse` (**CASO 4**). Básico/Intermediário/Avançado/Pro permitem NFS-e; boleto só Avançado/Pro.
 - **Suspensa**: `AssinaturaSuspensaGuard` bloqueia todas as rotas exceto Login, Minha Conta e Pagamentos, redirecionando para pagamento (**CASO 5**).
 
 ```csharp

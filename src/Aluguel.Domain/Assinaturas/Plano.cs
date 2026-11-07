@@ -20,6 +20,8 @@ public class Plano : Entity
     public int? MaxImoveis { get; private set; }
     public int? MaxUsuarios { get; private set; }
     public bool PermiteNfse { get; private set; }
+    /// <summary>Geração de boleto bancário de cobrança de aluguel (Avançado/Pro).</summary>
+    public bool PermiteBoleto { get; private set; }
     public int TrialDias { get; private set; }
     public decimal? ValorMensal { get; private set; }
     public bool Ativo { get; private set; } = true;
@@ -29,7 +31,7 @@ public class Plano : Entity
     private Plano() { }
 
     public Plano(Guid id, string codigo, string nome, int? maxImoveis, int? maxUsuarios,
-        bool permiteNfse, int trialDias, decimal? valorMensal)
+        bool permiteNfse, int trialDias, decimal? valorMensal, bool permiteBoleto = false)
     {
         Id = id;
         Codigo = codigo;
@@ -37,6 +39,7 @@ public class Plano : Entity
         MaxImoveis = maxImoveis;
         MaxUsuarios = maxUsuarios;
         PermiteNfse = permiteNfse;
+        PermiteBoleto = permiteBoleto;
         TrialDias = trialDias;
         ValorMensal = valorMensal;
     }
@@ -54,8 +57,8 @@ public class Plano : Entity
     public bool SuportaUtilizacaoUsuarios(int totalAtual) => MaxUsuarios is null || totalAtual <= MaxUsuarios;
 
     /// <summary>
-    /// Módulo Cobrança (histórico NFS-e + boletos): liberado quando o plano permite NFS-e
-    /// (planos Intermediário/Avançado/Pro também geram boletos de aluguel).
+    /// Módulo Cobrança (histórico + emissão de NFS-e): liberado quando o plano permite NFS-e.
+    /// Boleto é flag à parte (<see cref="PermiteBoleto"/>).
     /// </summary>
     public bool PermiteModuloCobranca => PermiteNfse;
 }

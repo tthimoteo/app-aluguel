@@ -275,6 +275,10 @@ namespace Aluguel.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(60)")
                         .HasColumnName("nome");
 
+                    b.Property<bool>("PermiteBoleto")
+                        .HasColumnType("boolean")
+                        .HasColumnName("permite_boleto");
+
                     b.Property<bool>("PermiteNfse")
                         .HasColumnType("boolean")
                         .HasColumnName("permite_nfse");
@@ -310,6 +314,7 @@ namespace Aluguel.Infrastructure.Persistence.Migrations
                             MaxImoveis = 1,
                             MaxUsuarios = 1,
                             Nome = "Trial",
+                            PermiteBoleto = false,
                             PermiteNfse = false,
                             TrialDias = 7,
                             UpdatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
@@ -324,7 +329,8 @@ namespace Aluguel.Infrastructure.Persistence.Migrations
                             MaxImoveis = 3,
                             MaxUsuarios = 1,
                             Nome = "Básico",
-                            PermiteNfse = false,
+                            PermiteBoleto = false,
+                            PermiteNfse = true,
                             TrialDias = 0,
                             UpdatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             ValorMensal = 49.99m
@@ -338,6 +344,7 @@ namespace Aluguel.Infrastructure.Persistence.Migrations
                             MaxImoveis = 5,
                             MaxUsuarios = 3,
                             Nome = "Intermediário",
+                            PermiteBoleto = false,
                             PermiteNfse = true,
                             TrialDias = 0,
                             UpdatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
@@ -352,6 +359,7 @@ namespace Aluguel.Infrastructure.Persistence.Migrations
                             MaxImoveis = 10,
                             MaxUsuarios = 5,
                             Nome = "Avançado",
+                            PermiteBoleto = true,
                             PermiteNfse = true,
                             TrialDias = 0,
                             UpdatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
@@ -364,6 +372,7 @@ namespace Aluguel.Infrastructure.Persistence.Migrations
                             Codigo = "PRO",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Nome = "Pro",
+                            PermiteBoleto = true,
                             PermiteNfse = true,
                             TrialDias = 0,
                             UpdatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))

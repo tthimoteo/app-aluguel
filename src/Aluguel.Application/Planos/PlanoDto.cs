@@ -7,5 +7,6 @@ public sealed record PlanoDto(
     int? MaxImoveis,
     int? MaxUsuarios,
     bool PermiteNfse,
+    bool PermiteBoleto,
     int TrialDias,
     decimal? ValorMensal);

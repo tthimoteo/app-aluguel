@@ -36,7 +36,8 @@ public static class IdentitySeeder
             await db.SaveChangesAsync();
         }
 
-        var planoNfse = await db.Planos.FirstOrDefaultAsync(p => p.Codigo == PlanoCodigo.Intermediario);
+        // Demo usa Avançado: NFS-e + boleto (Básico/Intermediário emitem NFS-e sem boleto).
+        var planoNfse = await db.Planos.FirstOrDefaultAsync(p => p.Codigo == PlanoCodigo.Avancado);
 
         // Cliente Demo = emitente NFS-e (PJ) alinhado ao certificado A1 de testes.
         const string cnpjDemo = "15809930000168";
@@ -75,6 +76,13 @@ public static class IdentitySeeder
                 razaoDemo, cliente.NomeFantasia ?? "Cliente Demo",
                 cliente.InscricaoMunicipal, cliente.CnaePrincipal,
                 cliente.Telefone, cliente.Email, null);
+            await db.SaveChangesAsync();
+        }
+
+        // Garante Avançado no Cliente Demo (NFS-e + boleto para seeds/smoke).
+        if (planoNfse is not null && cliente.PlanoId != planoNfse.Id)
+        {
+            cliente.DefinirPlano(planoNfse.Id);
             await db.SaveChangesAsync();
         }
 

@@ -84,6 +84,12 @@ public sealed class GerarCobrancaCommandHandler(
         await AcessoCobranca.GarantirPlanoPermiteAsync(
             currentUser, clientes, planos, imovel.ClienteId, cancellationToken);
 
+        var clienteEmitente = await clientes.ObterPorIdAsync(imovel.ClienteId, cancellationToken)
+            ?? throw new InvalidOperationException("Cliente emitente não encontrado.");
+        Domain.Assinaturas.Plano? planoCliente = null;
+        if (clienteEmitente.PlanoId is { } planoId)
+            planoCliente = await planos.ObterPorIdAsync(planoId, cancellationToken);
+
         if (imovel.Status != Domain.Common.StatusAtivoInativo.Ativo)
             throw new InvalidOperationException("Somente imóveis ativos podem gerar cobrança.");
 
@@ -163,30 +169,33 @@ public sealed class GerarCobrancaCommandHandler(
             cobrancas.AdicionarDocumento(new DocumentoFiscal(imovel.TenantId, nfse.Id, TipoDocumentoFiscal.PDF, pdfPath, tamanhoBytes: pdfBytes.Length));
         }
 
-        var geracaoBoleto = await GerarBoletoBancarioAsync(
-            imovel, contrato.InquilinoId, nfse.Id, competencia, valorTotal, vencimento,
-            request.ValorAluguel, condo, iptu, cancellationToken);
+        if (planoCliente?.PermiteBoleto == true)
+        {
+            var geracaoBoleto = await GerarBoletoBancarioAsync(
+                imovel, contrato.InquilinoId, nfse.Id, competencia, valorTotal, vencimento,
+                request.ValorAluguel, condo, iptu, cancellationToken);
 
-        var boletoRel = $"{imovel.TenantId:D}/{nfse.Id:D}-boleto.pdf";
-        string boletoPath;
-        await using (var s = new MemoryStream(geracaoBoleto.PdfBytes))
-            boletoPath = await storage.UploadAsync(
-                BaixarArquivoCobrancaQueryHandler.BucketBoletos, boletoRel, s, "application/pdf", cancellationToken);
+            var boletoRel = $"{imovel.TenantId:D}/{nfse.Id:D}-boleto.pdf";
+            string boletoPath;
+            await using (var s = new MemoryStream(geracaoBoleto.PdfBytes))
+                boletoPath = await storage.UploadAsync(
+                    BaixarArquivoCobrancaQueryHandler.BucketBoletos, boletoRel, s, "application/pdf", cancellationToken);
 
-        var boleto = new Boleto(
-            imovel.TenantId,
-            imovel.ClienteId,
-            imovel.Id,
-            competencia,
-            valorTotal,
-            vencimento,
-            nfse.Id,
-            nossoNumero: geracaoBoleto.NossoNumero,
-            linhaDigitavel: geracaoBoleto.LinhaDigitavel,
-            provedorCodigo: geracaoBoleto.ProvedorCodigo,
-            idExterno: geracaoBoleto.IdExterno);
-        boleto.DefinirPdf(boletoPath);
-        cobrancas.AdicionarBoleto(boleto);
+            var boleto = new Boleto(
+                imovel.TenantId,
+                imovel.ClienteId,
+                imovel.Id,
+                competencia,
+                valorTotal,
+                vencimento,
+                nfse.Id,
+                nossoNumero: geracaoBoleto.NossoNumero,
+                linhaDigitavel: geracaoBoleto.LinhaDigitavel,
+                provedorCodigo: geracaoBoleto.ProvedorCodigo,
+                idExterno: geracaoBoleto.IdExterno);
+            boleto.DefinirPdf(boletoPath);
+            cobrancas.AdicionarBoleto(boleto);
+        }
 
         await cobrancas.SalvarAlteracoesAsync(cancellationToken);
 
