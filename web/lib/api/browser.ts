@@ -2,6 +2,8 @@ import type {
   CertificadoDigital,
   Cliente,
   CobrancaDetalhe,
+  AssinaturaAtual,
+  CancelarAssinaturaResultado,
   ContratarPlanoResultado,
   Contrato,
   Imovel,
@@ -266,6 +268,11 @@ export const bff = {
       method: "POST",
       body: JSON.stringify({ planoId }),
     }),
+  assinaturaAtual: () => bffFetch<AssinaturaAtual>("/api/assinaturas/atual"),
+  cancelarAssinatura: () =>
+    bffFetch<CancelarAssinaturaResultado>("/api/assinaturas/cancelar", { method: "POST" }),
+  revogarCancelamentoAssinatura: () =>
+    bffFetch<AssinaturaAtual>("/api/assinaturas/revogar-cancelamento", { method: "POST" }),
   pagamentoPlano: (pagamentoId: string) =>
     bffFetch<PagamentoPlanoPix>(`/api/assinaturas/pagamentos/${pagamentoId}`),
   simularPagamentoPix: (pagamentoId: string) =>

@@ -144,9 +144,40 @@ export type PagamentoPlanoPix = {
 
 export type ContratarPlanoResultado = {
   assinaturaId: string;
-  pagamentoId: string;
+  pagamentoId: string | null;
   statusAssinatura: string;
-  pagamento: PagamentoPlanoPix;
+  operacao: "Contratacao" | "Upgrade" | "DowngradeAgendado" | string;
+  mensagem: string;
+  pagamento: PagamentoPlanoPix | null;
+  proximaCobranca: string | null;
+  fimCicloPago: string | null;
+  planoAgendadoId: string | null;
+  planoAgendadoNome: string | null;
+};
+
+export type AssinaturaAtual = {
+  id: string;
+  clienteId: string;
+  planoId: string;
+  planoNome: string;
+  planoCodigo: string;
+  status: string;
+  valorMensal: number;
+  proximaCobranca: string | null;
+  fimCicloPago: string | null;
+  planoAgendadoId: string | null;
+  planoAgendadoNome: string | null;
+  cancelamentoSolicitadoEm: string | null;
+  cancelamentoPendente: boolean;
+  downgradeAgendado: boolean;
+};
+
+export type CancelarAssinaturaResultado = {
+  assinaturaId: string;
+  statusAssinatura: string;
+  fimCicloPago: string | null;
+  cancelamentoSolicitadoEm: string;
+  mensagem: string;
 };
 
 export type CertificadoDigital = {

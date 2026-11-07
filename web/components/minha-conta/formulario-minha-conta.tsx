@@ -25,6 +25,7 @@ import { Label } from "@/components/ui/label";
 import { IntegracaoBoletoForm } from "@/components/minha-conta/integracao-boleto-form";
 import { bff, BffError, type AtualizacaoClienteInput } from "@/lib/api/browser";
 import type {
+  AssinaturaAtual,
   AuthMe,
   CertificadoDigital,
   Cliente,
@@ -33,7 +34,7 @@ import type {
   ProvedorBoleto,
 } from "@/lib/api/types";
 import { formatarCpfCnpj, formatarData, mascaraTelefone } from "@/lib/format";
-import { beneficiosDoPlano, precoRotulo } from "@/lib/planos";
+import { beneficiosDoPlano, precoRotulo, tipoMudancaPlano } from "@/lib/planos";
 import { cn } from "@/lib/utils";
 
 const REGIMES = [
@@ -66,6 +67,7 @@ export function FormularioMinhaConta({
   certificado: certificadoInicial,
   boletoProvedores = [],
   integracaoBoleto = null,
+  assinatura: assinaturaInicial = null,
   variante = "minha-conta",
 }: {
   me: AuthMe;
@@ -75,6 +77,7 @@ export function FormularioMinhaConta({
   /** Catálogo expansível de bancos/APIs de boleto (só usado se o plano permite cobrança). */
   boletoProvedores?: ProvedorBoleto[];
   integracaoBoleto?: IntegracaoBoletoCliente | null;
+  assinatura?: AssinaturaAtual | null;
   /** Admin edita qualquer cliente e aplica plano sem fluxo de pagamento. */
   variante?: "minha-conta" | "admin";
 }) {
@@ -111,6 +114,8 @@ export function FormularioMinhaConta({
   const [planoModal, setPlanoModal] = useState<Plano | null>(null);
   const [aplicandoPlano, setAplicandoPlano] = useState(false);
   const [contratandoPix, setContratandoPix] = useState(false);
+  const [assinatura, setAssinatura] = useState<AssinaturaAtual | null>(assinaturaInicial);
+  const [cancelando, setCancelando] = useState(false);
 
   const [arquivoCert, setArquivoCert] = useState<File | null>(null);
   const [senhaCert, setSenhaCert] = useState("");
@@ -271,13 +276,64 @@ export function FormularioMinhaConta({
     try {
       const resultado = await bff.contratarPlano(plano.id);
       setPlanoModal(null);
+      if (resultado.operacao === "DowngradeAgendado") {
+        toast.success(resultado.mensagem);
+        try {
+          setAssinatura(await bff.assinaturaAtual());
+        } catch {
+          /* ignore */
+        }
+        router.refresh();
+        return;
+      }
+      if (!resultado.pagamentoId) {
+        toast.error("Cobrança PIX não foi gerada.");
+        return;
+      }
       router.push(`/minha-conta/pagamento-pix/${resultado.pagamentoId}`);
     } catch (e) {
-      toast.error(e instanceof BffError ? e.message : "Não foi possível gerar a cobrança PIX.");
+      toast.error(e instanceof BffError ? e.message : "Não foi possível alterar o plano.");
     } finally {
       setContratandoPix(false);
     }
   }
+
+  async function onCancelarAssinatura() {
+    if (
+      !window.confirm(
+        "Cancelar a assinatura? Você mantém acesso até o fim do período já pago; depois o login será bloqueado. Sem estorno.",
+      )
+    ) {
+      return;
+    }
+    setCancelando(true);
+    try {
+      const r = await bff.cancelarAssinatura();
+      toast.success(r.mensagem);
+      setAssinatura(await bff.assinaturaAtual());
+      router.refresh();
+    } catch (e) {
+      toast.error(e instanceof BffError ? e.message : "Não foi possível cancelar a assinatura.");
+    } finally {
+      setCancelando(false);
+    }
+  }
+
+  async function onRevogarCancelamento() {
+    setCancelando(true);
+    try {
+      const r = await bff.revogarCancelamentoAssinatura();
+      setAssinatura(r);
+      toast.success("Cancelamento revogado. A renovação mensal permanece ativa.");
+      router.refresh();
+    } catch (e) {
+      toast.error(e instanceof BffError ? e.message : "Não foi possível revogar o cancelamento.");
+    } finally {
+      setCancelando(false);
+    }
+  }
+
+  const mudancaModal = planoModal ? tipoMudancaPlano(planoVigente, planoModal) : null;
 
   return (
     <>
@@ -442,11 +498,62 @@ export function FormularioMinhaConta({
             Plano vigente{planoVigente ? `: ${planoVigente.nome}` : ""}.{" "}
             {ehAdmin
               ? "Clique em outro plano para aplicá-lo diretamente a este cliente."
-              : "Clique em outro plano para ver os serviços e pagar via PIX."}
+              : "Upgrade: cobrança imediata e novo ciclo. Downgrade: agendado na próxima renovação (sem estorno)."}
           </p>
+
+          {!ehAdmin && assinatura ? (
+            <div className="mb-4 space-y-2 text-sm">
+              {assinatura.proximaCobranca ? (
+                <p className="text-xs text-muted-foreground">
+                  Próxima renovação: {formatarData(assinatura.proximaCobranca)}
+                  {assinatura.fimCicloPago
+                    ? ` · Ciclo pago até ${formatarData(assinatura.fimCicloPago)}`
+                    : null}
+                </p>
+              ) : null}
+              {assinatura.downgradeAgendado ? (
+                <p className="rounded-[4px] bg-[#FFC107]/15 px-3 py-2 text-xs text-[#8A6D00]">
+                  Downgrade para <strong>{assinatura.planoAgendadoNome}</strong> agendado na próxima
+                  renovação. Sem estorno ou crédito do ciclo atual.
+                </p>
+              ) : null}
+              {assinatura.cancelamentoPendente ? (
+                <div className="rounded-[4px] bg-[#E74C3C]/10 px-3 py-2 text-xs text-[#C0392B]">
+                  <p>
+                    Cancelamento solicitado. Acesso até{" "}
+                    <strong>
+                      {assinatura.fimCicloPago ? formatarData(assinatura.fimCicloPago) : "o fim do ciclo"}
+                    </strong>
+                    ; depois o login será bloqueado.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="mt-2 h-8 rounded-[4px]"
+                    disabled={cancelando}
+                    onClick={() => void onRevogarCancelamento()}
+                  >
+                    Revogar cancelamento
+                  </Button>
+                </div>
+              ) : assinatura.status === "Ativa" ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-8 rounded-[4px] text-destructive"
+                  disabled={cancelando}
+                  onClick={() => void onCancelarAssinatura()}
+                >
+                  {cancelando ? "Cancelando…" : "Cancelar assinatura"}
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
+
           <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {planos.map((p) => {
               const vigente = p.id === cliente.planoId;
+              const agendado = assinatura?.planoAgendadoId === p.id;
               return (
                 <li key={p.id}>
                   <button
@@ -456,12 +563,15 @@ export function FormularioMinhaConta({
                       "flex h-full w-full flex-col rounded-[4px] border p-3 text-left transition-colors",
                       vigente
                         ? "border-primary bg-[#F4E4DC]/70 ring-1 ring-primary/40 dark:bg-accent"
-                        : "border-border hover:border-primary/50",
+                        : agendado
+                          ? "border-[#FFC107] bg-[#FFC107]/10"
+                          : "border-border hover:border-primary/50",
                     )}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <p className="font-semibold">{p.nome}</p>
                       {vigente ? <StatusBadge status="Vigente" /> : null}
+                      {agendado ? <StatusBadge status="Pendente" /> : null}
                     </div>
                     <p className="mt-1 text-sm font-medium text-primary">{precoRotulo(p)}</p>
                     <p className="mt-2 text-xs text-muted-foreground">
@@ -647,7 +757,11 @@ export function FormularioMinhaConta({
                 <DialogDescription>
                   {ehAdmin
                     ? "Detalhes dos serviços. Como Administrador, você pode aplicar este plano ao cliente sem passar pelo pagamento."
-                    : "Detalhes dos serviços. Ao continuar, geramos um QR Code PIX dinâmico via Banco Inter."}
+                    : mudancaModal === "downgrade"
+                      ? "Downgrade agendado para a próxima renovação. Sem estorno e sem crédito do ciclo atual. Exige limites compatíveis."
+                      : mudancaModal === "upgrade"
+                        ? "Upgrade imediato: geramos PIX do novo valor e reiniciamos o ciclo após a liquidação."
+                        : "Ao continuar, geramos um QR Code PIX dinâmico via Banco Inter."}
                 </DialogDescription>
               </DialogHeader>
               <div className="py-3">
@@ -657,10 +771,17 @@ export function FormularioMinhaConta({
                     <li key={item}>{item}</li>
                   ))}
                 </ul>
-                <p className="mt-4 text-xs text-muted-foreground">
-                  Pagamento via PIX destinado a TTHIMOTEO Consultoria e Serviços de Eng. Ltda — CNPJ
-                  15.809.930/0001-68 · Banco Inter · CC 44588184-4.
-                </p>
+                {mudancaModal !== "downgrade" ? (
+                  <p className="mt-4 text-xs text-muted-foreground">
+                    Pagamento via PIX destinado a TTHIMOTEO Consultoria e Serviços de Eng. Ltda — CNPJ
+                    15.809.930/0001-68 · Banco Inter · CC 44588184-4.
+                  </p>
+                ) : (
+                  <p className="mt-4 text-xs text-muted-foreground">
+                    Na próxima renovação o plano muda para {planoModal.nome} e a cobrança passa a ser{" "}
+                    {precoRotulo(planoModal)}.
+                  </p>
+                )}
               </div>
               <DialogFooter className="border-0 p-0">
                 <Button
@@ -689,10 +810,16 @@ export function FormularioMinhaConta({
                     onClick={() => void onContratarViaPix(planoModal)}
                   >
                     {contratandoPix
-                      ? "Gerando PIX…"
+                      ? mudancaModal === "downgrade"
+                        ? "Agendando…"
+                        : "Gerando PIX…"
                       : planoModal.valorMensal == null
                         ? "Sob consulta"
-                        : "Pagar com PIX"}
+                        : mudancaModal === "downgrade"
+                          ? "Agendar downgrade"
+                          : mudancaModal === "upgrade"
+                            ? "Pagar upgrade via PIX"
+                            : "Pagar com PIX"}
                   </Button>
                 )}
               </DialogFooter>

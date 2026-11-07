@@ -28,7 +28,9 @@ public class AssinaturaPixHandlersTests
 
         var r = await handler.Handle(new ContratarPlanoCommand(PlanoBasicoId), CancellationToken.None);
 
-        r.Pagamento.Status.Should().Be("Pendente");
+        r.Operacao.Should().Be("Contratacao");
+        r.Pagamento.Should().NotBeNull();
+        r.Pagamento!.Status.Should().Be("Pendente");
         r.Pagamento.PixCopiaCola.Should().NotBeNullOrWhiteSpace();
         r.Pagamento.Beneficiario.Cnpj.Should().Be("15809930000168");
         r.StatusAssinatura.Should().Be("PendentePagamento");
@@ -139,6 +141,18 @@ sealed class FakeAssinaturaRepository : IAssinaturaRepository
 
     public Task<Assinatura?> ObterPorPagamentoIdAsync(Guid pagamentoId, CancellationToken ct = default) =>
         Task.FromResult(Itens.FirstOrDefault(a => a.Pagamentos.Any(p => p.Id == pagamentoId)));
+
+    public Task<IReadOnlyList<Assinatura>> ListarParaProcessamentoCicloAsync(
+        DateTimeOffset agora, bool forcarTodas, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<Assinatura>>(
+            forcarTodas
+                ? Itens.Where(a => a.Status is StatusAssinatura.Ativa or StatusAssinatura.PendentePagamento).ToList()
+                : Itens.Where(a =>
+                    (a.CancelamentoSolicitadoEm != null && a.Status == StatusAssinatura.Ativa
+                        && (a.FimCicloPago == null || a.FimCicloPago <= agora))
+                    || (a.Status == StatusAssinatura.Ativa && a.CancelamentoSolicitadoEm == null
+                        && a.ProximaCobranca != null && a.ProximaCobranca <= agora)
+                    || a.Status == StatusAssinatura.PendentePagamento).ToList());
 
     public void Adicionar(Assinatura assinatura) => Itens.Add(assinatura);
 

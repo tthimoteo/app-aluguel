@@ -15,7 +15,7 @@ public class AssinaturaPixTests
     public void SolicitarContratacao_deixa_pendente_e_atualiza_plano()
     {
         var a = new Assinatura(Tenant, Cliente, PlanoBasico, 49.99m, StatusAssinatura.Trial);
-        a.SolicitarContratacao(PlanoInter, 149.99m);
+        a.IniciarPrimeiraContratacao(PlanoInter, 149.99m);
 
         a.Status.Should().Be(StatusAssinatura.PendentePagamento);
         a.PlanoId.Should().Be(PlanoInter);
@@ -48,7 +48,7 @@ public class AssinaturaPixTests
 
         var agora = DateTimeOffset.Parse("2026-11-07T15:00:00Z");
         p.ConfirmarPagamentoPix("E1234567890123456789012345678901", agora);
-        a.AtivarAposPagamento(agora);
+        a.AtivarAposPagamento(agora, PlanoBasico, 49.99m);
 
         p.Status.Should().Be(StatusPagamentoPlano.Pago);
         p.PixEndToEndId.Should().Be("E1234567890123456789012345678901");

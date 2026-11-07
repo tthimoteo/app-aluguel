@@ -24,6 +24,36 @@ public sealed record BeneficiarioPixDto(
 
 public sealed record ContratarPlanoResultadoDto(
     Guid AssinaturaId,
-    Guid PagamentoId,
+    Guid? PagamentoId,
     string StatusAssinatura,
-    PagamentoPlanoDto Pagamento);
+    /// <summary>Contratacao | Upgrade | DowngradeAgendado.</summary>
+    string Operacao,
+    string Mensagem,
+    PagamentoPlanoDto? Pagamento,
+    DateTimeOffset? ProximaCobranca,
+    DateTimeOffset? FimCicloPago,
+    Guid? PlanoAgendadoId,
+    string? PlanoAgendadoNome);
+
+public sealed record AssinaturaAtualDto(
+    Guid Id,
+    Guid ClienteId,
+    Guid PlanoId,
+    string PlanoNome,
+    string PlanoCodigo,
+    string Status,
+    decimal ValorMensal,
+    DateTimeOffset? ProximaCobranca,
+    DateTimeOffset? FimCicloPago,
+    Guid? PlanoAgendadoId,
+    string? PlanoAgendadoNome,
+    DateTimeOffset? CancelamentoSolicitadoEm,
+    bool CancelamentoPendente,
+    bool DowngradeAgendado);
+
+public sealed record CancelarAssinaturaResultadoDto(
+    Guid AssinaturaId,
+    string StatusAssinatura,
+    DateTimeOffset? FimCicloPago,
+    DateTimeOffset CancelamentoSolicitadoEm,
+    string Mensagem);

@@ -21,13 +21,15 @@ export default async function MinhaContaPage() {
     );
   }
 
-  const [cliente, planos, certificado, boletoProvedores, integracaoBoleto] = await Promise.all([
-    api.cliente(clienteId),
-    api.planos(),
-    api.certificadoCliente(clienteId),
-    api.boletoProvedores(),
-    api.integracaoBoleto(clienteId),
-  ]);
+  const [cliente, planos, certificado, boletoProvedores, integracaoBoleto, assinatura] =
+    await Promise.all([
+      api.cliente(clienteId),
+      api.planos(),
+      api.certificadoCliente(clienteId),
+      api.boletoProvedores(),
+      api.integracaoBoleto(clienteId),
+      api.assinaturaAtual(),
+    ]);
 
   return (
     <div>
@@ -42,6 +44,7 @@ export default async function MinhaContaPage() {
         certificado={certificado}
         boletoProvedores={boletoProvedores}
         integracaoBoleto={integracaoBoleto}
+        assinatura={assinatura}
       />
     </div>
   );

@@ -72,8 +72,11 @@ public sealed class ProcessarWebhookPixInterCommandHandler(
                 : ev.EndToEndId!;
 
             pagamentoTracked.ConfirmarPagamentoPix(endToEnd, agora);
-            assinatura.AtivarAposPagamento(agora);
+            // Reinicia o ciclo mensal com o plano/valor pagos (upgrade ou renovação).
+            assinatura.AtivarAposPagamento(agora, plano.Id, pagamentoTracked.Valor);
             cliente.DefinirPlano(plano.Id);
+            if (cliente.Status != Domain.Clientes.StatusCliente.Ativo)
+                cliente.DefinirStatus(Domain.Clientes.StatusCliente.Ativo);
 
             assinaturas.AdicionarAuditoria(new AuditoriaAssinatura(
                 assinatura.TenantId,
@@ -82,7 +85,9 @@ public sealed class ProcessarWebhookPixInterCommandHandler(
                 assinaturaId: assinatura.Id,
                 novoPlano: plano.Codigo,
                 valor: pagamentoTracked.Valor,
-                descricao: $"PIX liquidado endToEndId={endToEnd} — assinatura ativada no plano {plano.Nome}"));
+                descricao:
+                $"PIX liquidado endToEndId={endToEnd} — plano {plano.Nome}; " +
+                $"próxima cobrança {assinatura.ProximaCobranca:yyyy-MM-dd}"));
 
             await assinaturas.SalvarAlteracoesAsync(cancellationToken);
 

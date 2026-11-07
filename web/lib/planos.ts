@@ -1,6 +1,31 @@
 import type { Plano } from "@/lib/api/types";
 import { formatarMoeda } from "@/lib/format";
 
+const ORDEM: Record<string, number> = {
+  TRIAL: 0,
+  BASICO: 1,
+  INTERMEDIARIO: 2,
+  AVANCADO: 3,
+  PRO: 4,
+};
+
+export function ordemPlano(codigo: string | null | undefined): number {
+  if (!codigo) return 0;
+  return ORDEM[codigo.toUpperCase()] ?? 0;
+}
+
+export function tipoMudancaPlano(
+  atual: Plano | null,
+  destino: Plano,
+): "contratacao" | "upgrade" | "downgrade" | "mesmo" {
+  if (!atual || atual.codigo === "TRIAL") return "contratacao";
+  const a = ordemPlano(atual.codigo);
+  const b = ordemPlano(destino.codigo);
+  if (b > a) return "upgrade";
+  if (b < a) return "downgrade";
+  return "mesmo";
+}
+
 /** Serviços/benefícios exibidos no modal de troca de plano (especificação §3). */
 export function beneficiosDoPlano(plano: Plano): string[] {
   const imoveis = plano.maxImoveis == null ? "Imóveis ilimitados (sob consulta)" : `Até ${plano.maxImoveis} imóveis`;

@@ -38,6 +38,32 @@ public class AssinaturaRepository(AppDbContext db) : IAssinaturaRepository
             .FirstOrDefaultAsync(a => a.Id == pagamento.AssinaturaId, ct);
     }
 
+    public async Task<IReadOnlyList<Assinatura>> ListarParaProcessamentoCicloAsync(
+        DateTimeOffset agora, bool forcarTodas, CancellationToken ct = default)
+    {
+        var query = db.Assinaturas
+            .Include(a => a.Pagamentos)
+            .Where(a =>
+                a.Status == StatusAssinatura.Ativa
+                || a.Status == StatusAssinatura.PendentePagamento);
+
+        if (!forcarTodas)
+        {
+            query = query.Where(a =>
+                (a.CancelamentoSolicitadoEm != null
+                    && a.Status == StatusAssinatura.Ativa
+                    && (a.FimCicloPago == null || a.FimCicloPago <= agora))
+                || (a.Status == StatusAssinatura.Ativa
+                    && a.CancelamentoSolicitadoEm == null
+                    && a.ProximaCobranca != null
+                    && a.ProximaCobranca <= agora)
+                || (a.Status == StatusAssinatura.PendentePagamento
+                    && a.InicioTolerancia != null));
+        }
+
+        return await query.OrderBy(a => a.ProximaCobranca).ToListAsync(ct);
+    }
+
     public void Adicionar(Assinatura assinatura) => db.Assinaturas.Add(assinatura);
 
     public void AdicionarPagamento(PagamentoPlano pagamento) => db.PagamentosPlano.Add(pagamento);

@@ -1,5 +1,7 @@
 using System.Security.Cryptography;
 using Aluguel.Application.Abstractions;
+using Aluguel.Domain.Assinaturas;
+using Aluguel.Domain.Clientes;
 using Aluguel.Domain.Usuarios;
 using Aluguel.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
@@ -145,6 +147,25 @@ public class AuthService(
 
         if (escolhido is null)
             return ContextoAuth.Falha("Você não está vinculado a este cliente.");
+
+        var cliente = await db.Clientes.AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == escolhido.ClienteId, ct);
+        if (cliente is null)
+            return ContextoAuth.Falha("Cliente vinculado não encontrado.");
+
+        if (cliente.Status == StatusCliente.Bloqueado)
+            return ContextoAuth.Falha(
+                "Acesso bloqueado: a assinatura foi encerrada ao fim do período pago. " +
+                "Entre em contato com a Lucrare para reativar.");
+
+        if (cliente.Status == StatusCliente.Inativo)
+            return ContextoAuth.Falha("Cliente inativo. Entre em contato com o administrador.");
+
+        var assinaturaCancelada = await db.Assinaturas.AsNoTracking().AnyAsync(a =>
+            a.ClienteId == escolhido.ClienteId && a.Status == StatusAssinatura.Cancelada, ct);
+        if (assinaturaCancelada && cliente.Status != StatusCliente.Ativo)
+            return ContextoAuth.Falha(
+                "Assinatura cancelada. Contrate um novo plano para recuperar o acesso.");
 
         return ContextoAuth.Cliente(escolhido.ClienteId, escolhido.Perfil.ToString());
     }

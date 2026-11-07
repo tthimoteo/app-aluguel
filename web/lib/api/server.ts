@@ -12,6 +12,7 @@ import type {
   Imovel,
   Inquilino,
   IntegracaoBoletoCliente,
+  AssinaturaAtual,
   PagamentoPlanoPix,
   Pagina,
   Plano,
@@ -81,6 +82,14 @@ function qs(params: Record<string, string | number | undefined | null>): string 
 export const api = {
   me: () => apiFetch<AuthMe>("/api/auth/me"),
   planos: () => apiFetch<Plano[]>("/api/planos"),
+  assinaturaAtual: async () => {
+    try {
+      return await apiFetch<AssinaturaAtual>("/api/assinaturas/atual");
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 404) return null;
+      throw e;
+    }
+  },
   pagamentoPlano: (pagamentoId: string) =>
     apiFetch<PagamentoPlanoPix>(`/api/assinaturas/pagamentos/${pagamentoId}`),
   clientes: (opts?: { termo?: string; take?: number }) =>

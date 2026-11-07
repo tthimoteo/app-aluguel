@@ -15,6 +15,12 @@ public interface IAssinaturaRepository
 
     Task<Assinatura?> ObterPorPagamentoIdAsync(Guid pagamentoId, CancellationToken ct = default);
 
+    /// <summary>
+    /// Assinaturas candidatas a renovação, efetivaçao de cancelamento ou suspensão por inadimplência.
+    /// </summary>
+    Task<IReadOnlyList<Assinatura>> ListarParaProcessamentoCicloAsync(
+        DateTimeOffset agora, bool forcarTodas, CancellationToken ct = default);
+
     void Adicionar(Assinatura assinatura);
 
     void AdicionarPagamento(PagamentoPlano pagamento);

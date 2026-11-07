@@ -75,15 +75,15 @@ Sempre que o Banco Inter informar a compensação de um pagamento PIX pendente, 
 
 #### Upgrade de Plano
 
-Permitido a qualquer momento. Ao solicitar: alterar imediatamente os limites; registrar a alteração; registrar histórico. Exemplos: Básico→Intermediário, Básico→Avançado, Intermediário→Avançado, Avançado→Pro.
+**Imediato.** Ao solicitar: gera cobrança PIX do **novo valor**, reinicia o ciclo após a liquidação (sem crédito do período anterior) e aplica os novos limites. Exemplos: Básico→Intermediário, Básico→Avançado, Intermediário→Avançado, Avançado→Pro.
 
 #### Downgrade de Plano
 
-Permitido desde que a utilização atual seja compatível com os limites do plano desejado. Antes de efetivar, validar: quantidade de imóveis; quantidade de usuários; demais limites. Se excedidos, o downgrade é **bloqueado** até adequação dos dados.
+**Agendado para a próxima renovação.** Permitido somente se a utilização atual (imóveis e usuários ativos) for compatível com os limites do plano desejado; caso contrário fica **bloqueado** até adequação. Sem estorno e sem crédito do ciclo vigente. Na renovação: aplica o plano menor e cobra o novo valor via PIX.
 
 #### Cancelamento da Assinatura
 
-Solicitado em "Minha Conta". Ao cancelar: nenhuma nova cobrança é gerada; o plano permanece ativo até o fim do ciclo já pago; após o ciclo, a assinatura passa a **"Suspensa"**. **Nenhum dado do cliente é excluído** automaticamente.
+Solicitado em "Minha Conta". Ao cancelar: nenhuma nova cobrança é gerada; o plano permanece ativo até o fim do ciclo já pago; após o ciclo, a assinatura passa a **"Cancelada"** e o **login é bloqueado**. **Nenhum dado do cliente é excluído** automaticamente.
 
 #### Status da Assinatura
 

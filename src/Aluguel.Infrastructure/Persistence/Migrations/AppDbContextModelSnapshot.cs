@@ -34,6 +34,10 @@ namespace Aluguel.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("cancelada_em");
 
+                    b.Property<DateTimeOffset?>("CancelamentoSolicitadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cancelamento_solicitado_em");
+
                     b.Property<Guid>("ClienteId")
                         .HasColumnType("uuid")
                         .HasColumnName("cliente_id");
@@ -62,6 +66,10 @@ namespace Aluguel.Infrastructure.Persistence.Migrations
                         .HasMaxLength(60)
                         .HasColumnType("character varying(60)")
                         .HasColumnName("mercado_pago_subscription_id");
+
+                    b.Property<Guid?>("PlanoAgendadoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("plano_agendado_id");
 
                     b.Property<Guid>("PlanoId")
                         .HasColumnType("uuid")
@@ -92,10 +100,18 @@ namespace Aluguel.Infrastructure.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("pk_assinatura");
 
+                    b.HasIndex("CancelamentoSolicitadoEm")
+                        .HasDatabaseName("ix_assinatura_cancelamento_solicitado")
+                        .HasFilter("cancelamento_solicitado_em IS NOT NULL");
+
                     b.HasIndex("ClienteId")
                         .IsUnique()
                         .HasDatabaseName("ux_assinatura_cliente_vigente")
                         .HasFilter("status IN ('Trial','PendentePagamento','Ativa')");
+
+                    b.HasIndex("PlanoAgendadoId")
+                        .HasDatabaseName("ix_assinatura_plano_agendado")
+                        .HasFilter("plano_agendado_id IS NOT NULL");
 
                     b.HasIndex("PlanoId")
                         .HasDatabaseName("ix_assinatura_plano_id");
@@ -1855,6 +1871,12 @@ namespace Aluguel.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_assinatura_clientes_cliente_id");
+
+                    b.HasOne("Aluguel.Domain.Assinaturas.Plano", null)
+                        .WithMany()
+                        .HasForeignKey("PlanoAgendadoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_assinatura_planos_plano_agendado_id");
 
                     b.HasOne("Aluguel.Domain.Assinaturas.Plano", null)
                         .WithMany()

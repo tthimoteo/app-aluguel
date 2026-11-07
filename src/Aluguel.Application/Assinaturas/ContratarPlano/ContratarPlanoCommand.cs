@@ -8,8 +8,9 @@ using MediatR;
 namespace Aluguel.Application.Assinaturas.ContratarPlano;
 
 /// <summary>
-/// Contrata/troca plano: cria cobrança PIX no Banco Inter e deixa a assinatura
-/// em <c>PendentePagamento</c> até o webhook de liquidação (§3).
+/// Contrata ou altera plano:
+/// upgrade = PIX imediato e reinício de ciclo após liquidação;
+/// downgrade = agendado para a próxima renovação (sem estorno/crédito).
 /// </summary>
 public sealed record ContratarPlanoCommand(Guid PlanoId) : IRequest<ContratarPlanoResultadoDto>;
 
@@ -63,81 +64,156 @@ public sealed class ContratarPlanoCommandHandler(
 
         var agora = clock.GetUtcNow();
         var vigente = await assinaturas.ObterVigentePorClienteAsync(clienteId, cancellationToken);
-        var planoAnteriorCodigo = await ResolverCodigoPlanoAsync(cliente.PlanoId, cancellationToken);
-        var assinaturaNova = vigente is null;
+        var planoAtual = cliente.PlanoId is { } pid
+            ? await planos.ObterPorIdAsync(pid, cancellationToken)
+            : null;
+        var codigoAtual = planoAtual?.Codigo;
 
+        var ehDowngrade = codigoAtual is not null
+            && PlanoRanking.EhDowngrade(codigoAtual, plano.Codigo);
+        var ehUpgrade = codigoAtual is null
+            || codigoAtual == PlanoCodigo.Trial
+            || PlanoRanking.EhUpgrade(codigoAtual, plano.Codigo);
+
+        if (ehDowngrade)
+            return await AgendarDowngradeAsync(
+                vigente, cliente, plano, codigoAtual!, tenantId, agora, cancellationToken);
+
+        if (!ehUpgrade && !PlanoRanking.MesmoNivel(codigoAtual, plano.Codigo))
+            throw new InvalidOperationException("Operação de plano não reconhecida.");
+
+        return await ContratarOuUpgradeComPixAsync(
+            vigente, cliente, plano, codigoAtual, tenantId, agora, cancellationToken);
+    }
+
+    private async Task<ContratarPlanoResultadoDto> AgendarDowngradeAsync(
+        Assinatura? vigente,
+        Cliente cliente,
+        Plano planoDestino,
+        string codigoAtual,
+        Guid tenantId,
+        DateTimeOffset agora,
+        CancellationToken ct)
+    {
+        if (vigente is null || vigente.Status != StatusAssinatura.Ativa)
+            throw new InvalidOperationException(
+                "Downgrade só pode ser agendado com assinatura ativa. Contrate um plano pago primeiro.");
+
+        vigente.AgendarDowngrade(planoDestino.Id);
+
+        assinaturas.AdicionarAuditoria(new AuditoriaAssinatura(
+            tenantId, cliente.Id, EventoAssinatura.Downgrade,
+            assinaturaId: vigente.Id,
+            usuarioId: currentUser.UserId,
+            planoAnterior: codigoAtual,
+            novoPlano: planoDestino.Codigo,
+            valor: planoDestino.ValorMensal,
+            descricao:
+            $"Downgrade agendado para {planoDestino.Nome} na próxima renovação " +
+            $"({vigente.ProximaCobranca:yyyy-MM-dd}) — sem estorno/crédito"));
+
+        await assinaturas.SalvarAlteracoesAsync(ct);
+
+        return new ContratarPlanoResultadoDto(
+            vigente.Id,
+            PagamentoId: null,
+            vigente.Status.ToString(),
+            Operacao: "DowngradeAgendado",
+            Mensagem:
+            $"Downgrade para {planoDestino.Nome} agendado para a próxima renovação" +
+            (vigente.ProximaCobranca is { } d ? $" ({d:dd/MM/yyyy})" : "") +
+            ". Sem estorno ou crédito do ciclo atual.",
+            Pagamento: null,
+            vigente.ProximaCobranca,
+            vigente.FimCicloPago,
+            vigente.PlanoAgendadoId,
+            planoDestino.Nome);
+    }
+
+    private async Task<ContratarPlanoResultadoDto> ContratarOuUpgradeComPixAsync(
+        Assinatura? vigente,
+        Cliente cliente,
+        Plano plano,
+        string? codigoAtual,
+        Guid tenantId,
+        DateTimeOffset agora,
+        CancellationToken ct)
+    {
+        var assinaturaNova = vigente is null;
         Assinatura assinatura;
+        string operacao;
+        EventoAssinatura evento;
+
+        var primeiraContratacao = vigente is null
+            || vigente.Status == StatusAssinatura.Trial
+            || codigoAtual is null or PlanoCodigo.Trial;
+
         if (vigente is null)
         {
             assinatura = new Assinatura(
-                tenantId, clienteId, plano.Id, plano.ValorMensal.Value, StatusAssinatura.PendentePagamento);
+                tenantId, cliente.Id, plano.Id, plano.ValorMensal!.Value, StatusAssinatura.PendentePagamento);
             assinaturas.Adicionar(assinatura);
+            operacao = "Contratacao";
+            evento = EventoAssinatura.Contratacao;
+        }
+        else if (primeiraContratacao)
+        {
+            assinatura = vigente;
+            assinatura.IniciarPrimeiraContratacao(plano.Id, plano.ValorMensal!.Value);
+            operacao = "Contratacao";
+            evento = EventoAssinatura.Contratacao;
         }
         else
         {
+            // Upgrade: mantém plano atual até liquidar; reinicia ciclo no webhook
             assinatura = vigente;
-            assinatura.SolicitarContratacao(plano.Id, plano.ValorMensal.Value);
+            assinatura.RegistrarIntencaoUpgrade();
+            operacao = "Upgrade";
+            evento = EventoAssinatura.Upgrade;
         }
 
-        var txId = GerarTxId();
-        var pagamento = assinatura.CriarPagamentoPix(
-            plano.Id, plano.ValorMensal.Value, agora.AddHours(1), txId);
-        // Assinatura já rastreada: coleção IReadOnly não propaga INSERT — adiciona explicitamente.
-        if (!assinaturaNova)
-            assinaturas.AdicionarPagamento(pagamento);
-
-        var cob = await pix.CriarCobrancaImediataAsync(
-            new InterPixCobrancaPedido(
-                TxId: txId,
-                Valor: plano.ValorMensal.Value,
-                SolicitacaoPagador: $"Assinatura Lucrare — plano {plano.Nome}"),
-            cancellationToken);
-
-        if (!cob.Sucesso || string.IsNullOrWhiteSpace(cob.PixCopiaCola))
-        {
-            pagamento.Cancelar(cob.MensagemErro ?? "Falha ao criar cobrança PIX no Banco Inter");
-            await assinaturas.SalvarAlteracoesAsync(cancellationToken);
-            throw new InvalidOperationException(
-                cob.MensagemErro ?? "Não foi possível gerar o QR Code PIX. Tente novamente em instantes.");
-        }
-
-        pagamento.RegistrarQrCode(cob.PixCopiaCola, cob.QrCodeBase64, cob.Location);
-
-        var evento = planoAnteriorCodigo is null or PlanoCodigo.Trial
-            ? EventoAssinatura.Contratacao
-            : CompararPlanos(planoAnteriorCodigo, plano.Codigo);
+        var (pagamento, _) = await AssinaturaPixHelper.CriarCobrancaPixAsync(
+            assinatura,
+            plano.Id,
+            plano.ValorMensal!.Value,
+            $"Assinatura Lucrare — plano {plano.Nome} ({operacao})",
+            assinaturaJaRastreada: !assinaturaNova,
+            assinaturas,
+            pix,
+            agora,
+            ct);
 
         assinaturas.AdicionarAuditoria(new AuditoriaAssinatura(
-            tenantId, clienteId, evento,
+            tenantId, cliente.Id, evento,
             assinaturaId: assinatura.Id,
             usuarioId: currentUser.UserId,
-            planoAnterior: planoAnteriorCodigo,
+            planoAnterior: codigoAtual,
             novoPlano: plano.Codigo,
             valor: plano.ValorMensal,
-            descricao: $"Cobrança PIX gerada (txid {txId}) — aguardando liquidação"));
+            descricao: operacao == "Upgrade"
+                ? $"Upgrade imediato: PIX gerado (txid {pagamento.PixTxId}) — ciclo reinicia após liquidação"
+                : $"Cobrança PIX gerada (txid {pagamento.PixTxId}) — aguardando liquidação"));
 
-        await assinaturas.SalvarAlteracoesAsync(cancellationToken);
+        await assinaturas.SalvarAlteracoesAsync(ct);
 
         var beneficiario = pix.ObterBeneficiario();
-        var dto = new PagamentoPlanoDto(
-            pagamento.Id,
-            assinatura.Id,
-            clienteId,
-            plano.Id,
-            plano.Nome,
-            pagamento.Valor,
-            pagamento.Status.ToString(),
-            pagamento.MetodoPagamento?.ToString(),
-            pagamento.DataVencimento,
-            pagamento.DataPagamento,
-            pagamento.PixTxId,
-            pagamento.PixCopiaCola,
-            pagamento.PixQrCodeBase64,
-            new BeneficiarioPixDto(
-                beneficiario.Nome, beneficiario.Cnpj, beneficiario.Banco, beneficiario.ContaCorrente));
+        var dto = AssinaturaPixHelper.ParaDto(pagamento, cliente.Id, plano.Nome, beneficiario);
+
+        var mensagem = operacao == "Upgrade"
+            ? $"Upgrade para {plano.Nome}: pague o PIX para reiniciar o ciclo com o novo valor. Sem crédito do período anterior."
+            : $"PIX gerado para o plano {plano.Nome}. A assinatura é ativada após a liquidação.";
 
         return new ContratarPlanoResultadoDto(
-            assinatura.Id, pagamento.Id, assinatura.Status.ToString(), dto);
+            assinatura.Id,
+            pagamento.Id,
+            assinatura.Status.ToString(),
+            operacao,
+            mensagem,
+            dto,
+            assinatura.ProximaCobranca,
+            assinatura.FimCicloPago,
+            assinatura.PlanoAgendadoId,
+            null);
     }
 
     private async Task ValidarLimitesAsync(Cliente cliente, Plano plano, CancellationToken ct)
@@ -162,37 +238,8 @@ public sealed class ContratarPlanoCommandHandler(
         if (motivos.Count > 0)
         {
             throw new InvalidOperationException(
-                $"Não é possível contratar o plano {plano.Nome}: o cliente {string.Join("; ", motivos)}. " +
+                $"Não é possível alterar para o plano {plano.Nome}: o cliente {string.Join("; ", motivos)}. " +
                 "Adeque a utilização (inative imóveis/usuários excedentes) antes de alterar o plano.");
         }
-    }
-
-    private async Task<string?> ResolverCodigoPlanoAsync(Guid? planoId, CancellationToken ct)
-    {
-        if (planoId is null) return null;
-        var p = await planos.ObterPorIdAsync(planoId.Value, ct);
-        return p?.Codigo;
-    }
-
-    private static EventoAssinatura CompararPlanos(string anterior, string novo)
-    {
-        var ordem = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
-        {
-            [PlanoCodigo.Trial] = 0,
-            [PlanoCodigo.Basico] = 1,
-            [PlanoCodigo.Intermediario] = 2,
-            [PlanoCodigo.Avancado] = 3,
-            [PlanoCodigo.Pro] = 4,
-        };
-        var a = ordem.GetValueOrDefault(anterior, 0);
-        var b = ordem.GetValueOrDefault(novo, 0);
-        return b >= a ? EventoAssinatura.Upgrade : EventoAssinatura.Downgrade;
-    }
-
-    /// <summary>txid Inter: 26–35 caracteres [a-zA-Z0-9].</summary>
-    internal static string GerarTxId()
-    {
-        var raw = $"lucrare{Guid.NewGuid():N}";
-        return raw.Length > 35 ? raw[..35] : raw.PadRight(26, '0');
     }
 }

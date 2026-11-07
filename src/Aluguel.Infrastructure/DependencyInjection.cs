@@ -3,6 +3,7 @@ using Aluguel.Domain.Fiscal;
 using Aluguel.Infrastructure.Identity;
 using Aluguel.Infrastructure.Integrations.BoletoBancario;
 using Aluguel.Infrastructure.Integrations.NfseNacional;
+using Aluguel.Infrastructure.Assinaturas;
 using Aluguel.Infrastructure.Integrations.PixInter;
 using Aluguel.Infrastructure.Persistence;
 using Aluguel.Infrastructure.Persistence.Repositories;
@@ -57,6 +58,7 @@ public static class DependencyInjection
         services.AddSingleton<ISecretProtector, AesSecretProtector>();
         services.AddSingleton<INfsePdfGenerator, NfseDanfsePdfGenerator>();
         services.AddSingleton(TimeProvider.System);
+        services.AddHostedService<AssinaturaCicloHostedService>();
         services.AddHttpClient();
 
         services.Configure<NfseOptions>(opts =>

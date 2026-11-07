@@ -67,8 +67,18 @@ Em `Ambiente=Mock` o provider gera payload EMV-like local e o endpoint
 - `PagamentoPlano` — campos PIX: `PixTxId`, `PixCopiaCola`, `PixQrCodeBase64`, `PixEndToEndId`, `PlanoDestinoId`.
 - `AuditoriaAssinatura` — eventos `Contratacao` / `Upgrade` / `Downgrade` / `Pagamento`.
 
+## Ciclo de vida (recorrência mensal)
+
+| Operação | Quando | Efeito |
+|---|---|---|
+| **Upgrade** | Imediato | PIX do novo valor; após liquidação reinicia `ProximaCobranca`/`FimCicloPago` |
+| **Downgrade** | Próxima renovação | Valida limites; agenda `PlanoAgendadoId`; sem estorno/crédito |
+| **Cancelamento** | Fim do ciclo pago | Acesso até `FimCicloPago`; depois `Cancelada` + cliente `Bloqueado` (login negado) |
+| **Renovação** | `ProximaCobranca` | Job horário aplica downgrade agendado (se houver) e gera PIX |
+
+Endpoints adicionais: `GET /atual`, `POST /cancelar`, `POST /revogar-cancelamento`, `POST /processar-ciclo` (Admin).
+
 ## Limitações atuais
 
 - Somente **PIX** (cartão/Mercado Pago fora de escopo).
 - Plano **Pro** (valor nulo) permanece sob consulta — sem self-service.
-- Renovação automática recorrente ainda não agenda cobranças mensais (próximo incremento).

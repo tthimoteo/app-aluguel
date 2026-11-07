@@ -17,7 +17,15 @@ public class AssinaturaConfiguration : IEntityTypeConfiguration<Assinatura>
 
         b.HasOne<Cliente>().WithMany().HasForeignKey(x => x.ClienteId).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<Plano>().WithMany().HasForeignKey(x => x.PlanoId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<Plano>().WithMany().HasForeignKey(x => x.PlanoAgendadoId).OnDelete(DeleteBehavior.Restrict)
+            .IsRequired(false);
         b.HasMany(x => x.Pagamentos).WithOne().HasForeignKey(x => x.AssinaturaId).OnDelete(DeleteBehavior.Cascade);
+        b.HasIndex(x => x.PlanoAgendadoId)
+            .HasFilter("plano_agendado_id IS NOT NULL")
+            .HasDatabaseName("ix_assinatura_plano_agendado");
+        b.HasIndex(x => x.CancelamentoSolicitadoEm)
+            .HasFilter("cancelamento_solicitado_em IS NOT NULL")
+            .HasDatabaseName("ix_assinatura_cancelamento_solicitado");
         // Pagamentos expõe IReadOnlyCollection via AsReadOnly(); EF precisa do backing field para INSERT.
         b.Navigation(x => x.Pagamentos).HasField("_pagamentos").UsePropertyAccessMode(PropertyAccessMode.Field);
 
