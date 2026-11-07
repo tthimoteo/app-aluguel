@@ -85,14 +85,14 @@ public class CobrancaPagamentoRemocaoTests
 
     private static RemoverCobrancaCommandHandler Handler(Cenario c) =>
         new(c.Cobrancas, c.Clientes, c.Planos, c.Certificados, c.Storage, c.Protector,
-            c.NfseProvider, c.User, c.Relogio);
+            c.NfseProvider, c.User, c.Relogio, new FakeAuditoriaService());
 
     [Fact]
     public async Task Registrar_pagamento_cria_pagamento_e_marca_boleto()
     {
         var c = Montar();
         var handler = new RegistrarPagamentoCobrancaCommandHandler(
-            c.Cobrancas, c.Clientes, c.Planos, c.User);
+            c.Cobrancas, c.Clientes, c.Planos, c.User, new FakeAuditoriaService());
 
         var dto = await handler.Handle(
             new RegistrarPagamentoCobrancaCommand(c.Nfse.Id, new DateOnly(2026, 10, 15), 2500m),
@@ -112,7 +112,7 @@ public class CobrancaPagamentoRemocaoTests
     {
         var c = Montar(comPagamento: true);
         var handler = new RegistrarPagamentoCobrancaCommandHandler(
-            c.Cobrancas, c.Clientes, c.Planos, c.User);
+            c.Cobrancas, c.Clientes, c.Planos, c.User, new FakeAuditoriaService());
 
         await handler.Invoking(h => h.Handle(new RegistrarPagamentoCobrancaCommand(c.Nfse.Id), default))
             .Should().ThrowAsync<InvalidOperationException>()

@@ -30,7 +30,7 @@ export const NAV_ITEMS: NavItem[] = [
     icone: "calculator",
     visivelPara: ["Gestor"],
   },
-  { href: "/auditoria", label: "Auditoria", icone: "scroll", visivelPara: ["Administrador", "Gestor"] },
+  { href: "/auditoria", label: "Auditoria", icone: "scroll", visivelPara: "todos" },
 ];
 
 export type OpcoesMenu = {

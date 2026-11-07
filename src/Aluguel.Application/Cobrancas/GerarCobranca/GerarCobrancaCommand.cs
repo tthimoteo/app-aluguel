@@ -2,10 +2,12 @@ using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Aluguel.Application.Abstractions;
+using Aluguel.Application.Auditoria;
 using Aluguel.Application.Cobrancas.BaixarArquivoCobranca;
 using Aluguel.Application.Clientes.EnviarCertificadoCliente;
 using Aluguel.Application.Common.Acesso;
 using Aluguel.Application.Common.Validacoes;
+using Aluguel.Domain.Auditoria;
 using Aluguel.Domain.Clientes;
 using Aluguel.Domain.Contratos;
 using Aluguel.Domain.Financeiro;
@@ -43,7 +45,8 @@ public sealed class GerarCobrancaCommandHandler(
     INfsePdfGenerator nfsePdf,
     IFileStorage storage,
     ISecretProtector protector,
-    ICurrentUser currentUser)
+    ICurrentUser currentUser,
+    IAuditoriaService auditoria)
     : IRequestHandler<GerarCobrancaCommand, CobrancaDetalheDto>
 {
     private static readonly Regex CompetenciaRegex = new(
@@ -184,7 +187,13 @@ public sealed class GerarCobrancaCommandHandler(
 
         await cobrancas.SalvarAlteracoesAsync(cancellationToken);
 
-        return (await cobrancas.ObterDetalheAsync(nfse.Id, cancellationToken))!;
+        var detalhe = (await cobrancas.ObterDetalheAsync(nfse.Id, cancellationToken))!;
+        await auditoria.RegistrarAsync(
+            AcaoAuditoria.Cadastro, TabelaAuditoria.Cobranca, detalhe.Id, detalhe.ClienteId,
+            null, AuditoriaSnapshots.DeCobranca(detalhe),
+            resumo: $"Cobrança {detalhe.Competencia} — {detalhe.ImovelNome}",
+            cancellationToken: cancellationToken);
+        return detalhe;
     }
 
     private sealed record BoletoGeradoLocal(

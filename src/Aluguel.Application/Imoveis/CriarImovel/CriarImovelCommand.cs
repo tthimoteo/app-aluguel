@@ -1,5 +1,7 @@
 using Aluguel.Application.Abstractions;
+using Aluguel.Application.Auditoria;
 using Aluguel.Application.Clientes;
+using Aluguel.Domain.Auditoria;
 using Aluguel.Domain.Imoveis;
 using MediatR;
 
@@ -14,7 +16,10 @@ public sealed record CriarImovelCommand(
     string? NumeroMatricula,
     EnderecoInput? Endereco) : IRequest<ImovelDto>;
 
-public sealed class CriarImovelCommandHandler(IImovelRepository repositorio, ICurrentTenant tenant)
+public sealed class CriarImovelCommandHandler(
+    IImovelRepository repositorio,
+    ICurrentTenant tenant,
+    IAuditoriaService auditoria)
     : IRequestHandler<CriarImovelCommand, ImovelDto>
 {
     public async Task<ImovelDto> Handle(CriarImovelCommand request, CancellationToken cancellationToken)
@@ -38,6 +43,13 @@ public sealed class CriarImovelCommandHandler(IImovelRepository repositorio, ICu
         repositorio.Adicionar(imovel);
         await repositorio.SalvarAlteracoesAsync(cancellationToken);
 
-        return imovel.ParaDto();
+        var dto = imovel.ParaDto();
+        await auditoria.RegistrarAsync(
+            AcaoAuditoria.Cadastro, TabelaAuditoria.Imovel, dto.Id, dto.ClienteId,
+            null, AuditoriaSnapshots.DeImovel(dto),
+            resumo: $"Imóvel «{dto.Nome}» cadastrado",
+            cancellationToken: cancellationToken);
+
+        return dto;
     }
 }

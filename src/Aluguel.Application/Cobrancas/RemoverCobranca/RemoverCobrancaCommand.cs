@@ -1,7 +1,9 @@
 using Aluguel.Application.Abstractions;
+using Aluguel.Application.Auditoria;
 using Aluguel.Application.Clientes.EnviarCertificadoCliente;
 using Aluguel.Application.Common.Acesso;
 using Aluguel.Application.Cobrancas.BaixarArquivoCobranca;
+using Aluguel.Domain.Auditoria;
 using Aluguel.Domain.Fiscal;
 using MediatR;
 
@@ -18,7 +20,8 @@ public sealed class RemoverCobrancaCommandHandler(
     ISecretProtector protector,
     INfseNacionalProvider nfseProvider,
     ICurrentUser currentUser,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    IAuditoriaService auditoria)
     : IRequestHandler<RemoverCobrancaCommand, RemoverCobrancaResultado?>
 {
     public async Task<RemoverCobrancaResultado?> Handle(
@@ -41,40 +44,61 @@ public sealed class RemoverCobrancaCommandHandler(
         if (nfse.Status == StatusNfse.Cancelada)
             throw new InvalidOperationException("Esta cobrança já está cancelada.");
 
+        var antes = new
+        {
+            nfse.Id,
+            nfse.ClienteId,
+            nfse.ImovelId,
+            nfse.Competencia,
+            nfse.ValorFaturado,
+            StatusNfse = nfse.Status.ToString(),
+            nfse.Numero,
+        };
+
         var agora = timeProvider.GetUtcNow();
         var temNfseEmitida = nfse.Status == StatusNfse.Emitida
                              && !string.IsNullOrWhiteSpace(nfse.ChaveAcesso)
                              && nfse.DataEmissao is not null;
 
+        RemoverCobrancaResultado resultado;
         if (!temNfseEmitida)
         {
             await cobrancas.RemoverCobrancaAsync(nfse.Id, cancellationToken);
             await cobrancas.SalvarAlteracoesAsync(cancellationToken);
-            return new RemoverCobrancaResultado(
+            resultado = new RemoverCobrancaResultado(
                 true, NfseCancelamentoAoRemover.SemNfseEmitida,
                 NfseCancelamentoPolitica.MensagemSemNfseEmitida);
         }
-
-        if (NfseCancelamentoPolitica.DentroDoPrazoAutomatico(nfse.DataEmissao, agora))
+        else if (NfseCancelamentoPolitica.DentroDoPrazoAutomatico(nfse.DataEmissao, agora))
         {
             await CancelarNaSefinEPersistirAsync(nfse, agora, cancellationToken);
             await cobrancas.RemoverBoletosDaNfseAsync(nfse.Id, cancellationToken);
             await cobrancas.SalvarAlteracoesAsync(cancellationToken);
-            return new RemoverCobrancaResultado(
+            resultado = new RemoverCobrancaResultado(
                 true, NfseCancelamentoAoRemover.CanceladaAutomaticamente,
                 NfseCancelamentoPolitica.MensagemCanceladaAutomaticamente);
         }
+        else
+        {
+            nfse.MarcarCancelada(
+                NfseCancelamentoPolitica.MotivoRemocaoCobranca +
+                " Cancelamento fiscal pendente no portal nacional da NFS-e (prazo de 24h ultrapassado).",
+                protocolo: null,
+                agora);
+            await cobrancas.RemoverBoletosDaNfseAsync(nfse.Id, cancellationToken);
+            await cobrancas.SalvarAlteracoesAsync(cancellationToken);
+            resultado = new RemoverCobrancaResultado(
+                true, NfseCancelamentoAoRemover.RequerCancelamentoManual,
+                NfseCancelamentoPolitica.MensagemRequerCancelamentoManual);
+        }
 
-        nfse.MarcarCancelada(
-            NfseCancelamentoPolitica.MotivoRemocaoCobranca +
-            " Cancelamento fiscal pendente no portal nacional da NFS-e (prazo de 24h ultrapassado).",
-            protocolo: null,
-            agora);
-        await cobrancas.RemoverBoletosDaNfseAsync(nfse.Id, cancellationToken);
-        await cobrancas.SalvarAlteracoesAsync(cancellationToken);
-        return new RemoverCobrancaResultado(
-            true, NfseCancelamentoAoRemover.RequerCancelamentoManual,
-            NfseCancelamentoPolitica.MensagemRequerCancelamentoManual);
+        await auditoria.RegistrarAsync(
+            AcaoAuditoria.Remocao, TabelaAuditoria.Cobranca, nfse.Id, nfse.ClienteId,
+            antes, new { resultado.CancelamentoNfse, resultado.Mensagem },
+            resumo: $"Cobrança {nfse.Competencia} removida",
+            cancellationToken: cancellationToken);
+
+        return resultado;
     }
 
     private async Task CancelarNaSefinEPersistirAsync(

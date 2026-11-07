@@ -1,6 +1,8 @@
 using Aluguel.Application.Abstractions;
+using Aluguel.Application.Auditoria;
 using Aluguel.Application.Common.Acesso;
 using Aluguel.Application.Usuarios;
+using Aluguel.Domain.Auditoria;
 using Aluguel.Domain.Usuarios;
 using MediatR;
 
@@ -19,7 +21,8 @@ public sealed record AtualizarUsuarioCommand(
 public sealed class AtualizarUsuarioCommandHandler(
     IUsuarioService usuarios,
     ICurrentUser currentUser,
-    IAuthService auth)
+    IAuthService auth,
+    IAuditoriaService auditoria)
     : IRequestHandler<AtualizarUsuarioCommand, UsuarioDto?>
 {
     public async Task<UsuarioDto?> Handle(AtualizarUsuarioCommand request, CancellationToken cancellationToken)
@@ -31,8 +34,17 @@ public sealed class AtualizarUsuarioCommandHandler(
         if (existente is null || !AcessoUsuarios.PodeGerenciar(currentUser, existente, clienteId))
             return null;
 
+        var antes = AuditoriaSnapshots.DeUsuario(existente);
         var dados = new AtualizacaoUsuario(
             request.Nome.Trim(), request.Email.Trim(), request.Telefone, request.Perfil, request.Status);
-        return await usuarios.AtualizarAsync(request.Id, clienteId, dados, cancellationToken);
+        var dto = await usuarios.AtualizarAsync(request.Id, clienteId, dados, cancellationToken);
+        if (dto is null) return null;
+
+        await auditoria.RegistrarAsync(
+            AcaoAuditoria.Alteracao, TabelaAuditoria.Usuario, dto.Id, clienteId,
+            antes, AuditoriaSnapshots.DeUsuario(dto),
+            resumo: $"Usuário «{dto.Nome}» alterado",
+            cancellationToken: cancellationToken);
+        return dto;
     }
 }

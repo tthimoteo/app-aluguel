@@ -12,9 +12,13 @@ public class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
         b.HasKey(x => x.Id);
         b.Property(x => x.Acao).HasMaxLength(40).IsRequired();
         b.Property(x => x.Tabela).HasMaxLength(60);
+        b.Property(x => x.UsuarioNome).HasMaxLength(120);
+        b.Property(x => x.Resumo).HasMaxLength(240);
         b.Property(x => x.ValoresAntes).HasColumnType("jsonb");
         b.Property(x => x.ValoresDepois).HasColumnType("jsonb");
         b.Property(x => x.Ip).HasMaxLength(60);
         b.HasIndex(x => new { x.TenantId, x.Tabela, x.RegistroId });
+        b.HasIndex(x => new { x.ClienteId, x.DataHora });
+        b.HasIndex(x => x.DataHora);
     }
 }

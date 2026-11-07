@@ -1,5 +1,7 @@
 using Aluguel.Application.Abstractions;
+using Aluguel.Application.Auditoria;
 using Aluguel.Application.Common.Acesso;
+using Aluguel.Domain.Auditoria;
 using Aluguel.Domain.Imoveis;
 using MediatR;
 
@@ -14,7 +16,10 @@ public sealed record DefinirCobrancaImovelCommand(
     decimal? DespesasCondominiais,
     decimal? ValorIptu) : IRequest<ImovelDto?>;
 
-public sealed class DefinirCobrancaImovelCommandHandler(IImovelRepository repositorio, ICurrentUser currentUser)
+public sealed class DefinirCobrancaImovelCommandHandler(
+    IImovelRepository repositorio,
+    ICurrentUser currentUser,
+    IAuditoriaService auditoria)
     : IRequestHandler<DefinirCobrancaImovelCommand, ImovelDto?>
 {
     public async Task<ImovelDto?> Handle(DefinirCobrancaImovelCommand request, CancellationToken cancellationToken)
@@ -22,6 +27,10 @@ public sealed class DefinirCobrancaImovelCommandHandler(IImovelRepository reposi
         var imovel = await repositorio.ObterPorIdAsync(request.Id, cancellationToken);
         if (imovel is null || !EscopoCliente.PodeAcessar(currentUser, imovel.ClienteId))
             return null;
+
+        var antes = AuditoriaSnapshots.DeCobrancaImovelEntidade(imovel);
+        var jaTinhaCobranca = !string.IsNullOrWhiteSpace(imovel.CompetenciaInicial)
+                              || imovel.DiaVencimentoCobranca is not null;
 
         var competencia = string.IsNullOrWhiteSpace(request.CompetenciaInicial)
             ? null
@@ -35,6 +44,16 @@ public sealed class DefinirCobrancaImovelCommandHandler(IImovelRepository reposi
             request.ValorIptu);
 
         await repositorio.SalvarAlteracoesAsync(cancellationToken);
-        return imovel.ParaDto();
+        var dto = imovel.ParaDto();
+        await auditoria.RegistrarAsync(
+            jaTinhaCobranca ? AcaoAuditoria.Alteracao : AcaoAuditoria.Cadastro,
+            TabelaAuditoria.Cobranca,
+            dto.Id,
+            dto.ClienteId,
+            antes,
+            AuditoriaSnapshots.DeCobrancaImovel(dto),
+            resumo: $"Dados de cobrança do imóvel «{dto.Nome}»",
+            cancellationToken: cancellationToken);
+        return dto;
     }
 }

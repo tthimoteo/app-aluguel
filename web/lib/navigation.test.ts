@@ -8,6 +8,7 @@ describe("itensVisiveis", () => {
     expect(labels).toContain("Imóveis");
     expect(labels).toContain("Relatórios");
     expect(labels).toContain("Cobrança");
+    expect(labels).toContain("Auditoria");
     expect(labels).not.toContain("Inquilinos");
     expect(labels).not.toContain("Contratos");
   });

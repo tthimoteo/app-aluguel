@@ -77,7 +77,7 @@ Tela mostra, **mês a mês**, o histórico de faturamento (XML e PDF para baixar
 | **Cobrança** | Administrador; Gestor/Analista (somente se o plano permitir NFS-e e boletos) | Histórico de cobranças por competência; filtros (competência, imóvel; cliente só Admin); detalhe com download de NFS-e (XML/PDF) e boleto (PDF). Gestor e Analista (e Admin) podem **gerar** cobrança, **marcar pagamento** e **remover** cobrança ainda não paga. |
 | **Relatório** | Administrador/Gestor/Analista | Extrair histórico de faturamentos, pagamentos, IPTU e demais despesas. |
 | **Dados para Contabilidade** | Gestor | Exportar Contas a Receber e Contas a Pagar em XLSX/CSV. |
-| **Auditoria** | AdminSistema/Gestor | Consultar logs de alterações. |
+| **Auditoria** | Todos (Administrador, Gestor, Analista) | Consultar logs de cadastro/alteração (imóvel, inquilino, contrato, cobrança, pagamento, usuário, cliente). Admin pode filtrar por cliente; demais perfis veem o cliente do contexto. |
 | **Tema** | Todos | Claro/escuro. |
 | **Sair** | Todos | Logout (revoga refresh token). |
 
@@ -94,7 +94,7 @@ Geração via **ClosedXML** (XLSX/CSV) e **QuestPDF** (PDF); arquivos no bucket 
 
 ## 6. Auditoria (§13)
 
-Toda alteração gera log (`audit_log`): usuário, data, hora, ação, IP, valores antes, valores depois. Eventos: **login, emissão, cancelamento, pagamento, despesas, alteração cadastral**.
+Toda alteração gera log (`audit_log`): usuário, data, hora, ação, IP, valores antes, valores depois, resumo e cliente. Eventos consultáveis na UI: **cadastro/alteração** de imóvel, inquilino, contrato, dados de cobrança, pagamento da cobrança, usuário e cliente; também **remoção** de cobrança. Outros eventos previstos (login, emissão, cancelamento, despesas) usam as mesmas ações/tabelas quando instrumentados.
 
 ## 7. Requisitos não funcionais (§14)
 

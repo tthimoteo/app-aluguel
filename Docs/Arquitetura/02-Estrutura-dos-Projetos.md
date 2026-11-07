@@ -149,7 +149,7 @@ web/
 │       ├── minha-conta/           # Gestor
 │       ├── relatorios/            # Administrador / Gestor / Analista
 │       ├── contabilidade/         # Gestor
-│       └── auditoria/             # Administrador / Gestor
+│       └── auditoria/             # Todos os perfis (consulta)
 ├── components/
 │   ├── ui/                        # shadcn/ui
 │   ├── layout/                    # sidebar, header, tema

@@ -1,6 +1,8 @@
 using Aluguel.Application.Abstractions;
+using Aluguel.Application.Auditoria;
 using Aluguel.Application.Clientes;
 using Aluguel.Application.Common.Acesso;
+using Aluguel.Domain.Auditoria;
 using Aluguel.Domain.Common;
 using Aluguel.Domain.Imoveis;
 using MediatR;
@@ -16,7 +18,10 @@ public sealed record AtualizarImovelCommand(
     StatusAtivoInativo Status,
     EnderecoInput? Endereco) : IRequest<ImovelDto?>;
 
-public sealed class AtualizarImovelCommandHandler(IImovelRepository repositorio, ICurrentUser currentUser)
+public sealed class AtualizarImovelCommandHandler(
+    IImovelRepository repositorio,
+    ICurrentUser currentUser,
+    IAuditoriaService auditoria)
     : IRequestHandler<AtualizarImovelCommand, ImovelDto?>
 {
     public async Task<ImovelDto?> Handle(AtualizarImovelCommand request, CancellationToken cancellationToken)
@@ -24,6 +29,8 @@ public sealed class AtualizarImovelCommandHandler(IImovelRepository repositorio,
         var imovel = await repositorio.ObterPorIdAsync(request.Id, cancellationToken);
         if (imovel is null || !EscopoCliente.PodeAcessar(currentUser, imovel.ClienteId))
             return null;
+
+        var antes = AuditoriaSnapshots.DeImovel(imovel.ParaDto());
 
         imovel.Atualizar(
             request.Nome.Trim(),
@@ -45,6 +52,12 @@ public sealed class AtualizarImovelCommandHandler(IImovelRepository repositorio,
         }
 
         await repositorio.SalvarAlteracoesAsync(cancellationToken);
-        return imovel.ParaDto();
+        var dto = imovel.ParaDto();
+        await auditoria.RegistrarAsync(
+            AcaoAuditoria.Alteracao, TabelaAuditoria.Imovel, dto.Id, dto.ClienteId,
+            antes, AuditoriaSnapshots.DeImovel(dto),
+            resumo: $"Imóvel «{dto.Nome}» alterado",
+            cancellationToken: cancellationToken);
+        return dto;
     }
 }

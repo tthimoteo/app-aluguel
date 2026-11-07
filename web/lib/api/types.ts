@@ -265,3 +265,18 @@ export type AuthMe = {
   roles: string[];
   clientes?: VinculoCliente[];
 };
+
+export type AuditoriaLog = {
+  id: number;
+  clienteId: string | null;
+  usuarioId: string | null;
+  usuarioNome: string | null;
+  acao: string;
+  tabela: string | null;
+  registroId: string | null;
+  resumo: string | null;
+  valoresAntes: string | null;
+  valoresDepois: string | null;
+  dataHora: string;
+  ip: string | null;
+};

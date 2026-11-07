@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getApiUrl } from "@/lib/api/config";
 import type {
+  AuditoriaLog,
   AuthMe,
   CertificadoDigital,
   Cliente,
@@ -142,4 +143,20 @@ export const api = {
   cobrancaResumo: (opts?: { clienteId?: string }) =>
     apiFetch<CobrancaResumo>(`/api/cobrancas/resumo${qs({ clienteId: opts?.clienteId })}`),
   cobranca: (id: string) => apiFetch<CobrancaDetalhe>(`/api/cobrancas/${id}`),
+  auditoria: (opts?: {
+    clienteId?: string;
+    tabela?: string;
+    acao?: string;
+    take?: number;
+    skip?: number;
+  }) =>
+    apiFetch<Pagina<AuditoriaLog>>(
+      `/api/auditoria${qs({
+        clienteId: opts?.clienteId,
+        tabela: opts?.tabela,
+        acao: opts?.acao,
+        take: opts?.take ?? 50,
+        skip: opts?.skip ?? 0,
+      })}`,
+    ),
 };
