@@ -16,7 +16,7 @@ export default async function ClientesPage({
   searchParams: Promise<{ termo?: string }>;
 }) {
   const usuario = await requireSession();
-  if (!temPerfil(usuario, "Administrador")) redirect("/");
+  if (!temPerfil(usuario, "Administrador")) redirect("/inicio");
 
   const { termo } = await searchParams;
   const pagina = await api.clientes({ termo, take: 50 });

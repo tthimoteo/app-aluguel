@@ -13,7 +13,7 @@ export default async function UsuariosPage({
   searchParams: Promise<{ termo?: string; clienteId?: string }>;
 }) {
   const usuario = await requireSession();
-  if (!temPerfil(usuario, "Administrador", "Gestor")) redirect("/");
+  if (!temPerfil(usuario, "Administrador", "Gestor")) redirect("/inicio");
 
   const { termo, clienteId } = await searchParams;
   const ehAdmin = temPerfil(usuario, "Administrador");

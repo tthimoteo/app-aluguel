@@ -12,7 +12,7 @@ export default async function EditarClientePage({
   params: Promise<{ id: string }>;
 }) {
   const usuario = await requireSession();
-  if (!temPerfil(usuario, "Administrador")) redirect("/");
+  if (!temPerfil(usuario, "Administrador")) redirect("/inicio");
 
   const { id } = await params;
   const me = await api.me();

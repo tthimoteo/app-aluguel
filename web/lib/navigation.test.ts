@@ -58,6 +58,7 @@ describe("itensVisiveis", () => {
 describe("tituloDaRota", () => {
   it("resolve o título a partir do caminho", () => {
     expect(tituloDaRota("/")).toBe("Início");
+    expect(tituloDaRota("/inicio")).toBe("Início");
     expect(tituloDaRota("/imoveis")).toBe("Imóveis");
     expect(tituloDaRota("/imoveis/novo")).toBe("Incluir imóvel");
     expect(tituloDaRota("/imoveis/a1b2c3d4-e5f6-7890-abcd-ef1234567890")).toBe("Imóvel");

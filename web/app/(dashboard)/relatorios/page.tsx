@@ -12,7 +12,7 @@ export default async function RelatoriosPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const usuario = await requireSession();
-  if (!temPerfil(usuario, "Administrador", "Gestor", "Analista")) redirect("/");
+  if (!temPerfil(usuario, "Administrador", "Gestor", "Analista")) redirect("/inicio");
 
   const sp = await searchParams;
   const ehAdmin = temPerfil(usuario, "Administrador");

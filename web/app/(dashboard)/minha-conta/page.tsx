@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 
 export default async function MinhaContaPage() {
   const usuario = await requireSession();
-  if (!temPerfil(usuario, "Gestor")) redirect("/");
+  if (!temPerfil(usuario, "Gestor")) redirect("/inicio");
 
   const me = await api.me();
   const clienteId = me.clienteId ?? usuario.clienteId;

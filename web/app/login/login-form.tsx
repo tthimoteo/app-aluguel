@@ -15,10 +15,16 @@ export function LoginForm() {
 
   function destinoSeguro(): string {
     const from = searchParams.get("from");
-    if (from && from.startsWith("/") && !from.startsWith("//") && !from.startsWith("/login")) {
+    if (
+      from &&
+      from.startsWith("/") &&
+      !from.startsWith("//") &&
+      !from.startsWith("/login") &&
+      from !== "/"
+    ) {
       return from;
     }
-    return "/";
+    return "/inicio";
   }
 
   async function onSubmit(formData: FormData) {
@@ -97,8 +103,19 @@ export function LoginForm() {
             {pending ? "Entrando..." : "Entrar"}
           </Button>
         </form>
+        <p className="mt-6 text-center text-sm text-muted-foreground">
+          Ainda não tem conta?{" "}
+          <a href="/cadastro" className="font-medium text-primary hover:underline">
+            Criar conta gratuita
+          </a>
+        </p>
+        <p className="mt-2 text-center text-sm">
+          <a href="/" className="text-muted-foreground hover:text-primary hover:underline">
+            Voltar à página inicial
+          </a>
+        </p>
         {process.env.NODE_ENV === "development" ? (
-          <p className="mt-6 text-center text-xs text-muted-foreground">
+          <p className="mt-4 text-center text-xs text-muted-foreground">
             Demo: <span className="font-medium">gestor@demo.local</span> / Gestor@123456
           </p>
         ) : null}

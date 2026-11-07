@@ -11,7 +11,7 @@ export type NavItem = {
 
 /** Menu §13 — visibilidade por perfil (Gestor/Analista/Administrador). */
 export const NAV_ITEMS: NavItem[] = [
-  { href: "/", label: "Início", icone: "home", visivelPara: "todos" },
+  { href: "/inicio", label: "Início", icone: "home", visivelPara: "todos" },
   { href: "/clientes", label: "Clientes", icone: "landmark", visivelPara: ["Administrador"] },
   { href: "/imoveis", label: "Imóveis", icone: "building", visivelPara: "todos" },
   {
@@ -55,7 +55,7 @@ const UUID =
   "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
 
 export function tituloDaRota(pathname: string): string {
-  if (pathname === "/") return "Início";
+  if (pathname === "/" || pathname === "/inicio") return "Início";
   if (new RegExp(`^/imoveis/${UUID}(\\?.*)?$`).test(pathname)) {
     return "Imóvel";
   }
@@ -67,7 +67,7 @@ export function tituloDaRota(pathname: string): string {
   }
   const candidatos: { href: string; label: string }[] = [
     ...Object.entries(TITULOS_FORA_DO_MENU).map(([href, label]) => ({ href, label })),
-    ...NAV_ITEMS.filter((i) => i.href !== "/").map((i) => ({ href: i.href, label: i.label })),
+    ...NAV_ITEMS.map((i) => ({ href: i.href, label: i.label })),
   ];
   candidatos.sort((a, b) => b.href.length - a.href.length);
   const match = candidatos.find(({ href }) => pathname === href || pathname.startsWith(`${href}/`));

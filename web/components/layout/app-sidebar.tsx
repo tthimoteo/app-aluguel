@@ -7,7 +7,7 @@ export function AppSidebar({ itens }: { itens: NavItem[] }) {
   return (
     <aside className="hidden h-svh w-64 shrink-0 flex-col bg-sidebar text-sidebar-foreground md:flex">
       <div className="border-b border-sidebar-border px-4 py-4">
-        <Link href="/" className="block">
+        <Link href="/inicio" className="block">
           <Logo />
         </Link>
       </div>

@@ -10,7 +10,7 @@ export default async function PagamentoPixPage({
   params: Promise<{ pagamentoId: string }>;
 }) {
   const usuario = await requireSession();
-  if (!temPerfil(usuario, "Gestor")) redirect("/");
+  if (!temPerfil(usuario, "Gestor")) redirect("/inicio");
 
   const { pagamentoId } = await params;
   const pagamento = await api.pagamentoPlano(pagamentoId);

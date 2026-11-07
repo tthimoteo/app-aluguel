@@ -25,7 +25,7 @@ export default async function CobrancasPage({
     const vinculo =
       (me.clienteId ? me.clientes?.find((c) => c.clienteId === me.clienteId) : undefined) ??
       me.clientes?.[0];
-    if (!vinculo?.permiteCobranca) redirect("/");
+    if (!vinculo?.permiteCobranca) redirect("/inicio");
   }
 
   const clienteFiltro = ehAdmin ? clienteId : me.clienteId ?? undefined;

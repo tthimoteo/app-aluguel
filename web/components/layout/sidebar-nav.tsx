@@ -12,7 +12,10 @@ export function SidebarNav({ itens, onNavigate }: { itens: NavItem[]; onNavigate
   return (
     <nav className="flex flex-col gap-1 px-3 py-2" aria-label="Menu principal">
       {itens.map((item) => {
-        const ativo = item.href === "/" ? pathname === "/" : pathname === item.href || pathname.startsWith(`${item.href}/`);
+        const ativo =
+          item.href === "/inicio"
+            ? pathname === "/inicio"
+            : pathname === item.href || pathname.startsWith(`${item.href}/`);
         return (
           <Link
             key={item.href}

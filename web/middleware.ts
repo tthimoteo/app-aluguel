@@ -4,9 +4,11 @@ import type { TokensAutenticacao } from "@/lib/api/types";
 import { applyAuthCookies, clearAuthCookies } from "@/lib/auth/cookie-response";
 import { ACCESS_COOKIE, REFRESH_COOKIE } from "@/lib/auth/constants";
 
-const PUBLIC_PREFIXES = ["/login", "/api/auth/login"];
+const PUBLIC_EXACT = new Set(["/", "/login", "/cadastro", "/demonstracao"]);
+const PUBLIC_PREFIXES = ["/login", "/cadastro", "/demonstracao", "/api/auth/login", "/api/planos", "/api/cadastro-publico"];
 
 function isPublic(pathname: string): boolean {
+  if (PUBLIC_EXACT.has(pathname)) return true;
   if (PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return true;
   if (pathname.startsWith("/_next")) return true;
   if (pathname === "/favicon.ico") return true;
@@ -55,8 +57,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(login);
   }
 
-  if (autenticado && pathname === "/login") {
-    return NextResponse.redirect(new URL("/", request.url));
+  if (autenticado && (pathname === "/login" || pathname === "/")) {
+    return NextResponse.redirect(new URL("/inicio", request.url));
   }
 
   return response;
