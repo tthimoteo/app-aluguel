@@ -19,6 +19,9 @@ public class NotaFiscalServicoConfiguration : IEntityTypeConfiguration<NotaFisca
         b.Property(x => x.ChaveAcesso).HasMaxLength(50);
         b.Property(x => x.Status).HasConversion<string>().HasMaxLength(25).IsRequired();
         b.Property(x => x.ValorServico).HasColumnType("numeric(14,2)");
+        b.Property(x => x.ValorAluguel).HasColumnType("numeric(14,2)");
+        b.Property(x => x.ValorIptu).HasColumnType("numeric(14,2)");
+        b.Property(x => x.ValorCondominio).HasColumnType("numeric(14,2)");
         b.Property(x => x.Desconto).HasColumnType("numeric(14,2)");
         b.Property(x => x.Multa).HasColumnType("numeric(14,2)");
         b.Property(x => x.Juros).HasColumnType("numeric(14,2)");

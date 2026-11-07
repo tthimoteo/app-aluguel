@@ -21,6 +21,7 @@ Base: análise integral de [`../APP-Aluguel-Especificacao.md`](../APP-Aluguel-Es
 | 11 | [Casos de Uso e Critérios de Aceite](11-Casos-de-Uso-e-Criterios-de-Aceite.md) | UC001–UC008 e cenários BDD (CASO 1–8). |
 | 12 | [Integração NFS-e Nacional](12-Integracao-Nfse-Nacional.md) | SEFIN (emissão DPS) vs ADN (consulta); sandbox; Cliente Demo PJ. |
 | 13 | [Integração Boleto Bancário](13-Integracao-Boleto-Bancario.md) | Catálogo expansível de bancos/APIs; cadastro no cliente; GerarCobranca. |
+| 14 | [Relatórios — Painel](14-Relatorios-Painel.md) | Dashboard, financeiro, imóveis, contratos e fiscal (UC008). |
 
 ## Stack (especificação §19)
 

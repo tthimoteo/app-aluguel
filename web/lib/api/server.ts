@@ -16,6 +16,7 @@ import type {
   ProvedorBoleto,
   Usuario,
 } from "@/lib/api/types";
+import type { RelatorioPainel } from "@/lib/api/relatorios";
 import { getAccessTokenFromJar } from "@/lib/auth/cookies";
 
 export class ApiError extends Error {
@@ -142,4 +143,24 @@ export const api = {
   cobrancaResumo: (opts?: { clienteId?: string }) =>
     apiFetch<CobrancaResumo>(`/api/cobrancas/resumo${qs({ clienteId: opts?.clienteId })}`),
   cobranca: (id: string) => apiFetch<CobrancaDetalhe>(`/api/cobrancas/${id}`),
+  relatorioPainel: (opts?: {
+    ano?: number;
+    mes?: number;
+    dataInicio?: string;
+    dataFim?: string;
+    clienteId?: string;
+    imovelId?: string;
+    diasAtrasoMinimos?: number;
+  }) =>
+    apiFetch<RelatorioPainel>(
+      `/api/relatorios/painel${qs({
+        ano: opts?.ano,
+        mes: opts?.mes,
+        dataInicio: opts?.dataInicio,
+        dataFim: opts?.dataFim,
+        clienteId: opts?.clienteId,
+        imovelId: opts?.imovelId,
+        diasAtrasoMinimos: opts?.diasAtrasoMinimos,
+      })}`,
+    ),
 };

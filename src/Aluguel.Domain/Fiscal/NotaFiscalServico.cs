@@ -16,6 +16,12 @@ public class NotaFiscalServico : AggregateRoot, ITenantOwned, IAuditable
     public string? ChaveAcesso { get; private set; }
     public StatusNfse Status { get; private set; } = StatusNfse.Rascunho;
     public decimal ValorServico { get; private set; }
+    /// <summary>Parcela de aluguel dentro do valor do serviço (relatórios / DRE).</summary>
+    public decimal ValorAluguel { get; private set; }
+    /// <summary>IPTU repassado na cobrança (pass-through).</summary>
+    public decimal ValorIptu { get; private set; }
+    /// <summary>Condomínio repassado na cobrança (pass-through).</summary>
+    public decimal ValorCondominio { get; private set; }
     public decimal Desconto { get; private set; }
     public decimal Multa { get; private set; }
     public decimal Juros { get; private set; }
@@ -38,7 +44,8 @@ public class NotaFiscalServico : AggregateRoot, ITenantOwned, IAuditable
 
     public NotaFiscalServico(Guid tenantId, Guid clienteId, Guid imovelId, string competencia,
         decimal valorServico, Guid? contratoId = null, Guid? inquilinoId = null,
-        decimal desconto = 0, decimal multa = 0, decimal juros = 0)
+        decimal desconto = 0, decimal multa = 0, decimal juros = 0,
+        decimal? valorAluguel = null, decimal? valorIptu = null, decimal? valorCondominio = null)
     {
         TenantId = tenantId;
         ClienteId = clienteId;
@@ -51,6 +58,15 @@ public class NotaFiscalServico : AggregateRoot, ITenantOwned, IAuditable
         Multa = multa;
         Juros = juros;
         ValorFaturado = valorServico - desconto + multa + juros;
+
+        var aluguel = valorAluguel ?? valorServico;
+        var iptu = valorIptu ?? 0m;
+        var condo = valorCondominio ?? 0m;
+        if (aluguel < 0 || iptu < 0 || condo < 0)
+            throw new ArgumentException("Parcelas da cobrança não podem ser negativas.");
+        ValorAluguel = aluguel;
+        ValorIptu = iptu;
+        ValorCondominio = condo;
     }
 
     public void MarcarEmitida(long numero, string serie, string chaveAcesso, Guid usuarioEmissorId,

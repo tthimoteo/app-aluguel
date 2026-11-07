@@ -114,7 +114,10 @@ public sealed class GerarCobrancaCommandHandler(
             competencia,
             valorTotal,
             contratoId: contrato.Id,
-            inquilinoId: contrato.InquilinoId);
+            inquilinoId: contrato.InquilinoId,
+            valorAluguel: request.ValorAluguel,
+            valorIptu: iptu,
+            valorCondominio: condo);
 
         cobrancas.AdicionarNfse(nfse);
 

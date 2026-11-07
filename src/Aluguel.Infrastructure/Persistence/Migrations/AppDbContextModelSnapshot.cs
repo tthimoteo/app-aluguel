@@ -1119,9 +1119,21 @@ namespace Aluguel.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("usuario_emissor_id");
 
+                    b.Property<decimal>("ValorAluguel")
+                        .HasColumnType("numeric(14,2)")
+                        .HasColumnName("valor_aluguel");
+
+                    b.Property<decimal>("ValorCondominio")
+                        .HasColumnType("numeric(14,2)")
+                        .HasColumnName("valor_condominio");
+
                     b.Property<decimal>("ValorFaturado")
                         .HasColumnType("numeric(14,2)")
                         .HasColumnName("valor_faturado");
+
+                    b.Property<decimal>("ValorIptu")
+                        .HasColumnType("numeric(14,2)")
+                        .HasColumnName("valor_iptu");
 
                     b.Property<decimal>("ValorServico")
                         .HasColumnType("numeric(14,2)")

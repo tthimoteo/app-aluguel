@@ -102,7 +102,7 @@ public static class CobrancaDemoSeeder
         DateTimeOffset emitidaEm, bool comPagamento, byte[] xmlAutorizado)
     {
         var nfse = new NotaFiscalServico(tenantId, clienteId, imovelId, competencia, valor,
-            inquilinoId: inquilinoId);
+            inquilinoId: inquilinoId, valorAluguel: valor, valorIptu: 0m, valorCondominio: 0m);
         // Chave real do XML autorizado SEFIN (fixture) — fallback demo só se o Id do XML não bater.
         var chave = ExtrairChave(xmlAutorizado) ?? $"NFe{numero}DEMO{competencia.Replace("/", "")}";
         nfse.MarcarEmitida(numero, "1", chave, emissorId, emitidaEm);
