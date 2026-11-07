@@ -205,8 +205,37 @@ namespace Aluguel.Infrastructure.Persistence.Migrations
                         .HasColumnName("metodo_pagamento");
 
                     b.Property<string>("Observacao")
-                        .HasColumnType("text")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
                         .HasColumnName("observacao");
+
+                    b.Property<string>("PixCopiaCola")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("pix_copia_cola");
+
+                    b.Property<string>("PixEndToEndId")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("pix_end_to_end_id");
+
+                    b.Property<string>("PixLocation")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("pix_location");
+
+                    b.Property<string>("PixQrCodeBase64")
+                        .HasColumnType("text")
+                        .HasColumnName("pix_qr_code_base64");
+
+                    b.Property<string>("PixTxId")
+                        .HasMaxLength(35)
+                        .HasColumnType("character varying(35)")
+                        .HasColumnName("pix_tx_id");
+
+                    b.Property<Guid>("PlanoDestinoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("plano_destino_id");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -236,6 +265,19 @@ namespace Aluguel.Infrastructure.Persistence.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_pagamento_plano_mercado_pago_payment_id")
                         .HasFilter("mercado_pago_payment_id IS NOT NULL");
+
+                    b.HasIndex("PixEndToEndId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_pagamento_plano_pix_e2e")
+                        .HasFilter("pix_end_to_end_id IS NOT NULL");
+
+                    b.HasIndex("PixTxId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_pagamento_plano_pix_txid")
+                        .HasFilter("pix_tx_id IS NOT NULL");
+
+                    b.HasIndex("PlanoDestinoId")
+                        .HasDatabaseName("ix_pagamento_plano_plano_destino_id");
 
                     b.ToTable("pagamento_plano", "app");
                 });
@@ -1840,6 +1882,13 @@ namespace Aluguel.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_pagamento_plano_assinatura_assinatura_id");
+
+                    b.HasOne("Aluguel.Domain.Assinaturas.Plano", null)
+                        .WithMany()
+                        .HasForeignKey("PlanoDestinoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_pagamento_plano_planos_plano_destino_id");
                 });
 
             modelBuilder.Entity("Aluguel.Domain.Clientes.Cliente", b =>

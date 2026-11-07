@@ -145,6 +145,7 @@ app.MapInquilinoEndpoints();
 app.MapContratoEndpoints();
 app.MapCobrancaEndpoints();
 app.MapBoletoEndpoints();
+app.MapAssinaturaEndpoints();
 app.MapRelatorioEndpoints();
 app.MapAuditoriaEndpoints();
 

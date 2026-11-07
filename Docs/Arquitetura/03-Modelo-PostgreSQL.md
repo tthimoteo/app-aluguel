@@ -150,7 +150,7 @@ CREATE TABLE app.assinatura (
     cancelada_em timestamptz NULL,
     fim_ciclo_pago timestamptz NULL,
     valor_mensal numeric(14,2) NOT NULL DEFAULT 0,
-    mercadopago_subscription_id varchar(60) NULL,
+    mercadopago_subscription_id varchar(60) NULL, -- legado
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
 );
@@ -162,18 +162,26 @@ CREATE TABLE app.pagamento_plano (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id uuid NOT NULL REFERENCES app.tenant(id),
     assinatura_id uuid NOT NULL REFERENCES app.assinatura(id),
+    plano_destino_id uuid NOT NULL REFERENCES app.plano(id),
     valor numeric(14,2) NOT NULL,
     data_vencimento timestamptz NOT NULL,
     data_pagamento timestamptz NULL,
     status varchar(20) NOT NULL DEFAULT 'Pendente'
         CHECK (status IN ('Pendente','Pago','Falhou','Estornado')),
     metodo_pagamento varchar(20) NULL CHECK (metodo_pagamento IN ('PIX','Cartao')),
-    mercadopago_payment_id varchar(60) NULL,
-    observacao text NULL,
+    mercadopago_payment_id varchar(60) NULL, -- legado
+    pix_tx_id varchar(35) NULL,
+    pix_copia_cola varchar(512) NULL,
+    pix_qr_code_base64 text NULL,
+    pix_end_to_end_id varchar(40) NULL,
+    pix_location varchar(256) NULL,
+    observacao varchar(500) NULL,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE UNIQUE INDEX ux_pagamento_mp_id ON app.pagamento_plano(mercadopago_payment_id) WHERE mercadopago_payment_id IS NOT NULL;
+CREATE UNIQUE INDEX ux_pagamento_plano_pix_txid ON app.pagamento_plano(pix_tx_id) WHERE pix_tx_id IS NOT NULL;
+CREATE UNIQUE INDEX ux_pagamento_plano_pix_e2e ON app.pagamento_plano(pix_end_to_end_id) WHERE pix_end_to_end_id IS NOT NULL;
 
 CREATE TABLE app.auditoria_assinatura (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

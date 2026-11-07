@@ -118,6 +118,37 @@ export type Plano = {
   valorMensal: number | null;
 };
 
+export type BeneficiarioPix = {
+  nome: string;
+  cnpj: string;
+  banco: string;
+  contaCorrente: string;
+};
+
+export type PagamentoPlanoPix = {
+  id: string;
+  assinaturaId: string;
+  clienteId: string;
+  planoDestinoId: string;
+  planoNome: string;
+  valor: number;
+  status: string;
+  metodoPagamento: string | null;
+  dataVencimento: string;
+  dataPagamento: string | null;
+  pixTxId: string | null;
+  pixCopiaCola: string | null;
+  pixQrCodeBase64: string | null;
+  beneficiario: BeneficiarioPix;
+};
+
+export type ContratarPlanoResultado = {
+  assinaturaId: string;
+  pagamentoId: string;
+  statusAssinatura: string;
+  pagamento: PagamentoPlanoPix;
+};
+
 export type CertificadoDigital = {
   id: string;
   clienteId: string;

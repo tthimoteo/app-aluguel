@@ -2,10 +2,12 @@ import type {
   CertificadoDigital,
   Cliente,
   CobrancaDetalhe,
+  ContratarPlanoResultado,
   Contrato,
   Imovel,
   Inquilino,
   IntegracaoBoletoCliente,
+  PagamentoPlanoPix,
   RemoverCobrancaResultado,
   Usuario,
 } from "@/lib/api/types";
@@ -259,6 +261,18 @@ export const bff = {
       method: "PUT",
       body: JSON.stringify(dados),
     }),
+  contratarPlano: (planoId: string) =>
+    bffFetch<ContratarPlanoResultado>("/api/assinaturas/contratar", {
+      method: "POST",
+      body: JSON.stringify({ planoId }),
+    }),
+  pagamentoPlano: (pagamentoId: string) =>
+    bffFetch<PagamentoPlanoPix>(`/api/assinaturas/pagamentos/${pagamentoId}`),
+  simularPagamentoPix: (pagamentoId: string) =>
+    bffFetch<{ processados: number; ignorados: number; mensagens: string[] }>(
+      `/api/assinaturas/pagamentos/${pagamentoId}/simular-pagamento`,
+      { method: "POST" },
+    ),
 };
 
 export type AtualizacaoClienteInput = {

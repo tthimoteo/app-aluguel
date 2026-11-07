@@ -23,7 +23,7 @@ export function beneficiosDoPlano(plano: Plano): string[] {
   } else if (plano.codigo === "PRO") {
     itens.push("Sem limites de utilização — sob consulta comercial com a Lucrare");
   } else {
-    itens.push("Pagamento via PIX ou cartão (Mercado Pago — em breve)");
+    itens.push("Pagamento via PIX (Banco Inter)");
   }
 
   return itens;

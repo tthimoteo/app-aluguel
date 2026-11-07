@@ -12,6 +12,7 @@ import type {
   Imovel,
   Inquilino,
   IntegracaoBoletoCliente,
+  PagamentoPlanoPix,
   Pagina,
   Plano,
   ProvedorBoleto,
@@ -80,6 +81,8 @@ function qs(params: Record<string, string | number | undefined | null>): string 
 export const api = {
   me: () => apiFetch<AuthMe>("/api/auth/me"),
   planos: () => apiFetch<Plano[]>("/api/planos"),
+  pagamentoPlano: (pagamentoId: string) =>
+    apiFetch<PagamentoPlanoPix>(`/api/assinaturas/pagamentos/${pagamentoId}`),
   clientes: (opts?: { termo?: string; take?: number }) =>
     apiFetch<Pagina<Cliente>>(`/api/clientes${qs({ termo: opts?.termo, take: opts?.take ?? 20 })}`),
   imoveis: (opts?: { termo?: string; take?: number; clienteId?: string }) =>

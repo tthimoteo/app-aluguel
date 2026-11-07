@@ -17,16 +17,16 @@ Aplicação web **responsiva**, **multi-tenant**, hospedada em **subdomínio da 
 | Plano | Imóveis | Usuários | NFS-e | Boleto | Preço | Pagamento |
 |---|---|---|---|---|---|---|
 | **Trial** | 1 cliente / imóvel | 1 | Não | Não | Grátis (7 dias) | — |
-| **Básico** | até 3 | 1 | Sim | Não | R$ 49,99 | PIX ou cartão |
-| **Intermediário** | até 5 | até 3 | Sim | Não | R$ 149,99 | PIX ou cartão |
-| **Avançado** | até 10 | até 5 | Sim | Sim | R$ 249,99 | PIX ou cartão |
+| **Básico** | até 3 | 1 | Sim | Não | R$ 49,99 | PIX |
+| **Intermediário** | até 5 | até 3 | Sim | Não | R$ 149,99 | PIX |
+| **Avançado** | até 10 | até 5 | Sim | Sim | R$ 249,99 | PIX |
 | **Pro** | sem limites (sob consulta) | sem limites | Sim | Sim | Sob consulta | Contato comercial |
 
-A cobrança será destinada para a CC da **Lucrare Contabilidade Estratégia LTDA – CNPJ 51.095.456/0001-13**.
+A cobrança do plano será destinada à CC da **TTHIMOTEO Consultoria e Serviços de Eng. Ltda – CNPJ 15.809.930/0001-68**, Banco Inter CC **44588184-4**, via **PIX** (API Banco Inter). Cartão/Mercado Pago ficam fora do escopo inicial.
 
 ### Fluxo de cobrança da plataforma SaaS
 
-O sistema deverá possuir controle automatizado de assinaturas dos planos contratados pelos clientes, permitindo **contratação, renovação, suspensão e reativação** de forma automática através da integração com o **Mercado Pago**.
+O sistema deverá possuir controle automatizado de assinaturas dos planos contratados pelos clientes, permitindo **contratação, renovação, suspensão e reativação** de forma automática através da integração **PIX com o Banco Inter** (QR Code dinâmico + webhook de liquidação).
 
 #### Período de Trial
 
@@ -43,13 +43,13 @@ Durante o Trial **não** será permitida a emissão de NFS-e. Ao término, caso 
 O cliente contrata um plano em **"Minha Conta"**. Ao selecionar um plano, o sistema deverá:
 - Registrar a solicitação de contratação;
 - Criar registro de assinatura com status **"Pendente de Pagamento"**;
-- Redirecionar o usuário ao ambiente de pagamento do Mercado Pago.
+- Criar cobrança PIX imediata na API do Banco Inter e exibir o **QR Code dinâmico** (copia e cola) ao usuário.
 
-Após a confirmação do pagamento, a assinatura é **ativada automaticamente**. Se o plano permitir NFS-e, as funcionalidades fiscais são liberadas imediatamente após a confirmação.
+Após a confirmação do pagamento (webhook de liquidação do Banco Inter), a assinatura é **ativada automaticamente**. Se o plano permitir NFS-e, as funcionalidades fiscais são liberadas imediatamente após a confirmação.
 
 #### Renovação da Assinatura
 
-Renovação automática conforme periodicidade contratada. A cada renovação o sistema deverá: gerar novo registro de cobrança; aguardar confirmação do Mercado Pago; registrar a movimentação financeira. Com pagamento identificado, a assinatura permanece ativa sem intervenção manual.
+Renovação automática conforme periodicidade contratada. A cada renovação o sistema deverá: gerar novo registro de cobrança PIX; aguardar confirmação do Banco Inter; registrar a movimentação financeira. Com pagamento identificado, a assinatura permanece ativa sem intervenção manual.
 
 #### Falha no Pagamento
 
@@ -71,7 +71,7 @@ O sistema deve exibir mensagem orientando a regularização.
 
 #### Reativação da Assinatura
 
-Sempre que o Mercado Pago informar a compensação de um pagamento pendente, o sistema reativa **automaticamente** a assinatura: restaura funcionalidades; registra na auditoria; atualiza a situação financeira.
+Sempre que o Banco Inter informar a compensação de um pagamento PIX pendente, o sistema reativa **automaticamente** a assinatura: restaura funcionalidades; registra na auditoria; atualiza a situação financeira.
 
 #### Upgrade de Plano
 
@@ -101,21 +101,20 @@ Cada registro armazena: Cliente; Usuário responsável; Data e hora; IP; Plano a
 Assinatura                         PagamentoPlano
 ├── Id                             ├── Id
 ├── ClienteId                      ├── AssinaturaId
-├── Plano                          ├── Valor
-├── Status                         ├── DataVencimento
-├── DataInicio                     ├── DataPagamento
-├── DataFimTrial                   ├── Status
-├── ProximaCobranca                ├── MetodoPagamento
-├── ValorMensal                    ├── MercadoPagoPaymentId
-├── MercadoPagoSubscriptionId      └── Observacao
-├── CreatedAt
-└── UpdatedAt
+├── Plano                          ├── PlanoDestinoId
+├── Status                         ├── Valor
+├── DataInicio                     ├── DataVencimento
+├── DataFimTrial                   ├── DataPagamento
+├── ProximaCobranca                ├── Status
+├── ValorMensal                    ├── MetodoPagamento (PIX)
+├── CreatedAt                      ├── PixTxId / PixCopiaCola / PixEndToEndId
+└── UpdatedAt                      └── Observacao
 ```
 
 ### Resumo do fluxo de pagamento SaaS
 
 ```text
-Trial 7 dias → Mercado Pago Assinaturas → Webhook → Ativa
+Trial 7 dias → PIX Banco Inter (QR dinâmico) → Webhook → Ativa
    → Suspensa por inadimplência → Reativação automática
 ```
 
@@ -331,7 +330,7 @@ AuditLog
 
 **Storage**: Supabase Storage.
 
-**Pagamentos**: Mercado Pago.
+**Pagamentos de plano**: PIX via Banco Inter (conta TTHIMOTEO).
 
 **NFS-e**: API Nacional da NFS-e (primeiro momento).
 

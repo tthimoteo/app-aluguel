@@ -1,6 +1,6 @@
 # Arquitetura — APP Aluguel (Lucrare)
 
-Documentação de arquitetura da plataforma **APP Aluguel**, um SaaS **multi-tenant** para gestão de locações, recebimentos, inadimplência e emissão de **NFS-e** (via **API Nacional da NFS-e**), com backend **.NET 9** e frontend **Next.js 15**, sobre **PostgreSQL** + **Supabase Storage** e integração **Mercado Pago**.
+Documentação de arquitetura da plataforma **APP Aluguel**, um SaaS **multi-tenant** para gestão de locações, recebimentos, inadimplência e emissão de **NFS-e** (via **API Nacional da NFS-e**), com backend **.NET 9** e frontend **Next.js 15**, sobre **PostgreSQL** + **Supabase Storage**, pagamento de plano via **PIX (Banco Inter)** e boletos por cliente.
 
 Base: análise integral de [`../APP-Aluguel-Especificacao.md`](../APP-Aluguel-Especificacao.md).
 
@@ -22,13 +22,14 @@ Base: análise integral de [`../APP-Aluguel-Especificacao.md`](../APP-Aluguel-Es
 | 12 | [Integração NFS-e Nacional](12-Integracao-Nfse-Nacional.md) | SEFIN (emissão DPS) vs ADN (consulta); sandbox; Cliente Demo PJ. |
 | 13 | [Integração Boleto Bancário](13-Integracao-Boleto-Bancario.md) | Catálogo expansível de bancos/APIs; cadastro no cliente; GerarCobranca. |
 | 14 | [Relatórios — Painel](14-Relatorios-Painel.md) | Dashboard, financeiro, imóveis, contratos e fiscal (UC008). |
+| 15 | [Integração PIX Assinatura (Inter)](15-Integracao-Pix-Assinatura-Inter.md) | Cobrança do plano via PIX Banco Inter (QR dinâmico + webhook). |
 
 ## Stack (especificação §19)
 
 - **Frontend**: Next.js 15 · React 19 · TypeScript · Tailwind v4 · shadcn/ui · Lucide · Recharts · next-pwa.
 - **Backend**: .NET 9 Web API · EF Core · FluentValidation · JWT · **ASP.NET Identity** · QuestPDF · ClosedXML.
 - **Banco/Storage**: PostgreSQL (Supabase) · Supabase Storage.
-- **Pagamentos**: Mercado Pago. **NFS-e**: API Nacional da NFS-e (primeiro momento).
+- **Pagamentos de plano**: PIX Banco Inter (conta TTHIMOTEO). **NFS-e**: API Nacional da NFS-e (primeiro momento).
 - **Hospedagem**: Vercel (frontend) · Render/Azure App Service (backend) · Supabase (DB + Storage).
 
 ## Decisões-chave (resumo)
@@ -37,7 +38,7 @@ Base: análise integral de [`../APP-Aluguel-Especificacao.md`](../APP-Aluguel-Es
 - **Multi-tenant compartilhado** (`tenant_id`) com *global query filters* + **RLS** (segregação total, §14).
 - **ASP.NET Core Identity + JWT** (perfis Gestor/Analista/AdminSistema); MFA opcional.
 - **Supabase Storage** privado (5 buckets); senha do certificado A1 cifrada no backend.
-- **Mercado Pago** com webhooks idempotentes (Inbox) + Outbox.
+- **PIX Banco Inter** para assinatura (webhook de liquidação ativa o plano); boleto por cliente é integração separada.
 - **Worker** para ciclo de vida da assinatura e fila fiscal (emissão/cancelamento).
 - Regras de negócio e **critérios de aceite (CASO 1–8)** rastreados a índices/policies.
 

@@ -110,6 +110,7 @@ export function FormularioMinhaConta({
   const [erro, setErro] = useState<string | null>(null);
   const [planoModal, setPlanoModal] = useState<Plano | null>(null);
   const [aplicandoPlano, setAplicandoPlano] = useState(false);
+  const [contratandoPix, setContratandoPix] = useState(false);
 
   const [arquivoCert, setArquivoCert] = useState<File | null>(null);
   const [senhaCert, setSenhaCert] = useState("");
@@ -258,6 +259,23 @@ export function FormularioMinhaConta({
       toast.error(e instanceof BffError ? e.message : "Não foi possível alterar o plano.");
     } finally {
       setAplicandoPlano(false);
+    }
+  }
+
+  async function onContratarViaPix(plano: Plano) {
+    if (plano.valorMensal == null) {
+      toast.info("O plano Pro é sob consulta. Entre em contato com a Lucrare.");
+      return;
+    }
+    setContratandoPix(true);
+    try {
+      const resultado = await bff.contratarPlano(plano.id);
+      setPlanoModal(null);
+      router.push(`/minha-conta/pagamento-pix/${resultado.pagamentoId}`);
+    } catch (e) {
+      toast.error(e instanceof BffError ? e.message : "Não foi possível gerar a cobrança PIX.");
+    } finally {
+      setContratandoPix(false);
     }
   }
 
@@ -424,7 +442,7 @@ export function FormularioMinhaConta({
             Plano vigente{planoVigente ? `: ${planoVigente.nome}` : ""}.{" "}
             {ehAdmin
               ? "Clique em outro plano para aplicá-lo diretamente a este cliente."
-              : "Clique em outro plano para ver os serviços e o link de pagamento."}
+              : "Clique em outro plano para ver os serviços e pagar via PIX."}
           </p>
           <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {planos.map((p) => {
@@ -629,7 +647,7 @@ export function FormularioMinhaConta({
                 <DialogDescription>
                   {ehAdmin
                     ? "Detalhes dos serviços. Como Administrador, você pode aplicar este plano ao cliente sem passar pelo pagamento."
-                    : "Detalhes dos serviços. A contratação com pagamento online será habilitada em breve."}
+                    : "Detalhes dos serviços. Ao continuar, geramos um QR Code PIX dinâmico via Banco Inter."}
                 </DialogDescription>
               </DialogHeader>
               <div className="py-3">
@@ -640,7 +658,8 @@ export function FormularioMinhaConta({
                   ))}
                 </ul>
                 <p className="mt-4 text-xs text-muted-foreground">
-                  Cobrança destinada à Lucrare Contabilidade Estratégia LTDA — CNPJ 51.095.456/0001-13.
+                  Pagamento via PIX destinado a TTHIMOTEO Consultoria e Serviços de Eng. Ltda — CNPJ
+                  15.809.930/0001-68 · Banco Inter · CC 44588184-4.
                 </p>
               </div>
               <DialogFooter className="border-0 p-0">
@@ -649,7 +668,7 @@ export function FormularioMinhaConta({
                   variant="secondary"
                   className="h-9 rounded-[4px] bg-[#95A5A6] text-white hover:bg-[#7F8C8D]"
                   onClick={() => setPlanoModal(null)}
-                  disabled={aplicandoPlano}
+                  disabled={aplicandoPlano || contratandoPix}
                 >
                   Fechar
                 </Button>
@@ -666,11 +685,14 @@ export function FormularioMinhaConta({
                   <Button
                     type="button"
                     className="h-9 rounded-[4px]"
-                    onClick={() => {
-                      toast.info("O link de pagamento (Mercado Pago) estará disponível em breve.");
-                    }}
+                    disabled={contratandoPix || planoModal.valorMensal == null}
+                    onClick={() => void onContratarViaPix(planoModal)}
                   >
-                    Ir para pagamento
+                    {contratandoPix
+                      ? "Gerando PIX…"
+                      : planoModal.valorMensal == null
+                        ? "Sob consulta"
+                        : "Pagar com PIX"}
                   </Button>
                 )}
               </DialogFooter>
