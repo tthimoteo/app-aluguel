@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { PageHeader } from "@/components/data/page-header";
 import { PainelRelatorios } from "@/components/relatorios/painel-relatorios";
-import { api } from "@/lib/api/server";
+import { ApiError, api } from "@/lib/api/server";
 import { requireSession, temPerfil } from "@/lib/auth/session";
 import { nomeCliente } from "@/lib/format";
 import { redirect } from "next/navigation";
@@ -26,19 +26,40 @@ export default async function RelatoriosPage({
   const imovelId = str(sp.imovelId);
   const diasAtrasoMinimos = num(sp.diasAtrasoMinimos) ?? 1;
 
-  const [painel, imoveisPagina, clientesPagina] = await Promise.all([
-    api.relatorioPainel({
-      ano: dataInicio || dataFim ? undefined : ano,
-      mes: dataInicio || dataFim ? undefined : mes,
-      dataInicio: dataInicio ?? undefined,
-      dataFim: dataFim ?? undefined,
-      clienteId: clienteId ?? undefined,
-      imovelId: imovelId ?? undefined,
-      diasAtrasoMinimos,
-    }),
-    api.imoveis({ take: 100, clienteId: clienteId ?? undefined }),
-    ehAdmin ? api.clientes({ take: 100 }) : Promise.resolve(null),
-  ]);
+  let painel;
+  let imoveisPagina: Awaited<ReturnType<typeof api.imoveis>>;
+  let clientesPagina: Awaited<ReturnType<typeof api.clientes>> | null;
+  try {
+    [painel, imoveisPagina, clientesPagina] = await Promise.all([
+      api.relatorioPainel({
+        ano: dataInicio || dataFim ? undefined : ano,
+        mes: dataInicio || dataFim ? undefined : mes,
+        dataInicio: dataInicio ?? undefined,
+        dataFim: dataFim ?? undefined,
+        clienteId: clienteId ?? undefined,
+        imovelId: imovelId ?? undefined,
+        diasAtrasoMinimos,
+      }),
+      api.imoveis({ take: 100, clienteId: clienteId ?? undefined }),
+      ehAdmin ? api.clientes({ take: 100 }) : Promise.resolve(null),
+    ]);
+  } catch (e) {
+    if (e instanceof ApiError) {
+      return (
+        <div>
+          <PageHeader
+            titulo="Relatórios"
+            descricao="Dashboard financeiro, inadimplência, vacância, fluxo de caixa e painel fiscal da carteira (UC008)."
+          />
+          <p className="text-sm text-destructive">
+            Não foi possível carregar o painel de relatórios ({e.message}). Confirme se a API está
+            atualizada e tente novamente.
+          </p>
+        </div>
+      );
+    }
+    throw e;
+  }
 
   const imoveis = imoveisPagina.itens.map((i) => ({ id: i.id, nome: i.nome }));
   const clientes =
