@@ -52,7 +52,7 @@ public class InquilinoTests
     public async Task Criar_normaliza_documento_e_define_tenant()
     {
         var repo = new FakeInquilinoRepository();
-        var handler = new CriarInquilinoCommandHandler(repo, new FakeImovelRepository(), new FakeCurrentTenant(Tenant));
+        var handler = new CriarInquilinoCommandHandler(repo, new FakeImovelRepository(), new FakeCurrentTenant(Tenant), new FakeAuditoriaService());
 
         var dto = await handler.Handle(Comando(), default);
 
@@ -74,7 +74,7 @@ public class InquilinoTests
         imovelId = imovel.Id;
 
         var repo = new FakeInquilinoRepository();
-        var handler = new CriarInquilinoCommandHandler(repo, imoveis, new FakeCurrentTenant(Tenant));
+        var handler = new CriarInquilinoCommandHandler(repo, imoveis, new FakeCurrentTenant(Tenant), new FakeAuditoriaService());
 
         var dto = await handler.Handle(
             new CriarInquilinoCommand(ClienteA, TipoPessoa.PF, "Maria", "390.533.447-05", null, null, null, null, imovelId),
@@ -95,7 +95,7 @@ public class InquilinoTests
         var repo = new FakeInquilinoRepository();
         repo.Itens.Add(new Inquilino(Tenant, ClienteA, TipoPessoa.PF, "João", "39053344705", imovelId: imovelId));
 
-        var handler = new CriarInquilinoCommandHandler(repo, imoveis, new FakeCurrentTenant(Tenant));
+        var handler = new CriarInquilinoCommandHandler(repo, imoveis, new FakeCurrentTenant(Tenant), new FakeAuditoriaService());
 
         await handler.Invoking(h => h.Handle(
                 new CriarInquilinoCommand(ClienteA, TipoPessoa.PF, "Maria", "390.533.447-05", null, null, null, null, imovelId),

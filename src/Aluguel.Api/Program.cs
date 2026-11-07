@@ -146,6 +146,7 @@ app.MapContratoEndpoints();
 app.MapCobrancaEndpoints();
 app.MapBoletoEndpoints();
 app.MapRelatorioEndpoints();
+app.MapAuditoriaEndpoints();
 
 // Endpoints de diagnóstico para demonstrar a autorização por role/política.
 app.MapGet("/api/admin/ping", () => Results.Ok(new { escopo = "Administrador", ok = true }))

@@ -1,6 +1,8 @@
 using Aluguel.Application.Abstractions;
+using Aluguel.Application.Auditoria;
 using Aluguel.Application.Clientes;
 using Aluguel.Application.Common.Validacoes;
+using Aluguel.Domain.Auditoria;
 using Aluguel.Domain.Clientes;
 using Aluguel.Domain.Common;
 using Aluguel.Domain.Inquilinos;
@@ -23,7 +25,8 @@ public sealed record CriarInquilinoCommand(
 public sealed class CriarInquilinoCommandHandler(
     IInquilinoRepository repositorio,
     IImovelRepository imoveis,
-    ICurrentTenant tenant)
+    ICurrentTenant tenant,
+    IAuditoriaService auditoria)
     : IRequestHandler<CriarInquilinoCommand, InquilinoDto>
 {
     public async Task<InquilinoDto> Handle(CriarInquilinoCommand request, CancellationToken cancellationToken)
@@ -69,6 +72,12 @@ public sealed class CriarInquilinoCommandHandler(
         repositorio.Adicionar(inquilino);
         await repositorio.SalvarAlteracoesAsync(cancellationToken);
 
-        return inquilino.ParaDto();
+        var dto = inquilino.ParaDto();
+        await auditoria.RegistrarAsync(
+            AcaoAuditoria.Cadastro, TabelaAuditoria.Inquilino, dto.Id, dto.ClienteId,
+            null, AuditoriaSnapshots.DeInquilino(dto),
+            resumo: $"Inquilino «{dto.Nome}» cadastrado",
+            cancellationToken: cancellationToken);
+        return dto;
     }
 }

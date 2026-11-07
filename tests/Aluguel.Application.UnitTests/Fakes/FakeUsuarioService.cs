@@ -92,9 +92,10 @@ public sealed class FakeUsuarioService : IUsuarioService
     }
 }
 
-public sealed class FakeCurrentUser(Guid? userId, Guid? clienteId, bool ehAdministrador) : ICurrentUser
+public sealed class FakeCurrentUser(Guid? userId, Guid? clienteId, bool ehAdministrador, string? nome = null) : ICurrentUser
 {
     public Guid? UserId { get; } = userId;
     public Guid? ClienteId { get; } = clienteId;
+    public string? Nome { get; } = nome;
     public bool EhAdministrador { get; } = ehAdministrador;
 }

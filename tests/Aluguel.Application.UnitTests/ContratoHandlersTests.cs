@@ -40,7 +40,7 @@ public class ContratoHandlersTests
             ? new FakeCurrentUser(Guid.NewGuid(), null, ehAdministrador: true)
             : new FakeCurrentUser(Guid.NewGuid(), ClienteA, ehAdministrador: false);
 
-        var handler = new CriarContratoCommandHandler(contratos, imoveis, inquilinos, new FakeCurrentTenant(Tenant), atual);
+        var handler = new CriarContratoCommandHandler(contratos, imoveis, inquilinos, new FakeCurrentTenant(Tenant), atual, new FakeAuditoriaService());
         return new Cenario(contratos, imoveis, inquilinos, imovel, inquilino, handler);
     }
 

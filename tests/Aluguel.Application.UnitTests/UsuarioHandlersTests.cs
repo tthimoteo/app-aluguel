@@ -33,7 +33,7 @@ public class UsuarioHandlersTests
     public async Task Criar_define_tenant_do_contexto_e_normaliza_cpf()
     {
         var service = new FakeUsuarioService();
-        var handler = new CriarUsuarioCommandHandler(service, new FakeCurrentTenant(Tenant));
+        var handler = new CriarUsuarioCommandHandler(service, new FakeCurrentTenant(Tenant), new FakeAuditoriaService());
 
         var cmd = new CriarUsuarioCommand(ClienteA, "  Ana  ", "  ana@demo.local ",
             "390.533.447-05", "11999998888", PerfilUsuario.Analista, "Senha@12345");
@@ -50,7 +50,7 @@ public class UsuarioHandlersTests
     [Fact]
     public async Task Criar_sem_tenant_lanca()
     {
-        var handler = new CriarUsuarioCommandHandler(new FakeUsuarioService(), new FakeCurrentTenant(null));
+        var handler = new CriarUsuarioCommandHandler(new FakeUsuarioService(), new FakeCurrentTenant(null), new FakeAuditoriaService());
         var cmd = new CriarUsuarioCommand(ClienteA, "Ana", "ana@demo.local", null, null,
             PerfilUsuario.Analista, "Senha@12345");
 
@@ -66,7 +66,7 @@ public class UsuarioHandlersTests
         service.Itens.Add(alvo);
 
         var gestor = new FakeCurrentUser(Guid.NewGuid(), ClienteA, ehAdministrador: false);
-        var handler = new AtualizarUsuarioCommandHandler(service, gestor, Auth());
+        var handler = new AtualizarUsuarioCommandHandler(service, gestor, Auth(), new FakeAuditoriaService());
 
         var act = () => handler.Handle(new AtualizarUsuarioCommand(alvo.Id, ClienteB, "Novo", alvo.Email, null,
             PerfilUsuario.Analista, StatusUsuario.Ativo), default);
@@ -83,7 +83,7 @@ public class UsuarioHandlersTests
         service.Itens.Add(alvo);
 
         var gestor = new FakeCurrentUser(Guid.NewGuid(), ClienteA, ehAdministrador: false);
-        var handler = new AtualizarUsuarioCommandHandler(service, gestor, Auth());
+        var handler = new AtualizarUsuarioCommandHandler(service, gestor, Auth(), new FakeAuditoriaService());
 
         var dto = await handler.Handle(new AtualizarUsuarioCommand(alvo.Id, ClienteA, "Novo Nome", "novo@demo.local",
             "11333334444", PerfilUsuario.Gestor, StatusUsuario.Ativo), default);
@@ -101,7 +101,7 @@ public class UsuarioHandlersTests
         service.Itens.Add(alvo);
 
         var gestor = new FakeCurrentUser(Guid.NewGuid(), ClienteA, ehAdministrador: false);
-        var handler = new AtualizarUsuarioCommandHandler(service, gestor, Auth((ClienteB, "Gestor")));
+        var handler = new AtualizarUsuarioCommandHandler(service, gestor, Auth((ClienteB, "Gestor")), new FakeAuditoriaService());
 
         var dto = await handler.Handle(new AtualizarUsuarioCommand(alvo.Id, ClienteB, "Outro", alvo.Email, null,
             PerfilUsuario.Analista, StatusUsuario.Ativo), default);
@@ -118,7 +118,7 @@ public class UsuarioHandlersTests
         service.Itens.Add(alvo);
 
         var admin = new FakeCurrentUser(Guid.NewGuid(), clienteId: null, ehAdministrador: true);
-        var handler = new AtualizarUsuarioCommandHandler(service, admin, Auth());
+        var handler = new AtualizarUsuarioCommandHandler(service, admin, Auth(), new FakeAuditoriaService());
 
         var dto = await handler.Handle(new AtualizarUsuarioCommand(alvo.Id, ClienteB, "Editado", alvo.Email, null,
             PerfilUsuario.Analista, StatusUsuario.Inativo), default);

@@ -48,7 +48,7 @@ public class ImovelTests
     public async Task Criar_define_tenant_e_cliente()
     {
         var repo = new FakeImovelRepository();
-        var handler = new CriarImovelCommandHandler(repo, new FakeCurrentTenant(Tenant));
+        var handler = new CriarImovelCommandHandler(repo, new FakeCurrentTenant(Tenant), new FakeAuditoriaService());
 
         var dto = await handler.Handle(Comando(nome: "  Casa  "), default);
 
@@ -62,7 +62,7 @@ public class ImovelTests
     public async Task Criar_com_limite_atingido_lanca()
     {
         var repo = new FakeImovelRepository { PodeAdicionar = false };
-        var handler = new CriarImovelCommandHandler(repo, new FakeCurrentTenant(Tenant));
+        var handler = new CriarImovelCommandHandler(repo, new FakeCurrentTenant(Tenant), new FakeAuditoriaService());
         await handler.Invoking(h => h.Handle(Comando(), default))
             .Should().ThrowAsync<InvalidOperationException>();
     }
@@ -136,7 +136,7 @@ public class ImovelTests
         repo.Itens.Add(imovel);
 
         var gestor = new FakeCurrentUser(Guid.NewGuid(), ClienteA, ehAdministrador: false);
-        var handler = new AtualizarImovelCommandHandler(repo, gestor);
+        var handler = new AtualizarImovelCommandHandler(repo, gestor, new FakeAuditoriaService());
 
         await handler.Invoking(h => h.Handle(
                 new AtualizarImovelCommand(imovel.Id, "Apto", TipoImovel.Residencial, null, null, StatusAtivoInativo.Ativo, null), default))
@@ -169,7 +169,7 @@ public class ImovelTests
         repo.Itens.Add(imovel);
 
         var gestor = new FakeCurrentUser(Guid.NewGuid(), ClienteA, ehAdministrador: false);
-        var handler = new DefinirCobrancaImovelCommandHandler(repo, gestor);
+        var handler = new DefinirCobrancaImovelCommandHandler(repo, gestor, new FakeAuditoriaService());
 
         var dto = await handler.Handle(
             new DefinirCobrancaImovelCommand(
@@ -193,7 +193,7 @@ public class ImovelTests
         repo.Itens.Add(imovel);
 
         var gestor = new FakeCurrentUser(Guid.NewGuid(), ClienteA, ehAdministrador: false);
-        var handler = new DefinirCobrancaImovelCommandHandler(repo, gestor);
+        var handler = new DefinirCobrancaImovelCommandHandler(repo, gestor, new FakeAuditoriaService());
 
         var dto = await handler.Handle(
             new DefinirCobrancaImovelCommand(imovel.Id, "01/2026", PropositoLocacao.Comercial, 10, null, null),

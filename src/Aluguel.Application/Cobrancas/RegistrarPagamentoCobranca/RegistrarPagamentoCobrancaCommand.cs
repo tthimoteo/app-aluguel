@@ -1,5 +1,7 @@
 using Aluguel.Application.Abstractions;
+using Aluguel.Application.Auditoria;
 using Aluguel.Application.Common.Acesso;
+using Aluguel.Domain.Auditoria;
 using Aluguel.Domain.Financeiro;
 using MediatR;
 
@@ -14,7 +16,8 @@ public sealed class RegistrarPagamentoCobrancaCommandHandler(
     ICobrancaRepository cobrancas,
     IClienteRepository clientes,
     IPlanoRepository planos,
-    ICurrentUser currentUser)
+    ICurrentUser currentUser,
+    IAuditoriaService auditoria)
     : IRequestHandler<RegistrarPagamentoCobrancaCommand, CobrancaDetalheDto>
 {
     public async Task<CobrancaDetalheDto> Handle(
@@ -52,6 +55,14 @@ public sealed class RegistrarPagamentoCobrancaCommandHandler(
         boleto?.MarcarPago();
 
         await cobrancas.SalvarAlteracoesAsync(cancellationToken);
+
+        await auditoria.RegistrarAsync(
+            AcaoAuditoria.Cadastro, TabelaAuditoria.Pagamento, nfse.Id, nfse.ClienteId,
+            null,
+            AuditoriaSnapshots.DePagamento(nfse.Id, nfse.ClienteId, nfse.ImovelId, nfse.Competencia, valor, data),
+            resumo: $"Pagamento da cobrança {nfse.Competencia}",
+            cancellationToken: cancellationToken);
+
         return (await cobrancas.ObterDetalheAsync(nfse.Id, cancellationToken))!;
     }
 }

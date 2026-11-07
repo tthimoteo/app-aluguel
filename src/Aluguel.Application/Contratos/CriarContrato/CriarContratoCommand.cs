@@ -1,5 +1,7 @@
 using Aluguel.Application.Abstractions;
+using Aluguel.Application.Auditoria;
 using Aluguel.Application.Common.Acesso;
+using Aluguel.Domain.Auditoria;
 using Aluguel.Domain.Contratos;
 using MediatR;
 
@@ -25,7 +27,8 @@ public sealed class CriarContratoCommandHandler(
     IImovelRepository imoveis,
     IInquilinoRepository inquilinos,
     ICurrentTenant tenant,
-    ICurrentUser currentUser)
+    ICurrentUser currentUser,
+    IAuditoriaService auditoria)
     : IRequestHandler<CriarContratoCommand, ContratoDto>
 {
     public async Task<ContratoDto> Handle(CriarContratoCommand request, CancellationToken cancellationToken)
@@ -64,6 +67,12 @@ public sealed class CriarContratoCommandHandler(
         contratos.Adicionar(contrato);
         await contratos.SalvarAlteracoesAsync(cancellationToken);
 
-        return contrato.ParaDto();
+        var dto = contrato.ParaDto();
+        await auditoria.RegistrarAsync(
+            AcaoAuditoria.Cadastro, TabelaAuditoria.Contrato, dto.Id, dto.ClienteId,
+            null, AuditoriaSnapshots.DeContrato(dto),
+            resumo: $"Contrato «{dto.NumeroContrato}» cadastrado",
+            cancellationToken: cancellationToken);
+        return dto;
     }
 }

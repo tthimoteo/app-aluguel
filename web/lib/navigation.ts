@@ -24,7 +24,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/usuarios", label: "Usuários", icone: "userCog", visivelPara: ["Administrador", "Gestor"] },
   { href: "/minha-conta", label: "Minha Conta", icone: "user", visivelPara: ["Gestor"] },
   { href: "/relatorios", label: "Relatórios", icone: "barChart", visivelPara: ["Administrador", "Gestor", "Analista"] },
-  { href: "/auditoria", label: "Auditoria", icone: "scroll", visivelPara: ["Administrador", "Gestor"] },
+  { href: "/auditoria", label: "Auditoria", icone: "scroll", visivelPara: "todos" },
 ];
 
 export type OpcoesMenu = {

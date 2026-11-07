@@ -1,5 +1,7 @@
 using Aluguel.Application.Abstractions;
+using Aluguel.Application.Auditoria;
 using Aluguel.Application.Common.Acesso;
+using Aluguel.Domain.Auditoria;
 using Aluguel.Domain.Clientes;
 using Aluguel.Domain.Common;
 using MediatR;
@@ -30,7 +32,8 @@ public sealed class AtualizarClienteCommandHandler(
     IPlanoRepository planos,
     IImovelRepository imoveis,
     IUsuarioService usuarios,
-    ICurrentUser currentUser)
+    ICurrentUser currentUser,
+    IAuditoriaService auditoria)
     : IRequestHandler<AtualizarClienteCommand, ClienteDto?>
 {
     public async Task<ClienteDto?> Handle(AtualizarClienteCommand request, CancellationToken cancellationToken)
@@ -39,6 +42,7 @@ public sealed class AtualizarClienteCommandHandler(
         if (cliente is null || !EscopoCliente.PodeAcessar(currentUser, cliente.Id))
             return null;
 
+        var antes = AuditoriaSnapshots.DeCliente(cliente.ParaDto());
         var endereco = request.Endereco?.ParaValueObject();
 
         if (cliente.TipoPessoa == TipoPessoa.PF)
@@ -71,7 +75,13 @@ public sealed class AtualizarClienteCommandHandler(
             cliente.DefinirStatus(status);
 
         await repositorio.SalvarAlteracoesAsync(cancellationToken);
-        return cliente.ParaDto();
+        var dto = cliente.ParaDto();
+        await auditoria.RegistrarAsync(
+            AcaoAuditoria.Alteracao, TabelaAuditoria.Cliente, dto.Id, dto.Id,
+            antes, AuditoriaSnapshots.DeCliente(dto),
+            resumo: $"Cliente «{dto.NomeExibicao}» alterado",
+            cancellationToken: cancellationToken);
+        return dto;
     }
 
     /// <summary>Downgrade/upgrade: bloqueia se a utilização atual exceder os limites do novo plano (CASO 2).</summary>

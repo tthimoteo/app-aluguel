@@ -385,6 +385,10 @@ namespace Aluguel.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(40)")
                         .HasColumnName("acao");
 
+                    b.Property<Guid?>("ClienteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cliente_id");
+
                     b.Property<DateTimeOffset>("DataHora")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("data_hora");
@@ -397,6 +401,11 @@ namespace Aluguel.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("RegistroId")
                         .HasColumnType("uuid")
                         .HasColumnName("registro_id");
+
+                    b.Property<string>("Resumo")
+                        .HasMaxLength(240)
+                        .HasColumnType("character varying(240)")
+                        .HasColumnName("resumo");
 
                     b.Property<string>("Tabela")
                         .HasMaxLength(60)
@@ -411,6 +420,11 @@ namespace Aluguel.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("usuario_id");
 
+                    b.Property<string>("UsuarioNome")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("usuario_nome");
+
                     b.Property<string>("ValoresAntes")
                         .HasColumnType("jsonb")
                         .HasColumnName("valores_antes");
@@ -421,6 +435,12 @@ namespace Aluguel.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_audit_log");
+
+                    b.HasIndex("DataHora")
+                        .HasDatabaseName("ix_audit_log_data_hora");
+
+                    b.HasIndex("ClienteId", "DataHora")
+                        .HasDatabaseName("ix_audit_log_cliente_id_data_hora");
 
                     b.HasIndex("TenantId", "Tabela", "RegistroId")
                         .HasDatabaseName("ix_audit_log_tenant_id_tabela_registro_id");

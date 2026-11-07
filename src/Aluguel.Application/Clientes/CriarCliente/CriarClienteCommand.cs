@@ -1,5 +1,7 @@
 using Aluguel.Application.Abstractions;
+using Aluguel.Application.Auditoria;
 using Aluguel.Application.Common.Validacoes;
+using Aluguel.Domain.Auditoria;
 using Aluguel.Domain.Clientes;
 using MediatR;
 
@@ -20,7 +22,10 @@ public sealed record CriarClienteCommand(
     string? Email,
     EnderecoInput? Endereco) : IRequest<ClienteDto>;
 
-public sealed class CriarClienteCommandHandler(IClienteRepository repositorio, ICurrentTenant tenant)
+public sealed class CriarClienteCommandHandler(
+    IClienteRepository repositorio,
+    ICurrentTenant tenant,
+    IAuditoriaService auditoria)
     : IRequestHandler<CriarClienteCommand, ClienteDto>
 {
     public async Task<ClienteDto> Handle(CriarClienteCommand request, CancellationToken cancellationToken)
@@ -41,6 +46,12 @@ public sealed class CriarClienteCommandHandler(IClienteRepository repositorio, I
         repositorio.Adicionar(cliente);
         await repositorio.SalvarAlteracoesAsync(cancellationToken);
 
-        return cliente.ParaDto();
+        var dto = cliente.ParaDto();
+        await auditoria.RegistrarAsync(
+            AcaoAuditoria.Cadastro, TabelaAuditoria.Cliente, dto.Id, dto.Id,
+            null, AuditoriaSnapshots.DeCliente(dto),
+            resumo: $"Cliente «{dto.NomeExibicao}» cadastrado",
+            cancellationToken: cancellationToken);
+        return dto;
     }
 }

@@ -22,13 +22,13 @@ public class ClienteHandlersTests
         FakeImovelRepository? imoveis = null,
         FakeUsuarioService? usuarios = null) =>
         new(repo, planos ?? new FakePlanoRepository(), imoveis ?? new FakeImovelRepository(),
-            usuarios ?? new FakeUsuarioService(), user);
+            usuarios ?? new FakeUsuarioService(), user, new FakeAuditoriaService());
 
     [Fact]
     public async Task Criar_define_tenant_do_contexto_e_persiste()
     {
         var repo = new FakeClienteRepository();
-        var handler = new CriarClienteCommandHandler(repo, new FakeCurrentTenant(Tenant));
+        var handler = new CriarClienteCommandHandler(repo, new FakeCurrentTenant(Tenant), new FakeAuditoriaService());
 
         var cmd = new CriarClienteCommand(TipoPessoa.PF, null, "João", "390.533.447-05", null,
             null, null, null, null, null, null, null,
@@ -47,7 +47,7 @@ public class ClienteHandlersTests
     [Fact]
     public async Task Criar_sem_tenant_lanca()
     {
-        var handler = new CriarClienteCommandHandler(new FakeClienteRepository(), new FakeCurrentTenant(null));
+        var handler = new CriarClienteCommandHandler(new FakeClienteRepository(), new FakeCurrentTenant(null), new FakeAuditoriaService());
         var cmd = new CriarClienteCommand(TipoPessoa.PF, null, "João", "39053344705", null,
             null, null, null, null, null, null, null, null);
 
