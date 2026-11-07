@@ -18,10 +18,13 @@ public sealed class SmtpEmailSender(
             throw new InvalidOperationException("SMTP não configurado (Email:SmtpHost).");
         if (string.IsNullOrWhiteSpace(opts.SmtpUser) || string.IsNullOrWhiteSpace(opts.SmtpPassword))
             throw new InvalidOperationException(
-                "Credenciais SMTP ausentes. Configure Email:SmtpUser e Email:SmtpPassword (senha de app do Gmail).");
+                "Credenciais SMTP ausentes. Configure EMAIL_SMTP_USER e EMAIL_SMTP_PASSWORD " +
+                "(caixa Office 365 @lucrarecontabilidade.com.br com SMTP AUTH).");
+
+        var remetente = string.IsNullOrWhiteSpace(opts.Remetente) ? opts.SmtpUser : opts.Remetente;
 
         var mime = new MimeMessage();
-        mime.From.Add(new MailboxAddress(opts.RemetenteNome, opts.Remetente));
+        mime.From.Add(new MailboxAddress(opts.RemetenteNome, remetente));
         mime.To.Add(MailboxAddress.Parse(mensagem.Destinatario));
         mime.Subject = mensagem.Assunto;
         if (!string.IsNullOrWhiteSpace(mensagem.RemetenteResposta))

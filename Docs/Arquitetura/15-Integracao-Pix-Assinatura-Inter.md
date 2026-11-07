@@ -83,4 +83,7 @@ Endpoints adicionais: `GET /atual`, `POST /cancelar`, `POST /revogar-cancelament
 - Somente **PIX** (cartão/Mercado Pago fora de escopo).
 - Plano **Pro** (valor nulo) permanece sob consulta — sem self-service (landing: «Solicitar Demonstração»).
 - Cadastro público (`POST /api/cadastro-publico`): cria tenant + cliente PF + gestor; Trial sem PIX ou plano pago com QR imediato; resposta inclui tokens JWT para primeiro acesso.
-- Lead Pro (`POST /api/cadastro-publico/demonstracao`): envia e-mail SMTP para `tthimoteoconsultoria@gmail.com` com nome, e-mail, telefone e mensagem (Reply-To = e-mail do interessado). Credenciais: `EMAIL_SMTP_USER` / `EMAIL_SMTP_PASSWORD` (senha de app Gmail).
+- Lead Pro (`POST /api/cadastro-publico/demonstracao`): envia e-mail SMTP para `tthimoteoconsultoria@gmail.com` com nome, e-mail, telefone e mensagem (Reply-To = e-mail do interessado).
+  - Servidor: Office 365 `smtp.office365.com:587` (STARTTLS).
+  - Secrets: `EMAIL_SMTP_USER` (ex.: `contato@lucrarecontabilidade.com.br`), `EMAIL_SMTP_PASSWORD` (senha da caixa ou app password); opcional `EMAIL_SMTP_HOST` (padrão Office 365).
+  - No tenant Microsoft 365, a caixa precisa ter **SMTP AUTH** habilitado.
