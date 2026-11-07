@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Graph;
 using Microsoft.Graph.Models;
+using Microsoft.Graph.Models.ODataErrors;
 using Microsoft.Graph.Users.Item.SendMail;
 using AuthenticationFailedException = Azure.Identity.AuthenticationFailedException;
 
@@ -92,12 +93,14 @@ public sealed class GraphEmailSender : IEmailSender
         {
             await _graph.Users[remetente].SendMail.PostAsync(body, cancellationToken: ct);
         }
-        catch (ServiceException ex)
+        catch (ODataError ex)
         {
-            _logger.LogError(ex, "Microsoft Graph rejeitou envio para {Destinatario}", mensagem.Destinatario);
+            _logger.LogError(ex, "Microsoft Graph rejeitou envio para {Destinatario}: {Code}",
+                mensagem.Destinatario, ex.Error?.Code);
             throw new InvalidOperationException(
-                $"Falha ao enviar e-mail via Microsoft Graph ({ex.ResponseStatusCode}): {ex.Message}. " +
-                "Confirme permissão de aplicativo Mail.Send com consentimento admin e o UPN do remetente.",
+                $"Falha ao enviar e-mail via Microsoft Graph ({ex.ResponseStatusCode} {ex.Error?.Code}): {ex.Error?.Message ?? ex.Message}. " +
+                "Confirme permissão de *aplicativo* Mail.Send com consentimento de administrador " +
+                "e que o UPN do remetente (EMAIL_GRAPH_SENDER) existe no Exchange.",
                 ex);
         }
         catch (AuthenticationFailedException ex)

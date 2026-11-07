@@ -15,9 +15,11 @@ Envio transacional do APP Aluguel (ex.: lead de demonstração do plano Pro) usa
    - Nome: `APP Aluguel · E-mail`  
    - Contas: somente este diretório organizacional.
 2. **Certificados e segredos** → **Novo segredo do cliente** → copiar o valor (só aparece uma vez).
-3. **Permissões de API** → **Microsoft Graph** → **Permissões de aplicativo**:
+3. **Permissões de API** → **Microsoft Graph** → **Permissões de aplicativo** (não delegada):
    - `Mail.Send`
-4. **Conceder consentimento de administrador** para o tenant.
+4. **Conceder consentimento de administrador** para o tenant (botão «Conceder consentimento…»).
+   - Sem isso o token vem **sem roles** e o Exchange responde `ErrorAccessDenied` /
+     `application only has the following permissions granted: ''`.
 5. Anotar:
    - **ID do diretório (tenant)**
    - **ID do aplicativo (client)**
