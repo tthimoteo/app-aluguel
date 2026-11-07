@@ -4,6 +4,7 @@ using Aluguel.Infrastructure.Identity;
 using Aluguel.Infrastructure.Integrations.BoletoBancario;
 using Aluguel.Infrastructure.Integrations.NfseNacional;
 using Aluguel.Infrastructure.Assinaturas;
+using Aluguel.Infrastructure.Email;
 using Aluguel.Infrastructure.Integrations.PixInter;
 using Aluguel.Infrastructure.Persistence;
 using Aluguel.Infrastructure.Persistence.Repositories;
@@ -140,6 +141,29 @@ public static class DependencyInjection
             services.AddScoped<IInterPixProvider, MockInterPixProvider>();
         else
             services.AddScoped<IInterPixProvider, InterPixProvider>();
+
+        services.Configure<EmailOptions>(opts =>
+        {
+            var s = configuration.GetSection(EmailOptions.SectionName);
+            s.Bind(opts);
+            // Secrets / env (ASP.NET Core: Email__SmtpPassword; também EMAIL_SMTP_*).
+            if (configuration["EMAIL_SMTP_USER"] is { Length: > 0 } eu) opts.SmtpUser = eu;
+            if (configuration["EMAIL_SMTP_PASSWORD"] is { Length: > 0 } ep) opts.SmtpPassword = ep;
+            if (configuration["EMAIL_SMTP_HOST"] is { Length: > 0 } eh) opts.SmtpHost = eh;
+        });
+        var emailOptsBound = new EmailOptions();
+        configuration.GetSection(EmailOptions.SectionName).Bind(emailOptsBound);
+        if (configuration["EMAIL_SMTP_USER"] is { Length: > 0 } envUser)
+            emailOptsBound.SmtpUser = envUser;
+        if (configuration["EMAIL_SMTP_PASSWORD"] is { Length: > 0 } envPass)
+            emailOptsBound.SmtpPassword = envPass;
+        var forcarMock = string.Equals(emailOptsBound.Ambiente, "Mock", StringComparison.OrdinalIgnoreCase);
+        var temCredencial = !string.IsNullOrWhiteSpace(emailOptsBound.SmtpUser)
+            && !string.IsNullOrWhiteSpace(emailOptsBound.SmtpPassword);
+        if (!forcarMock && temCredencial)
+            services.AddSingleton<IEmailSender, SmtpEmailSender>();
+        else
+            services.AddSingleton<IEmailSender, LoggingEmailSender>();
 
         return services;
     }

@@ -73,13 +73,29 @@ public class CadastroPublicoHandlersTests
     }
 
     [Fact]
-    public async Task Demonstracao_valida_campos()
+    public async Task Demonstracao_envia_email_para_caixa_comercial()
     {
-        var handler = new SolicitarDemonstracaoCommandHandler();
+        var sender = new FakeEmailSender();
+        var handler = new SolicitarDemonstracaoCommandHandler(sender);
         var r = await handler.Handle(new SolicitarDemonstracaoCommand(
             "Ana Admin", "ana@empresa.com", "11999990000", "Quero o plano Pro"), CancellationToken.None);
-        r.Ok.Should().BeTrue();
 
+        r.Ok.Should().BeTrue();
+        sender.Enviadas.Should().ContainSingle();
+        var msg = sender.Enviadas[0];
+        msg.Destinatario.Should().Be(SolicitarDemonstracaoCommandHandler.DestinatarioPadrao);
+        msg.Assunto.Should().Contain("Ana Admin");
+        msg.CorpoTexto.Should().Contain("ana@empresa.com");
+        msg.CorpoTexto.Should().Contain("11999990000");
+        msg.CorpoTexto.Should().Contain("Quero o plano Pro");
+        msg.RemetenteResposta.Should().Be("ana@empresa.com");
+        msg.CorpoHtml.Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
+    public async Task Demonstracao_valida_campos()
+    {
+        var handler = new SolicitarDemonstracaoCommandHandler(new FakeEmailSender());
         var act = () => handler.Handle(new SolicitarDemonstracaoCommand("A", "x", "1", null), CancellationToken.None);
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
@@ -122,6 +138,17 @@ sealed class FakeTenantStore : ITenantStore
     public void Adicionar(Tenant tenant) => Itens.Add(tenant);
 
     public Task<int> SalvarAlteracoesAsync(CancellationToken ct = default) => Task.FromResult(1);
+}
+
+sealed class FakeEmailSender : IEmailSender
+{
+    public List<MensagemEmail> Enviadas { get; } = [];
+
+    public Task EnviarAsync(MensagemEmail mensagem, CancellationToken ct = default)
+    {
+        Enviadas.Add(mensagem);
+        return Task.CompletedTask;
+    }
 }
 
 sealed class FakeAuthServiceComLogin : IAuthService
