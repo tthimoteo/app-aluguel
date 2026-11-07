@@ -37,6 +37,11 @@ public sealed class FakeUsuarioService : IUsuarioService
     public Task<bool> EmailEmUsoAsync(string email, Guid? ignorarId, CancellationToken ct = default) =>
         Task.FromResult(EmailsEmUso.Contains(email.Trim()));
 
+    public HashSet<string> CpfsIdentidade { get; } = new(StringComparer.Ordinal);
+
+    public Task<bool> CpfIdentidadeEmUsoAsync(string cpf, CancellationToken ct = default) =>
+        Task.FromResult(CpfsIdentidade.Contains(cpf) || CpfsEmUso.Any(x => x.Cpf == cpf));
+
     public Task<bool> CpfEmUsoNoClienteAsync(Guid clienteId, string cpf, Guid? ignorarId, CancellationToken ct = default) =>
         Task.FromResult(CpfsEmUso.Contains((clienteId, cpf)));
 

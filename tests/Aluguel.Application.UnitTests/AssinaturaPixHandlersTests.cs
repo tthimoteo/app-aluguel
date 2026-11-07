@@ -174,6 +174,9 @@ sealed class FakePlanoRepository : IPlanoRepository
     public Task<Plano?> ObterPorIdAsync(Guid id, CancellationToken ct = default) =>
         Task.FromResult(Itens.FirstOrDefault(p => p.Id == id));
 
+    public Task<Plano?> ObterPorCodigoAsync(string codigo, CancellationToken ct = default) =>
+        Task.FromResult(Itens.FirstOrDefault(p => p.Codigo == codigo && p.Ativo));
+
     public Task<IReadOnlyList<Plano>> ListarAtivosAsync(CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<Plano>>(Itens.Where(p => p.Ativo).ToList());
 }

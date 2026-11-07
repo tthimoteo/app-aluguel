@@ -7,5 +7,7 @@ public interface IPlanoRepository
 {
     Task<Plano?> ObterPorIdAsync(Guid id, CancellationToken ct = default);
 
+    Task<Plano?> ObterPorCodigoAsync(string codigo, CancellationToken ct = default);
+
     Task<IReadOnlyList<Plano>> ListarAtivosAsync(CancellationToken ct = default);
 }

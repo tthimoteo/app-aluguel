@@ -89,6 +89,9 @@ public class UsuarioService(UserManager<AppUser> userManager, AppDbContext db, I
         return db.Users.AnyAsync(u => u.NormalizedEmail == normalizado && (ignorarId == null || u.Id != ignorarId), ct);
     }
 
+    public Task<bool> CpfIdentidadeEmUsoAsync(string cpf, CancellationToken ct = default) =>
+        db.Users.IgnoreQueryFilters().AnyAsync(u => u.Cpf == cpf, ct);
+
     public async Task<bool> CpfEmUsoNoClienteAsync(Guid clienteId, string cpf, Guid? ignorarId,
         CancellationToken ct = default)
     {

@@ -138,6 +138,7 @@ app.MapGet("/api/planos", async (ISender sender, CancellationToken ct) =>
     .WithName("ObterPlanos");
 
 app.MapAuthEndpoints();
+app.MapCadastroPublicoEndpoints();
 app.MapClienteEndpoints();
 app.MapUsuarioEndpoints();
 app.MapImovelEndpoints();

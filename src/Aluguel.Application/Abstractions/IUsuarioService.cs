@@ -20,6 +20,9 @@ public interface IUsuarioService
 
     Task<bool> EmailEmUsoAsync(string email, Guid? ignorarId, CancellationToken ct = default);
 
+    /// <summary>True se já existe identidade (ASP.NET Identity) com este CPF, em qualquer tenant.</summary>
+    Task<bool> CpfIdentidadeEmUsoAsync(string cpf, CancellationToken ct = default);
+
     Task<bool> CpfEmUsoNoClienteAsync(Guid clienteId, string cpf, Guid? ignorarId, CancellationToken ct = default);
 
     /// <summary>Localiza a identidade pelo CPF no tenant. <paramref name="clienteId"/> indica se já está neste cliente.</summary>

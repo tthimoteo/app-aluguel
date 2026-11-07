@@ -81,4 +81,5 @@ Endpoints adicionais: `GET /atual`, `POST /cancelar`, `POST /revogar-cancelament
 ## Limitações atuais
 
 - Somente **PIX** (cartão/Mercado Pago fora de escopo).
-- Plano **Pro** (valor nulo) permanece sob consulta — sem self-service.
+- Plano **Pro** (valor nulo) permanece sob consulta — sem self-service (landing: «Solicitar Demonstração»).
+- Cadastro público (`POST /api/cadastro-publico`): cria tenant + cliente PF + gestor; Trial sem PIX ou plano pago com QR imediato; resposta inclui tokens JWT para primeiro acesso.
