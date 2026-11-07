@@ -35,7 +35,7 @@ Abra [http://localhost:3000](http://localhost:3000). Em Development, usuários d
 - Listagens: clientes, imóveis (via seletor de cliente), usuários (via seletor de cliente)
 - Inquilinos e contratos acessados a partir da página de imóveis (fora do menu)
 - Minha Conta (Gestor) com `/api/auth/me` e catálogo de planos
-- Placeholders: relatórios, dados para contabilidade, auditoria
+- Relatórios (painel UC008); placeholder de auditoria
 
 ## Testes
 

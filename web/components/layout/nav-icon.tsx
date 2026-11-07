@@ -1,7 +1,6 @@
 import {
   BarChart3,
   Building2,
-  Calculator,
   FileText,
   Home,
   Landmark,
@@ -22,7 +21,6 @@ const ICONES: Record<NavItem["icone"], LucideIcon> = {
   userCog: UserCog,
   user: User,
   barChart: BarChart3,
-  calculator: Calculator,
   scroll: ScrollText,
   landmark: Landmark,
   receipt: Receipt,

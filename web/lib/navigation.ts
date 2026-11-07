@@ -3,7 +3,7 @@ export type Perfil = "Administrador" | "Gestor" | "Analista";
 export type NavItem = {
   href: string;
   label: string;
-  icone: "home" | "building" | "users" | "file" | "userCog" | "user" | "barChart" | "calculator" | "scroll" | "landmark" | "receipt";
+  icone: "home" | "building" | "users" | "file" | "userCog" | "user" | "barChart" | "scroll" | "landmark" | "receipt";
   visivelPara: Perfil[] | "todos";
   /** Se true, Gestor/Analista só veem o item quando o cliente do contexto permite Cobrança (plano NFS-e). */
   exigeCobranca?: boolean;
@@ -24,12 +24,6 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/usuarios", label: "Usuários", icone: "userCog", visivelPara: ["Administrador", "Gestor"] },
   { href: "/minha-conta", label: "Minha Conta", icone: "user", visivelPara: ["Gestor"] },
   { href: "/relatorios", label: "Relatórios", icone: "barChart", visivelPara: ["Administrador", "Gestor", "Analista"] },
-  {
-    href: "/contabilidade",
-    label: "Dados para Contabilidade",
-    icone: "calculator",
-    visivelPara: ["Gestor"],
-  },
   { href: "/auditoria", label: "Auditoria", icone: "scroll", visivelPara: ["Administrador", "Gestor"] },
 ];
 

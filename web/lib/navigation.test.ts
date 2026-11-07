@@ -43,14 +43,14 @@ describe("itensVisiveis", () => {
     expect(hrefs).not.toContain("/minha-conta");
   });
 
-  it("mostra Minha Conta e Dados para Contabilidade só para Gestor", () => {
+  it("mostra Minha Conta só para Gestor e não lista Contabilidade", () => {
     const hrefs = itensVisiveis(["Gestor"], { permiteCobranca: true }).map((i) => i.href);
     expect(hrefs).toContain("/minha-conta");
-    expect(hrefs).toContain("/contabilidade");
     expect(hrefs).toContain("/usuarios");
     expect(hrefs).toContain("/relatorios");
     expect(hrefs).toContain("/cobrancas");
     expect(hrefs).not.toContain("/clientes");
+    expect(hrefs).not.toContain("/contabilidade");
   });
 });
 
