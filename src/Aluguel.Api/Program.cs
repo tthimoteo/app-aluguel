@@ -125,9 +125,11 @@ if (builder.Configuration.GetValue("Database:MigrateOnStartup", true))
     await db.Database.MigrateAsync();
 }
 
-// Roles sempre; usuários demo apenas em Development.
-await IdentitySeeder.SeedAsync(app.Services, seedDemoUsers: app.Environment.IsDevelopment());
-if (app.Environment.IsDevelopment())
+// Roles sempre; usuários/cobranças demo em Development ou quando Database:SeedDemoUsers=true (smoke em produção).
+var seedDemo = app.Environment.IsDevelopment()
+    || builder.Configuration.GetValue("Database:SeedDemoUsers", false);
+await IdentitySeeder.SeedAsync(app.Services, seedDemoUsers: seedDemo);
+if (seedDemo)
     await CobrancaDemoSeeder.SeedAsync(app.Services);
 
 if (app.Environment.IsDevelopment())

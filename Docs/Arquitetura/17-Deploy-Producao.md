@@ -108,8 +108,9 @@ Aguarde a propagação DNS (minutos a algumas horas). HTTPS é emitido automatic
 | `Cors__Origins__0` | sim | URL HTTPS do frontend |
 | `Email__GraphTenantId` / `ClientId` / `ClientSecret` | para demo | Mesmos valores do Graph já validados |
 | `InterPix__Ambiente` | MVP = `Mock` | Trocar para `Producao` + cert. Inter depois |
-| `Nfse__Ambiente` | MVP = `Mock` | |
+| `Nfse__Ambiente` | MVP = `Mock` | `ProducaoRestrita` = sandbox SEFIN (exige cert. A1) |
 | `Boleto__Ambiente` | MVP = `Mock` | |
+| `Database__SeedDemoUsers` | opcional | `true` cria `gestor@demo.local` / `Gestor@123456` + cobranças demo; desligar após smoke |
 
 A API normaliza automaticamente URI `postgres://` do Blueprint Render para o formato Npgsql (`Host=...`) com `SSL Mode=Require`. Se ainda falhar, edite `ConnectionStrings__Postgres` manualmente no painel (formato chave=valor).
 

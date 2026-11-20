@@ -28,6 +28,9 @@ services:
         value: Production
       - key: Database__MigrateOnStartup
         value: "true"
+      # Gestor demo (gestor@demo.local / Gestor@123456) + cobranças de smoke. Desligue após testes.
+      - key: Database__SeedDemoUsers
+        value: "true"
       - key: ConnectionStrings__Postgres
         fromDatabase:
           name: aluguel-db
