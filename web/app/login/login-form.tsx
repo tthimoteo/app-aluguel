@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -105,14 +106,14 @@ export function LoginForm() {
         </form>
         <p className="mt-6 text-center text-sm text-muted-foreground">
           Ainda não tem conta?{" "}
-          <a href="/cadastro" className="font-medium text-primary hover:underline">
+          <Link href="/cadastro" className="font-medium text-primary hover:underline">
             Criar conta gratuita
-          </a>
+          </Link>
         </p>
         <p className="mt-2 text-center text-sm">
-          <a href="/" className="text-muted-foreground hover:text-primary hover:underline">
+          <Link href="/" className="text-muted-foreground hover:text-primary hover:underline">
             Voltar à página inicial
-          </a>
+          </Link>
         </p>
         {process.env.NODE_ENV === "development" ? (
           <p className="mt-4 text-center text-xs text-muted-foreground">

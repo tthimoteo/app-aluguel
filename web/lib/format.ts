@@ -168,7 +168,7 @@ export function moedaParaInput(valor: number | null | undefined): string {
  * Aceita vírgula ou ponto; normaliza para vírgula (pt-BR).
  */
 export function mascaraPercentual(valor: string): string {
-  let s = valor.replace(/[^\d.,]/g, "").replace(/\./g, ",");
+  const s = valor.replace(/[^\d.,]/g, "").replace(/\./g, ",");
   const primeiraVirgula = s.indexOf(",");
   if (primeiraVirgula === -1) return s;
   const inteiro = s.slice(0, primeiraVirgula).replace(/,/g, "");

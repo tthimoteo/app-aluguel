@@ -89,7 +89,7 @@ export default async function AuditoriaPage({
         clientes={clientesPagina.itens.map((c) => ({ id: c.id, nome: c.nomeExibicao }))}
       />
       {pagina.itens.length === 0 ? (
-        <EmptyState titulo="Nenhum evento encontrado" descricao="Ajuste os filtros ou realize alterações cadastrais." />
+        <EmptyState mensagem="Nenhum evento encontrado. Ajuste os filtros ou realize alterações cadastrais." />
       ) : (
         <>
           <p className="mb-3 text-sm text-muted-foreground">

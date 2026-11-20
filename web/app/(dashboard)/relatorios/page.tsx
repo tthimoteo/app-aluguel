@@ -33,7 +33,7 @@ export default async function RelatoriosPage({
     [painel, imoveisPagina, clientesPagina] = await Promise.all([
       api.relatorioPainel({
         ano: dataInicio || dataFim ? undefined : ano,
-        mes: dataInicio || dataFim ? undefined : mes,
+        mes: dataInicio || dataFim ? undefined : (mes ?? undefined),
         dataInicio: dataInicio ?? undefined,
         dataFim: dataFim ?? undefined,
         clienteId: clienteId ?? undefined,

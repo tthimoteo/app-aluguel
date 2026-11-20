@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -62,12 +63,12 @@ export function FiltrosCobranca({
         <Button type="submit" className="h-10 rounded-[4px] px-4">
           Filtrar
         </Button>
-        <a
+        <Link
           href="/cobrancas"
           className="inline-flex h-10 items-center justify-center rounded-[4px] border border-input bg-background px-4 text-sm font-medium hover:bg-accent"
         >
           Limpar
-        </a>
+        </Link>
       </div>
     </form>
   );
