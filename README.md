@@ -27,3 +27,14 @@ cd web && npm install && npm run dev
 ```
 
 API: `http://localhost:5272` · App: `http://localhost:3000` · login demo: `gestor@demo.local` / `Gestor@123456`.
+
+## Produção (domínio Lucrare)
+
+Guia completo: [`Docs/Arquitetura/17-Deploy-Producao.md`](Docs/Arquitetura/17-Deploy-Producao.md).
+
+| Camada | Host | Domínio sugerido |
+|---|---|---|
+| Frontend | Vercel | `https://aluguel.lucrarecontabilidade.com.br` |
+| API | Render (Docker) | `https://api.aluguel.lucrarecontabilidade.com.br` |
+
+Arquivos: `Dockerfile`, `render.yaml`, `web/vercel.json`.

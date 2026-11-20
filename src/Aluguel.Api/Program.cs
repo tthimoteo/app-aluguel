@@ -68,8 +68,20 @@ builder.Services.AddAuthorization(o =>
 builder.Services.ConfigureHttpJsonOptions(o =>
     o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
+// Cors:Origins (appsettings / Cors__Origins__N) ou CORS_ORIGINS (lista separada por vírgula).
 var corsOrigins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>()
-    ?? ["http://localhost:3000", "http://127.0.0.1:3000"];
+    ?? [];
+var corsOriginsEnv = builder.Configuration["CORS_ORIGINS"];
+if (!string.IsNullOrWhiteSpace(corsOriginsEnv))
+{
+    corsOrigins = corsOrigins
+        .Concat(corsOriginsEnv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToArray();
+}
+if (corsOrigins.Length == 0)
+    corsOrigins = ["http://localhost:3000", "http://127.0.0.1:3000"];
+
 builder.Services.AddCors(o =>
 {
     o.AddPolicy("Frontend", p =>

@@ -1,0 +1,70 @@
+# Blueprint Render — APP Aluguel (Lucrare)
+# Docs: Docs/Arquitetura/17-Deploy-Producao.md
+#
+# No dashboard Render (conta tthimoteoconsultoria@gmail.com):
+#   New → Blueprint → conectar repositório → aplicar este arquivo.
+#
+# Domínios sugeridos:
+#   API:  https://api.aluguel.lucrarecontabilidade.com.br
+#   App:  https://aluguel.lucrarecontabilidade.com.br  (Vercel)
+
+databases:
+  - name: aluguel-db
+    plan: free
+    databaseName: aluguel
+    user: aluguel
+
+services:
+  - type: web
+    name: aluguel-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: Database__MigrateOnStartup
+        value: "true"
+      - key: ConnectionStrings__Postgres
+        fromDatabase:
+          name: aluguel-db
+          property: connectionString
+      - key: Jwt__Issuer
+        value: aluguel-api
+      - key: Jwt__Audience
+        value: aluguel-app
+      - key: Jwt__AccessTokenMinutes
+        value: "15"
+      - key: Jwt__RefreshTokenDays
+        value: "7"
+      # Gere com: openssl rand -base64 48
+      - key: Jwt__SigningKey
+        sync: false
+      # Origens CORS do frontend em produção (ajuste após criar o domínio na Vercel)
+      - key: Cors__Origins__0
+        value: https://aluguel.lucrarecontabilidade.com.br
+      - key: Cors__Origins__1
+        value: https://aluguel-lucrare.vercel.app
+      - key: Email__Ambiente
+        value: Graph
+      - key: Email__GraphSenderUser
+        value: thiago.thimoteo@lucrarecontabilidade.com.br
+      - key: Email__RemetenteNome
+        value: APP Aluguel · Lucrare
+      - key: Email__DestinatarioDemonstracao
+        value: tthimoteoconsultoria@gmail.com
+      - key: Email__GraphTenantId
+        sync: false
+      - key: Email__GraphClientId
+        sync: false
+      - key: Email__GraphClientSecret
+        sync: false
+      - key: InterPix__Ambiente
+        value: Mock
+      - key: Nfse__Ambiente
+        value: Mock
+      - key: Boleto__Ambiente
+        value: Mock

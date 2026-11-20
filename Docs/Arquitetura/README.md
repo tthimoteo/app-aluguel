@@ -24,6 +24,7 @@ Base: análise integral de [`../APP-Aluguel-Especificacao.md`](../APP-Aluguel-Es
 | 14 | [Relatórios — Painel](14-Relatorios-Painel.md) | Dashboard, financeiro, imóveis, contratos e fiscal (UC008). |
 | 15 | [Integração PIX Assinatura (Inter)](15-Integracao-Pix-Assinatura-Inter.md) | Cobrança do plano via PIX Banco Inter (QR dinâmico + webhook). |
 | 16 | [E-mail Microsoft Graph (OAuth2)](16-Email-Microsoft-Graph.md) | Lead de demonstração via Graph `Mail.Send` (sem senha de app SMTP). |
+| 17 | [Deploy em produção](17-Deploy-Producao.md) | Render (API + Postgres) · Vercel (Next.js) · DNS `lucrarecontabilidade.com.br`. |
 
 ## Stack (especificação §19)
 
