@@ -14,19 +14,16 @@ public sealed class LocalFileStorage(IConfiguration configuration) : IFileStorag
 
     public async Task<string> UploadAsync(string bucket, string path, Stream conteudo, string contentType, CancellationToken ct = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(bucket);
-        ArgumentException.ThrowIfNullOrWhiteSpace(path);
         _ = contentType;
-
-        var relativo = Combinar(bucket, path);
-        var fisico = Path.Combine(Raiz, relativo.Replace('/', Path.DirectorySeparatorChar));
+        var logico = StoragePath.LogicalPath(bucket, path);
+        var fisico = Path.Combine(Raiz, logico.Replace('/', Path.DirectorySeparatorChar));
         var pasta = Path.GetDirectoryName(fisico);
         if (!string.IsNullOrEmpty(pasta))
             Directory.CreateDirectory(pasta);
 
         await using var destino = File.Create(fisico);
         await conteudo.CopyToAsync(destino, ct);
-        return relativo.Replace('\\', '/');
+        return logico;
     }
 
     public Task<Stream> DownloadAsync(string bucket, string path, CancellationToken ct = default)
@@ -50,16 +47,7 @@ public sealed class LocalFileStorage(IConfiguration configuration) : IFileStorag
 
     private string CaminhoFisico(string bucket, string path)
     {
-        var relativo = Combinar(bucket, path);
-        return Path.Combine(Raiz, relativo.Replace('/', Path.DirectorySeparatorChar));
-    }
-
-    private static string Combinar(string bucket, string path)
-    {
-        var limpo = path.Trim().TrimStart('/');
-        // Se o path já inclui o bucket (ex.: contracts/tenant/...), não duplica.
-        if (limpo.StartsWith(bucket + "/", StringComparison.OrdinalIgnoreCase))
-            return limpo;
-        return $"{bucket.Trim()}/{limpo}";
+        var logico = StoragePath.LogicalPath(bucket, path);
+        return Path.Combine(Raiz, logico.Replace('/', Path.DirectorySeparatorChar));
     }
 }

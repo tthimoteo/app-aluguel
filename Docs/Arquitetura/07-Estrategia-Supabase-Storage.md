@@ -22,6 +22,9 @@ Os cinco buckets são exatamente os definidos na especificação. Todos **privad
 | `nfse-xml` | XML de NFS-e e XML do evento de cancelamento | Legal (mín. 5 anos) |
 | `nfse-pdf` | PDF (DANFSe) das NFS-e | Legal |
 | `reports` | Relatórios/exportações geradas (XLSX/CSV/PDF) | Temporária |
+| `boletos` | PDF de boletos gerados (código atual) | Enquanto cobrança existir |
+
+> Em produção a API usa `Storage:Provider=Supabase` + `Storage:SupabaseUrl` + `Storage:SupabaseServiceRoleKey` (`SupabaseFileStorage`). Em Development permanece `Local` (`./storage`).
 
 ## 3. Convenção de caminho (path)
 
@@ -134,14 +137,24 @@ WITH CHECK ( bucket_id = 'nfse-xml' AND auth.role() = 'service_role' );
 
 ## 9. Configuração (env vars)
 
+Implementação atual (REST + `service_role`):
+
 ```text
-SUPABASE_URL=https://<project_ref>.supabase.co
+Storage__Provider=Supabase
+Storage__SupabaseUrl=https://<project_ref>.supabase.co
+Storage__SupabaseServiceRoleKey=***     # Project Settings → API → service_role (Reveal)
+```
+
+Alternativa S3-compatible (futuro / streaming grande):
+
+```text
 SUPABASE_STORAGE_S3_ENDPOINT=https://<project_ref>.storage.supabase.co/storage/v1/s3
 SUPABASE_STORAGE_REGION=sa-east-1
-SUPABASE_STORAGE_ACCESS_KEY=***        # secret (server-side only)
-SUPABASE_STORAGE_SECRET_KEY=***        # secret (server-side only)
-CERT_PROTECTOR_KEY=***                 # chave AES para senha do PFX
+SUPABASE_STORAGE_ACCESS_KEY=***
+SUPABASE_STORAGE_SECRET_KEY=***
 ```
+
+Buckets a criar no painel (todos **Private**): `contracts`, `certificates`, `nfse-xml`, `nfse-pdf`, `boletos`, `reports`.
 
 Segredos ficam em variáveis de ambiente / *secret manager*, nunca no repositório.
 

@@ -58,7 +58,33 @@ public static class DependencyInjection
         services.AddScoped<IRelatorioRepository, RelatorioRepository>();
         services.AddScoped<IAuditoriaService, AuditoriaService>();
 
-        services.AddSingleton<IFileStorage, LocalFileStorage>();
+        var storageOpts = configuration.GetSection(StorageOptions.SectionName).Get<StorageOptions>()
+            ?? new StorageOptions();
+        services.Configure<StorageOptions>(configuration.GetSection(StorageOptions.SectionName));
+
+        if (storageOpts.IsSupabase)
+        {
+            if (string.IsNullOrWhiteSpace(storageOpts.SupabaseUrl)
+                || string.IsNullOrWhiteSpace(storageOpts.SupabaseServiceRoleKey))
+                throw new InvalidOperationException(
+                    "Storage:Provider=Supabase exige Storage:SupabaseUrl e Storage:SupabaseServiceRoleKey.");
+
+            services.AddHttpClient(SupabaseFileStorage.HttpClientName, client =>
+            {
+                var baseUrl = storageOpts.SupabaseUrl!.TrimEnd('/') + "/storage/v1/";
+                client.BaseAddress = new Uri(baseUrl);
+                client.DefaultRequestHeaders.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", storageOpts.SupabaseServiceRoleKey);
+                client.DefaultRequestHeaders.TryAddWithoutValidation("apikey", storageOpts.SupabaseServiceRoleKey);
+                client.Timeout = TimeSpan.FromMinutes(5);
+            });
+            services.AddSingleton<IFileStorage, SupabaseFileStorage>();
+        }
+        else
+        {
+            services.AddSingleton<IFileStorage, LocalFileStorage>();
+        }
+
         services.AddSingleton<ISecretProtector, AesSecretProtector>();
         services.AddSingleton<INfsePdfGenerator, NfseDanfsePdfGenerator>();
         services.AddSingleton(TimeProvider.System);

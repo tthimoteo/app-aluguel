@@ -71,3 +71,10 @@ services:
         value: Mock
       - key: Boleto__Ambiente
         value: Mock
+      # Supabase Storage (buckets privados; service_role só no backend)
+      - key: Storage__Provider
+        value: Supabase
+      - key: Storage__SupabaseUrl
+        sync: false
+      - key: Storage__SupabaseServiceRoleKey
+        sync: false

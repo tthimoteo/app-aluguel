@@ -111,6 +111,9 @@ Aguarde a propagação DNS (minutos a algumas horas). HTTPS é emitido automatic
 | `Nfse__Ambiente` | MVP = `Mock` | `ProducaoRestrita` = sandbox SEFIN (exige cert. A1) |
 | `Boleto__Ambiente` | MVP = `Mock` | |
 | `Database__SeedDemoUsers` | opcional | `true` cria `gestor@demo.local` / `Gestor@123456` + cobranças demo; desligar após smoke |
+| `Storage__Provider` | produção = `Supabase` | `Local` só em Development |
+| `Storage__SupabaseUrl` | sim (prod) | Project URL do Supabase |
+| `Storage__SupabaseServiceRoleKey` | sim (prod) | `service_role` (nunca a anon key) |
 
 A API normaliza automaticamente URI `postgres://` do Blueprint Render para o formato Npgsql (`Host=...`) com `SSL Mode=Require`. Se ainda falhar, edite `ConnectionStrings__Postgres` manualmente no painel (formato chave=valor).
 
