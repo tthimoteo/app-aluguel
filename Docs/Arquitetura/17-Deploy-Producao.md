@@ -111,7 +111,7 @@ Aguarde a propagação DNS (minutos a algumas horas). HTTPS é emitido automatic
 | `Nfse__Ambiente` | MVP = `Mock` | |
 | `Boleto__Ambiente` | MVP = `Mock` | |
 
-Se o Postgres do Render exigir SSL e a connection string automática falhar, edite manualmente adicionando `;SSL Mode=Require;Trust Server Certificate=true` (formato Npgsql) ou `?sslmode=require` (URI).
+A API normaliza automaticamente URI `postgres://` do Blueprint Render para o formato Npgsql (`Host=...`) com `SSL Mode=Require`. Se ainda falhar, edite `ConnectionStrings__Postgres` manualmente no painel (formato chave=valor).
 
 ### Frontend (Vercel)
 

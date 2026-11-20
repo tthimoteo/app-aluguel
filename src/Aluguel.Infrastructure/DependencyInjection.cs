@@ -21,8 +21,10 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("Postgres")
-            ?? throw new InvalidOperationException("ConnectionStrings:Postgres não configurada.");
+        // Render injeta URI postgres://; Npgsql/EF exige Host=... (ver PostgresConnectionString).
+        var connectionString = PostgresConnectionString.Normalize(
+            configuration.GetConnectionString("Postgres")
+            ?? configuration["DATABASE_URL"]);
 
         // Resolução de tenant: default nulo (a API registra a versão baseada no JWT ao habilitar auth).
         services.AddScoped<ICurrentTenant, NullCurrentTenant>();
